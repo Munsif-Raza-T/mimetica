@@ -1,16 +1,17 @@
 import os
 from dataclasses import dataclass
 from typing import Dict, Any
+import streamlit as st
 
 @dataclass
 class Config:
     """Configuration settings for MIMÉTICA MVP"""
     
     # API Keys
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
-    PINECONE_ENVIRONMENT: str = os.getenv("PINECONE_ENVIRONMENT", "")
-    SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")
+    OPENAI_API_KEY: str = st.secrets["OPENAI_API_KEY"]
+    PINECONE_API_KEY: str = st.secrets["PINECONE_API_KEY"]
+    PINECONE_ENVIRONMENT: str = st.secrets["PINECONE_ENVIRONMENT"]
+    SERPER_API_KEY: str = st.secrets["SERPER_API_KEY"]
     
     # Application Settings
     APP_TITLE: str = "MIMÉTICA MVP 1.0"
