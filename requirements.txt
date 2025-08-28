@@ -1,0 +1,15 @@
+streamlit
+pandas
+pinecone
+plotly
+numpy
+openpyxl
+python-docx
+PyPDF2
+docx
+requests
+matplotlib
+pydantic
+crewai
+crewai_tools
+openai
