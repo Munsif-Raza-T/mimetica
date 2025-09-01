@@ -16,6 +16,15 @@ from config import config
 from crewai.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
+# ADD THESE NEW IMPORTS FOR CODE INTERPRETER
+import sys
+import io
+import traceback
+import contextlib
+import ast
+import types
+import base64
+
 
 # =============================================================================
 # SESSION FILE READER TOOL
@@ -90,7 +99,287 @@ class SessionFileReadTool(BaseTool):
 
 
 # =============================================================================
-# FUNCTION-BASED TOOLS (Using @tool decorator)
+# CODE INTERPRETER TOOL - ADD THIS ENTIRE SECTION
+# =============================================================================
+
+class CodeInterpreterTool(BaseTool):
+    """Custom Code Interpreter Tool for executing Python code safely within CrewAI agents"""
+    
+    name: str = "code_interpreter"
+    description: str = "Execute Python code and return results. Supports data analysis, visualization, calculations, and general Python operations. Returns both output and any generated plots."
+    
+    # Define allowed modules as strings to avoid pickle issues
+    _allowed_module_names: List[str] = [
+        'pandas', 'numpy', 'matplotlib.pyplot', 'plotly.graph_objects', 
+        'plotly.express', 'datetime', 'json', 'math', 'statistics', 'random'
+    ]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+    
+    def _get_allowed_modules(self) -> Dict[str, Any]:
+        """Get allowed modules dynamically to avoid pickle issues"""
+        return {
+            'pandas': pd,
+            'numpy': np, 
+            'matplotlib': plt,
+            'plt': plt,  # Common alias
+            'go': go,
+            'px': px,
+            'datetime': datetime,
+            'timedelta': timedelta,
+            'json': json,
+            'math': __import__('math'),
+            'statistics': __import__('statistics'),
+            'random': __import__('random'),
+        }
+    
+    def _create_safe_globals(self) -> Dict[str, Any]:
+        """Create a safe global namespace for code execution"""
+        safe_globals = {
+            '__builtins__': {
+                # Safe built-in functions
+                'abs': abs, 'all': all, 'any': any, 'bin': bin, 'bool': bool,
+                'chr': chr, 'dict': dict, 'dir': dir, 'divmod': divmod,
+                'enumerate': enumerate, 'filter': filter, 'float': float,
+                'format': format, 'frozenset': frozenset, 'hex': hex,
+                'int': int, 'isinstance': isinstance, 'issubclass': issubclass,
+                'iter': iter, 'len': len, 'list': list, 'map': map,
+                'max': max, 'min': min, 'next': next, 'oct': oct,
+                'ord': ord, 'pow': pow, 'print': print, 'range': range,
+                'reversed': reversed, 'round': round, 'set': set,
+                'slice': slice, 'sorted': sorted, 'str': str, 'sum': sum,
+                'tuple': tuple, 'type': type, 'zip': zip,
+                # Safe exceptions
+                'ValueError': ValueError, 'TypeError': TypeError,
+                'KeyError': KeyError, 'IndexError': IndexError,
+                'Exception': Exception,
+            }
+        }
+        
+        # Add allowed modules to globals dynamically
+        safe_globals.update(self._get_allowed_modules())
+        
+        return safe_globals
+    
+    def _is_safe_code(self, code: str) -> tuple[bool, str]:
+        """Check if the code is safe to execute"""
+        try:
+            tree = ast.parse(code)
+        except SyntaxError as e:
+            return False, f"Syntax error: {str(e)}"
+        
+        # List of potentially dangerous operations
+        dangerous_operations = [
+            ast.Import,  # We'll handle imports manually
+            ast.ImportFrom,  # We'll handle imports manually
+        ]
+        
+        dangerous_names = [
+            'exec', 'eval', 'compile', '__import__', 'open', 'file',
+            'input', 'raw_input', 'reload', 'exit', 'quit',
+            'subprocess', 'os.system', 'os.popen', 'os.spawn',
+        ]
+        
+        for node in ast.walk(tree):
+            # Check for dangerous operations
+            if any(isinstance(node, dangerous_op) for dangerous_op in dangerous_operations):
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    # Allow imports of safe modules only
+                    if isinstance(node, ast.Import):
+                        for alias in node.names:
+                            if alias.name not in self._allowed_module_names:
+                                return False, f"Import of '{alias.name}' is not allowed"
+                    elif isinstance(node, ast.ImportFrom):
+                        if node.module and node.module not in self._allowed_module_names:
+                            return False, f"Import from '{node.module}' is not allowed"
+                        continue
+                else:
+                    return False, f"Operation {type(node).__name__} is not allowed"
+            
+            # Check for dangerous function calls
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name) and node.func.id in dangerous_names:
+                    return False, f"Function '{node.func.id}' is not allowed"
+                elif isinstance(node.func, ast.Attribute):
+                    func_name = f"{ast.unparse(node.func)}" if hasattr(ast, 'unparse') else str(node.func.attr)
+                    if any(dangerous in func_name for dangerous in dangerous_names):
+                        return False, f"Function '{func_name}' is not allowed"
+        
+        return True, "Code is safe"
+    
+    def _capture_plots(self) -> List[str]:
+        """Capture any matplotlib plots as base64 encoded images"""
+        plots = []
+        
+        # Check if there are any matplotlib figures
+        if plt.get_fignums():
+            for fig_num in plt.get_fignums():
+                fig = plt.figure(fig_num)
+                
+                # Save plot to bytes
+                img_buffer = io.BytesIO()
+                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=150)
+                img_buffer.seek(0)
+                
+                # Encode as base64
+                img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+                plots.append(f"data:image/png;base64,{img_base64}")
+                
+                img_buffer.close()
+            
+            # Clear all figures to prevent memory leaks
+            plt.close('all')
+        
+        return plots
+    
+    def _execute_code(self, code: str) -> Dict[str, Any]:
+        """Execute the code safely and return results"""
+        # Redirect stdout to capture print statements
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
+        
+        result = {
+            'success': False,
+            'output': '',
+            'error': '',
+            'plots': [],
+            'variables': {}
+        }
+        
+        try:
+            # Redirect output streams
+            sys.stdout = stdout_buffer
+            sys.stderr = stderr_buffer
+            
+            # Create a copy of globals for this execution
+            execution_globals = self._create_safe_globals()
+            execution_locals = {}
+            
+            # Execute the code
+            exec(code, execution_globals, execution_locals)
+            
+            # Capture output
+            result['output'] = stdout_buffer.getvalue()
+            result['success'] = True
+            
+            # Capture any plots
+            result['plots'] = self._capture_plots()
+            
+            # Capture important variables (avoid internal Python variables)
+            important_vars = {}
+            for key, value in execution_locals.items():
+                if not key.startswith('_'):
+                    try:
+                        # Try to make it JSON serializable for storage
+                        if isinstance(value, (int, float, str, bool, list, dict)):
+                            important_vars[key] = value
+                        elif isinstance(value, np.ndarray):
+                            important_vars[key] = f"NumPy array with shape {value.shape}"
+                        elif isinstance(value, pd.DataFrame):
+                            important_vars[key] = f"Pandas DataFrame with shape {value.shape}"
+                        else:
+                            important_vars[key] = str(type(value))
+                    except:
+                        important_vars[key] = str(type(value))
+            
+            result['variables'] = important_vars
+            
+        except Exception as e:
+            result['error'] = traceback.format_exc()
+            result['output'] = stdout_buffer.getvalue()  # Capture any output before error
+            
+        finally:
+            # Restore stdout/stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            
+            # Capture any stderr output
+            if stderr_buffer.getvalue():
+                result['error'] += stderr_buffer.getvalue()
+        
+        return result
+    
+    def _run(self, code: str, timeout: int = 30) -> str:
+        """
+        Execute Python code and return formatted results
+        
+        Args:
+            code: Python code to execute
+            timeout: Execution timeout in seconds (default: 30)
+            
+        Returns:
+            Formatted string containing execution results
+        """
+        try:
+            # Validate code safety
+            is_safe, safety_message = self._is_safe_code(code)
+            if not is_safe:
+                return f"Code execution blocked: {safety_message}"
+            
+            # Execute the code
+            result = self._execute_code(code)
+            
+            # Format the response
+            response_parts = []
+            
+            # Add execution status
+            if result['success']:
+                response_parts.append("✅ Code executed successfully!")
+            else:
+                response_parts.append("❌ Code execution failed!")
+            
+            # Add output if any
+            if result['output'].strip():
+                response_parts.append(f"\n📤 Output:\n{result['output'].strip()}")
+            
+            # Add errors if any
+            if result['error'].strip():
+                response_parts.append(f"\n🚨 Error:\n{result['error'].strip()}")
+            
+            # Add information about plots
+            if result['plots']:
+                response_parts.append(f"\n📊 Generated {len(result['plots'])} plot(s)")
+                response_parts.append("Note: Plot visualization data is captured but not displayed in text format")
+            
+            # Add variable information
+            if result['variables']:
+                variables_info = []
+                for var_name, var_info in result['variables'].items():
+                    variables_info.append(f"  • {var_name}: {var_info}")
+                
+                if variables_info:
+                    response_parts.append(f"\n📋 Variables created:\n" + "\n".join(variables_info))
+            
+            # Add code execution summary
+            response_parts.append(f"\n🔧 Executed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            return "\n".join(response_parts)
+            
+        except Exception as e:
+            return f"Code interpreter error: {str(e)}"
+
+
+# Function-based version using @tool decorator
+@tool("execute_python_code")
+def execute_python_code(code: str) -> str:
+    """
+    Execute Python code safely and return results.
+    
+    Args:
+        code: Python code to execute
+        
+    Returns:
+        Execution results including output, errors, and generated plots info
+    """
+    interpreter = CodeInterpreterTool()
+    return interpreter._run(code)
+
+
+# =============================================================================
+# FUNCTION-BASED TOOLS (Using @tool decorator) - YOUR EXISTING TOOLS
 # =============================================================================
 
 @tool("pinecone_vector_search")
@@ -532,8 +821,61 @@ Risk Assessment:
         return f"Monte Carlo simulation failed: {str(e)}"
 
 
+@tool("async_web_research")
+async def async_web_research_tool(topic: str, depth: str = "basic") -> str:
+    """Perform asynchronous web research on a given topic.
+    
+    Args:
+        topic: The research topic
+        depth: Research depth - "basic", "detailed", or "comprehensive"
+    
+    Returns:
+        Research findings formatted as string
+    """
+    import asyncio
+    
+    try:
+        # Simulate async web research
+        await asyncio.sleep(1)  # Simulated network delay
+        
+        research_points = {
+            "basic": 3,
+            "detailed": 5,
+            "comprehensive": 8
+        }
+        
+        num_points = research_points.get(depth, 3)
+        
+        # Simulated research results
+        findings = f"""
+Async Web Research Results for: {topic}
+Research Depth: {depth}
+Timestamp: {datetime.now().isoformat()}
+
+Key Findings:
+"""
+        
+        for i in range(1, num_points + 1):
+            findings += f"- Finding {i}: [Simulated research point about {topic}]\n"
+        
+        findings += f"""
+Research Methodology:
+- Search engines consulted: Multiple sources
+- Academic databases: Included in {depth} research
+- Industry reports: {"Included" if depth in ["detailed", "comprehensive"] else "Basic coverage"}
+- Social media sentiment: {"Analyzed" if depth == "comprehensive" else "Not included"}
+
+Confidence Level: {"High" if depth == "comprehensive" else "Medium" if depth == "detailed" else "Basic"}
+"""
+        
+        return findings
+        
+    except Exception as e:
+        return f"Async web research failed: {str(e)}"
+
+
 # =============================================================================
-# CLASS-BASED TOOLS (Using BaseTool subclassing) - Alternative approach
+# CLASS-BASED TOOLS (Using BaseTool subclassing) - YOUR EXISTING TOOLS
 # =============================================================================
 
 class AdvancedPineconeVectorSearchTool(BaseTool):
@@ -590,68 +932,10 @@ Search Summary:
 
 
 # =============================================================================
-# ASYNC TOOLS EXAMPLE
+# TOOL COLLECTIONS - UPDATE THIS SECTION
 # =============================================================================
 
-@tool("async_web_research")
-async def async_web_research_tool(topic: str, depth: str = "basic") -> str:
-    """Perform asynchronous web research on a given topic.
-    
-    Args:
-        topic: The research topic
-        depth: Research depth - "basic", "detailed", or "comprehensive"
-    
-    Returns:
-        Research findings formatted as string
-    """
-    import asyncio
-    import aiohttp
-    
-    try:
-        # Simulate async web research
-        await asyncio.sleep(1)  # Simulated network delay
-        
-        research_points = {
-            "basic": 3,
-            "detailed": 5,
-            "comprehensive": 8
-        }
-        
-        num_points = research_points.get(depth, 3)
-        
-        # Simulated research results
-        findings = f"""
-Async Web Research Results for: {topic}
-Research Depth: {depth}
-Timestamp: {datetime.now().isoformat()}
-
-Key Findings:
-"""
-        
-        for i in range(1, num_points + 1):
-            findings += f"- Finding {i}: [Simulated research point about {topic}]\n"
-        
-        findings += f"""
-Research Methodology:
-- Search engines consulted: Multiple sources
-- Academic databases: Included in {depth} research
-- Industry reports: {"Included" if depth in ["detailed", "comprehensive"] else "Basic coverage"}
-- Social media sentiment: {"Analyzed" if depth == "comprehensive" else "Not included"}
-
-Confidence Level: {"High" if depth == "comprehensive" else "Medium" if depth == "detailed" else "Basic"}
-"""
-        
-        return findings
-        
-    except Exception as e:
-        return f"Async web research failed: {str(e)}"
-
-
-# =============================================================================
-# TOOL COLLECTIONS FOR EASY IMPORT
-# =============================================================================
-
-# Function-based tools list
+# Function-based tools list - ADD execute_python_code HERE
 FUNCTION_TOOLS = [
     pinecone_vector_search,
     project_management_tool,
@@ -659,20 +943,22 @@ FUNCTION_TOOLS = [
     markdown_editor_tool,
     serper_search_tool,
     monte_carlo_simulation_tool,
-    async_web_research_tool
+    async_web_research_tool,  # NOW INCLUDED
+    execute_python_code  # ADD THIS LINE - Your new code interpreter tool
 ]
 
-# Class-based tools list
+# Class-based tools list - ADD CodeInterpreterTool HERE
 CLASS_TOOLS = [
-    AdvancedPineconeVectorSearchTool()
+    AdvancedPineconeVectorSearchTool(),
+    CodeInterpreterTool()  # ADD THIS LINE - Your new code interpreter class
 ]
 
-# All tools combined
+# All tools combined - NOW INCLUDES CODE INTERPRETER
 ALL_TOOLS = FUNCTION_TOOLS + CLASS_TOOLS
 
 
 # =============================================================================
-# USAGE EXAMPLES
+# USAGE EXAMPLES - UPDATE THIS SECTION
 # =============================================================================
 
 def get_strategic_analysis_tools():
@@ -682,20 +968,30 @@ def get_strategic_analysis_tools():
         project_management_tool,
         evaluation_framework_tool,
         monte_carlo_simulation_tool,
-        serper_search_tool
+        serper_search_tool,
+        execute_python_code  # ADD THIS - Code execution for analysis
     ]
 
 def get_content_tools():
     """Get tools for content generation and formatting"""
     return [
         markdown_editor_tool,
-        async_web_research_tool
+        execute_python_code  # ADD THIS - Code execution for content generation
     ]
 
 def get_advanced_tools():
     """Get advanced tools with enhanced features"""
     return [
-        AdvancedPineconeVectorSearchTool()
+        AdvancedPineconeVectorSearchTool(),
+        CodeInterpreterTool()  # ADD THIS - Advanced code execution
+    ]
+
+# NEW FUNCTION - Get code interpreter tools specifically
+def get_code_interpreter_tools():
+    """Get all code interpreter tools"""
+    return [
+        CodeInterpreterTool(),
+        execute_python_code
     ]
 
 
@@ -711,8 +1007,14 @@ def configure_tool_caching():
 
 
 if __name__ == "__main__":
-    # Example usage
+    # Example usage - UPDATED TO INCLUDE CODE INTERPRETER
     print("Available CrewAI Tools:")
     print(f"Function-based tools: {len(FUNCTION_TOOLS)}")
     print(f"Class-based tools: {len(CLASS_TOOLS)}")
     print(f"Total tools: {len(ALL_TOOLS)}")
+    
+    # Test the code interpreter
+    print("\nTesting Code Interpreter:")
+    interpreter = CodeInterpreterTool()
+    test_result = interpreter._run("print('Hello from Code Interpreter!')")
+    print(test_result)

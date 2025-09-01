@@ -1,5 +1,5 @@
 from crewai import Agent
-from crewai_tools import CodeInterpreterTool
+from tools.custom_tools import CodeInterpreterTool
 from tools.custom_tools import monte_carlo_simulation_tool
 from config import config
 
