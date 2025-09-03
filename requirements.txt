@@ -99,7 +99,6 @@ pdfplumber==0.11.7
 pexpect==4.9.0
 pillow==11.3.0
 pinecone==7.3.0
-pinecone-client
 pinecone-plugin-assistant==1.7.0
 pinecone-plugin-interface==0.0.7
 plotly==6.3.0
