@@ -153,15 +153,28 @@ Install all required Python packages using the provided `requirements.txt`:
 pip install -r requirements.txt
 ```
 
-## 5. Configure Environment Variables
+## 5. Configure Secrets and Environment Variables
 
-- If your app uses environment variables (it imports `load_dotenv`), create a `.env` file in the project root.
-- Add any required variables (see `config.py` or documentation for specifics).
-
-Example `.env`:
+### Local Development
+1. Create a `.env` file in the project root (this file should NEVER be committed to version control)
+2. Add the following required secrets:
 ```
 OPENAI_API_KEY=your_openai_key_here
-OTHER_CONFIG=your_value
+PINECONE_API_KEY=your_pinecone_key_here
+PINECONE_ENVIRONMENT=your_pinecone_environment
+```
+
+### Streamlit Cloud Deployment
+1. Go to your app's settings in Streamlit Cloud
+2. Navigate to the "Secrets" section
+3. Add the following secrets in TOML format:
+```toml
+[openai]
+api_key = "your_openai_key_here"
+
+[pinecone]
+api_key = "your_pinecone_key_here"
+environment = "your_pinecone_environment"
 ```
 
 ## 6. Run the Application
@@ -197,12 +210,51 @@ streamlit run app.py
   ```
 - **Environment Variables**: Double-check your `.env` file for required keys.
 
-## 10. Optional: Updating Dependencies
+## 10. Deployment
+
+### Local Deployment
+- Follow steps 1-9 above for local deployment
+- Ensure all environment variables are properly set in your `.env` file
+- Use `streamlit run app.py` to start the application
+
+### Streamlit Cloud Deployment
+1. Push your code to GitHub (ensure `.env` is in `.gitignore`)
+2. Log in to [Streamlit Cloud](https://streamlit.io/cloud)
+3. Click "New app" and select your repository
+4. Configure your secrets in the Streamlit Cloud dashboard (see Section 5)
+5. Deploy your app
+
+### Common Deployment Issues
+
+#### SQLite Version Error
+If you encounter a SQLite version error with ChromaDB:
+1. Add this to your `requirements.txt`:
+```
+chromadb<0.4.0
+```
+2. Or use only Pinecone as your vector store (recommended for cloud deployment)
+
+#### Package Conflicts
+- Use `pip-compile` to generate a deterministic `requirements.txt`
+- Pin specific versions of key dependencies:
+```
+streamlit==1.24.0
+pinecone-client==2.2.2
+openai==1.3.0
+```
+
+## 11. Optional: Updating Dependencies
 
 If you add new packages, update `requirements.txt`:
 
 ```powershell
 pip freeze > requirements.txt
+```
+
+For more reproducible builds, consider using `pip-compile`:
+```powershell
+pip install pip-tools
+pip-compile requirements.in
 ```
 
 ---

@@ -5,8 +5,12 @@ Handles document processing, token estimation, and batch creation for optimal AP
 
 import time
 import streamlit as st
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Dict, List, Any, Tuple, Optional, Set
 from datetime import datetime
+import concurrent.futures
+import re
+from functools import lru_cache
+import threading
 
 
 class TokenBatchManager:
@@ -50,9 +54,10 @@ class TokenBatchManager:
             'end_time': None
         }
     
+    @lru_cache(maxsize=10000)
     def estimate_tokens_accurate(self, text: str) -> int:
         """
-        More accurate token estimation using multiple methods
+        More accurate token estimation using multiple methods with caching
         
         Args:
             text: Input text to estimate tokens for
@@ -63,19 +68,25 @@ class TokenBatchManager:
         if not text or not text.strip():
             return 0
         
-        # Multiple estimation methods for accuracy
-        word_count = len(text.split())
+        # Quick estimation for very short texts
+        if len(text) < 100:
+            return max(1, int(len(text) / 3))
+        
+        # Use regex to count words more efficiently
+        word_count = len(re.findall(r'\b\w+\b', text))
         char_count = len(text)
         
-        # GPT tokenizer approximations
-        token_estimate_words = word_count * 1.3  # ~1.3 tokens per word
-        token_estimate_chars = char_count / 4    # ~4 chars per token
+        # Optimized token estimation based on GPT-3 tokenizer characteristics
+        # Using weighted average of different methods
+        estimate1 = word_count * 1.3  # Word-based estimate
+        estimate2 = char_count / 4    # Character-based estimate
+        estimate3 = len(re.findall(r'[A-Za-z0-9]+|\s+|[^\w\s]', text)) * 0.9  # Token pattern estimate
         
-        # Use the higher estimate for safety
-        estimated_tokens = int(max(token_estimate_words, token_estimate_chars))
+        # Weighted average with more weight on the pattern-based estimate
+        estimated_tokens = (estimate1 + estimate2 + 2 * estimate3) / 4
         
-        # Add small buffer for API overhead
-        return max(1, int(estimated_tokens * 1.1))
+        # Add smaller buffer (reduced from 1.1 to 1.05 for better accuracy)
+        return max(1, int(estimated_tokens * 1.05))
     
     def chunk_document_smart(self, doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -150,18 +161,18 @@ class TokenBatchManager:
         return chunks if chunks else [doc]  # Fallback to original document
     
     def _split_into_sentences(self, text: str) -> List[str]:
-        """Split text into sentences using multiple delimiters"""
-        # Common sentence delimiters
-        delimiters = ['. ', '! ', '? ', '.\n', '!\n', '?\n']
+        """
+        Split text into sentences using regex for better performance
+        """
+        if not text:
+            return []
+            
+        # Efficient regex-based sentence splitting
+        sentence_pattern = r'(?<=[.!?])\s+(?=[A-Z])|(?<=[.!?])\s*[\n\r]+\s*(?=[A-Z])'
+        sentences = re.split(sentence_pattern, text)
         
-        sentences = [text]
-        for delimiter in delimiters:
-            new_sentences = []
-            for sentence in sentences:
-                new_sentences.extend(sentence.split(delimiter))
-            sentences = [s.strip() for s in new_sentences if s.strip()]
-        
-        return sentences
+        # Filter and clean in a single pass
+        return [s.strip() for s in sentences if s and len(s.strip()) > 10]
     
     def _split_sentence_by_words(self, sentence: str, max_tokens: int) -> List[str]:
         """Split an oversized sentence into word-based chunks"""
@@ -216,7 +227,7 @@ class TokenBatchManager:
     def create_smart_batches(self, docs: List[Dict[str, Any]], 
                            max_tokens_per_batch: Optional[int] = None) -> List[List[Dict[str, Any]]]:
         """
-        Create batches that respect token limits with optimal packing
+        Create optimally packed batches using an improved bin packing algorithm
         
         Args:
             docs: List of document chunks
@@ -228,40 +239,50 @@ class TokenBatchManager:
         if max_tokens_per_batch is None:
             max_tokens_per_batch = min(self.MAX_TOKENS_PER_MIN // 2, 60000)
         
-        batches = []
-        current_batch = []
-        current_batch_tokens = 0
+        # Early return for empty input
+        if not docs:
+            return []
         
-        # Sort docs by token count for optimal packing (smallest first)
-        sorted_docs = sorted(docs, key=lambda x: x.get('estimated_tokens', 0))
+        # Initialize batches with optimal pre-allocation
+        estimated_batch_count = sum(doc.get('estimated_tokens', 0) for doc in docs) // max_tokens_per_batch + 1
+        batches = [[] for _ in range(estimated_batch_count)]
+        batch_tokens = [0] * estimated_batch_count
+        
+        # Sort docs by token count in descending order for better packing
+        sorted_docs = sorted(docs, key=lambda x: x.get('estimated_tokens', 0), reverse=True)
         
         for doc in sorted_docs:
             doc_tokens = doc.get('estimated_tokens', 0)
             
-            # Skip documents that are too large (shouldn't happen with smart chunking)
             if doc_tokens > max_tokens_per_batch:
                 if st:
                     st.warning(f"⚠️ Skipping oversized chunk: {doc_tokens:,} tokens (ID: {doc.get('chunk_id', 'unknown')})")
                 continue
             
-            # Check if adding this doc would exceed the batch limit
-            if current_batch_tokens + doc_tokens > max_tokens_per_batch and current_batch:
-                batches.append(current_batch)
-                current_batch = [doc]
-                current_batch_tokens = doc_tokens
+            # Find the best batch for this document using best-fit algorithm
+            best_batch_idx = -1
+            min_remaining_space = max_tokens_per_batch + 1
+            
+            for i, tokens in enumerate(batch_tokens):
+                remaining_space = max_tokens_per_batch - tokens
+                if doc_tokens <= remaining_space < min_remaining_space:
+                    min_remaining_space = remaining_space
+                    best_batch_idx = i
+            
+            # If no existing batch fits, create a new one
+            if best_batch_idx == -1:
+                batches.append([doc])
+                batch_tokens.append(doc_tokens)
             else:
-                current_batch.append(doc)
-                current_batch_tokens += doc_tokens
+                batches[best_batch_idx].append(doc)
+                batch_tokens[best_batch_idx] += doc_tokens
         
-        # Add the last batch if it has content
-        if current_batch:
-            batches.append(current_batch)
-        
-        return batches
+        # Remove empty batches and ensure optimal packing
+        return [batch for batch in batches if batch]
     
     def process_documents_with_batching(self, documents: List[Dict[str, Any]]) -> Tuple[List[List[Dict[str, Any]]], Dict[str, Any]]:
         """
-        Complete document processing pipeline: chunk documents and create batches
+        Complete document processing pipeline with parallel processing
         
         Args:
             documents: List of original documents
@@ -275,14 +296,23 @@ class TokenBatchManager:
         if st:
             st.info(f"📄 Processing {len(documents)} documents for batching...")
         
-        # Chunk all documents
+        # Parallel document chunking
         chunked_docs = []
-        for i, doc in enumerate(documents):
+        chunk_lock = threading.Lock()
+        
+        def process_doc(doc_tuple):
+            i, doc = doc_tuple
             if st:
                 st.info(f"📋 Chunking document {i+1}/{len(documents)}: {doc.get('filename', 'Unknown')}")
             
             doc_chunks = self.chunk_document_smart(doc)
-            chunked_docs.extend(doc_chunks)
+            with chunk_lock:
+                chunked_docs.extend(doc_chunks)
+        
+        # Use ThreadPoolExecutor for parallel processing
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, len(documents))) as executor:
+            # Process documents in parallel
+            list(executor.map(process_doc, enumerate(documents)))
         
         self.processing_stats['total_chunks'] = len(chunked_docs)
         
