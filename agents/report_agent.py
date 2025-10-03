@@ -1,27 +1,67 @@
 from crewai import Agent
 # Using markdown_editor_tool for report generation
-from tools.custom_tools import markdown_editor_tool
+from tools.custom_tools import markdown_editor_tool, strategic_visualization_generator, execute_python_code
 from config import config
+import streamlit as st
 
 class ReportAgent:
     """Agent responsible for consolidating all outputs into a comprehensive final report"""
     
     @staticmethod
     def create_agent():
+        # Get current model configuration
+        selected_model = config.validate_and_fix_selected_model()
+        model_config = config.AVAILABLE_MODELS[selected_model]
+        provider = model_config['provider']
+        
+        # Set up LLM based on provider
+        llm = None
+        if provider == 'openai':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"openai/{selected_model}",
+                api_key=config.OPENAI_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        elif provider == 'anthropic':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"anthropic/{selected_model}",
+                api_key=config.ANTHROPIC_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        
         return Agent(
-            role="Report Synthesis and Documentation Specialist",
-            goal="Consolidate all analysis outputs into a comprehensive, professional final report with executive summary and actionable recommendations",
-            backstory="""You are a senior business analyst and report writing expert with extensive experience in 
-            synthesizing complex analyses into clear, actionable reports. You excel at creating executive-level 
-            documentation that communicates technical findings in business terms. Your expertise includes report 
-            structure design, executive communication, and strategic recommendation formulation.""",
+            role="Strategic Report Analyst and Visualization Specialist",
+            goal="Synthesize all phase outputs into a comprehensive, visually enhanced strategic report with professional charts and graphs. You MUST use the strategic_visualization_generator tool to create charts for each major section.",
+            backstory="""You are a senior strategic analyst with expertise in business intelligence and data visualization. 
+            Your specialty is creating comprehensive strategic reports that combine rigorous analysis with compelling 
+            visual representations. You excel at:
+            
+            1. **Strategic Synthesis**: Integrating complex analysis from multiple sources into coherent insights
+            2. **Data Visualization**: Creating professional charts, graphs, and diagrams that enhance understanding
+            3. **Executive Communication**: Translating technical analysis into executive-ready recommendations
+            4. **Visual Storytelling**: Using charts and graphs to tell a compelling strategic narrative
+            
+            CRITICAL: You ALWAYS use the strategic_visualization_generator tool to create charts for every report section.
+            
+            Charts will be saved as image files and integrated into the final PDF. You should include image placeholder
+            references in your report text where charts should appear. Do NOT expect or include base64 image data 
+            in your report content - the system will handle image placement automatically.
+            You understand that executives and stakeholders make better decisions when complex data is presented 
+            visually and that a well-visualized report significantly increases comprehension and buy-in.
+            
+            You are required to generate visualizations for every major section of your reports.""",
             tools=[
-                markdown_editor_tool
+                markdown_editor_tool,
+                strategic_visualization_generator,
+                execute_python_code
             ],
             verbose=True,
             allow_delegation=False,
             max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            llm=llm
         )
     
     @staticmethod
@@ -29,7 +69,8 @@ class ReportAgent:
         from crewai import Task
         return Task(
             description = f"""
-            Create a comprehensive final report that consolidates all analysis outputs into a cohesive strategic document.
+            Create a comprehensive final report that consolidates all analysis outputs into a cohesive strategic document 
+            with professional visualizations and charts.
             
             All Phase Outputs to Consolidate:
             {all_phase_outputs}
@@ -49,29 +90,63 @@ class ReportAgent:
                
             3. **Strategic Analysis Synthesis**
                - Problem definition and context integration
-               - Risk assessment consolidation
-               - Option analysis and recommendation
-               - Implementation roadmap summary
+               - Risk assessment consolidation with RISK MATRIX visualization
+               - Option analysis and recommendation with SCENARIO COMPARISON charts
+               - Implementation roadmap summary with TIMELINE visualization
                
             4. **Quantitative Analysis Results**
-               - Monte Carlo simulation findings
-               - Scenario analysis outcomes
+               - Monte Carlo simulation findings with DISTRIBUTION charts
+               - Scenario analysis outcomes with COMPARISON visualizations
                - Statistical confidence levels
-               - Risk-adjusted recommendations
+               - Risk-adjusted recommendations with supporting charts
                
             5. **Implementation Framework**
-               - Detailed implementation plan summary
-               - Resource allocation and timeline
-               - Success measurement framework
-               - Risk mitigation strategies
+               - Detailed implementation plan summary with GANTT chart
+               - Resource allocation and timeline with visual timeline
+               - Success measurement framework with PERFORMANCE DASHBOARD
+               - Risk mitigation strategies with risk matrix
                
             6. **Strategic Recommendations**
                - Primary strategic recommendation with rationale
                - Alternative approaches and contingencies
-               - Critical success factors and dependencies
+               - Critical success factors and dependencies  
                - Next steps and decision timeline
                
-            Create a professional, executive-ready report that enables informed strategic decision-making.
+            **CRITICAL VISUALIZATION REQUIREMENTS:**
+            
+            You MUST use the strategic_visualization_generator tool to create charts. For each major section, 
+            call the tool with sample data if real data is not available:
+            
+            STEP 1: Generate Risk Matrix
+            Use: strategic_visualization_generator(chart_type="risk_matrix", data_input=sample_risk_data, title="Risk Assessment")
+            
+            STEP 2: Generate ROI Chart  
+            Use: strategic_visualization_generator(chart_type="roi_projection", data_input=sample_roi_data, title="ROI Projection")
+            
+            STEP 3: Generate Timeline
+            Use: strategic_visualization_generator(chart_type="timeline", data_input=sample_timeline_data, title="Implementation Timeline")
+            
+            STEP 4: Generate Performance Dashboard
+            Use: strategic_visualization_generator(chart_type="performance_dashboard", data_input=sample_kpi_data, title="Performance Dashboard")
+            
+            Include the tool outputs in your report as text references - images will be automatically placed in the PDF.
+            
+            For each major section, you consider what visualizations would best support the narrative 
+            and enhance understanding. You create:
+            - Risk matrices and heat maps for risk analysis
+            - ROI projections and financial forecasts
+            - Timeline charts and Gantt charts for implementation planning
+            - Monte Carlo distributions for uncertainty analysis
+            - Stakeholder impact matrices
+            - Performance dashboards with KPIs
+            - SWOT analysis matrices
+            - Scenario comparison charts
+            
+            Each visualization should be generated with appropriate data extracted from the phase outputs and 
+            embedded in the report with clear titles and explanations.
+            
+            Create a professional, executive-ready report that enables informed strategic decision-making through 
+            both comprehensive analysis and compelling visual insights.
             """,
             expected_output = """A comprehensive final report in both PDF and Markdown formats containing:
             
@@ -86,6 +161,10 @@ class ReportAgent:
             - **Analysis Date**: [Current Date]
             - **Report Version**: 1.0
             - **Confidentiality**: [Classification Level]
+            - **Files Used**: [List of all uploaded file names used in this analysis]
+            - **Project Name**: [Project name from project information]  
+            - **Project Description**: [Project description from project information]
+            - **Analysis Focus**: [Analysis focus from project information]
             
             ---
             
@@ -227,6 +306,9 @@ class ReportAgent:
             [External market and competition risks]
             
             ### Risk Quantification and Impact
+            
+            **GENERATE RISK MATRIX VISUALIZATION HERE**: Use the strategic_visualization_generator tool with chart_type="risk_matrix" to create a visual risk assessment matrix showing probability vs impact for all identified risks.
+            
             #### Risk Prioritization Matrix
             | Risk Category | Probability | Impact | Priority Score | Mitigation Strategy |
             |---------------|-------------|---------|----------------|-------------------|
@@ -277,6 +359,9 @@ class ReportAgent:
             ## Quantitative Analysis and Simulation Results
             
             ### Monte Carlo Simulation Analysis
+            
+            **GENERATE MONTE CARLO VISUALIZATION HERE**: Use the strategic_visualization_generator tool with chart_type="monte_carlo_distribution" to create a distribution chart showing simulation results with key statistics and percentiles.
+            
             #### Simulation Methodology
             - **Model Parameters**: [Key variables and distributions]
             - **Simulation Runs**: [Number of iterations performed]
@@ -284,6 +369,9 @@ class ReportAgent:
             - **Statistical Methods**: [Analysis techniques used]
             
             #### Scenario Analysis Results
+            
+            **GENERATE SCENARIO COMPARISON CHART HERE**: Use the strategic_visualization_generator tool with chart_type="scenario_comparison" to compare optimistic, baseline, and pessimistic scenarios.
+            
             #### Optimistic Scenario (90th Percentile)
             - **Key Outcomes**: [Primary results in best case]
             - **Probability**: [Likelihood of achieving optimistic results]
@@ -320,6 +408,8 @@ class ReportAgent:
             #### Strategic Approach
             [High-level implementation philosophy and approach]
             
+            **GENERATE TIMELINE VISUALIZATION HERE**: Use the strategic_visualization_generator tool with chart_type="timeline" to create a Gantt chart showing implementation phases, durations, and dependencies.
+            
             #### Implementation Phases
             1. **Phase 1: Preparation** ([Duration])
                - [Key activities and deliverables]
@@ -340,6 +430,8 @@ class ReportAgent:
                - [Key activities and deliverables]
                - [Resource requirements]
                - [Success criteria]
+            
+            **GENERATE ROI PROJECTION CHART HERE**: Use the strategic_visualization_generator tool with chart_type="roi_projection" to show expected financial returns over time across all implementation phases.
             
             ### Resource Requirements and Allocation
             #### Human Resources
@@ -372,6 +464,8 @@ class ReportAgent:
             ---
             
             ## Success Measurement and Evaluation Framework
+            
+            **GENERATE PERFORMANCE DASHBOARD HERE**: Use the strategic_visualization_generator tool with chart_type="performance_dashboard" to create a comprehensive KPI dashboard showing current vs target performance across all key metrics.
             
             ### Key Performance Indicators (KPIs)
             #### Strategic KPIs

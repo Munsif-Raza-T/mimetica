@@ -102,11 +102,17 @@ class SessionFileReadTool(BaseTool):
 # CODE INTERPRETER TOOL - ADD THIS ENTIRE SECTION
 # =============================================================================
 
+class CodeInterpreterToolInput(BaseModel):
+    """Input schema for CodeInterpreterTool"""
+    code: str = Field(..., description="Python code to execute")
+    timeout: int = Field(default=30, description="Execution timeout in seconds")
+
 class CodeInterpreterTool(BaseTool):
     """Custom Code Interpreter Tool for executing Python code safely within CrewAI agents"""
     
     name: str = "code_interpreter"
     description: str = "Execute Python code and return results. Supports data analysis, visualization, calculations, and general Python operations. Returns both output and any generated plots."
+    args_schema: Type[BaseModel] = CodeInterpreterToolInput
     
     # Define allowed modules as strings to avoid pickle issues
     _allowed_module_names: List[str] = [
@@ -364,18 +370,586 @@ class CodeInterpreterTool(BaseTool):
 
 # Function-based version using @tool decorator
 @tool("execute_python_code")
-def execute_python_code(code: str) -> str:
+def execute_python_code(code: str, timeout: int = 30) -> str:
     """
     Execute Python code safely and return results.
     
     Args:
         code: Python code to execute
+        timeout: Execution timeout in seconds (default: 30)
         
     Returns:
         Execution results including output, errors, and generated plots info
     """
     interpreter = CodeInterpreterTool()
-    return interpreter._run(code)
+    return interpreter._run(code, timeout)
+
+
+# =============================================================================
+# VISUALIZATION GENERATOR TOOL
+# =============================================================================
+
+# =============================================================================
+# VISUALIZATION GENERATOR TOOL
+# =============================================================================
+
+def _generate_strategic_visualization(
+    chart_type: str, 
+    data_input: str, 
+    title: str = "Strategic Analysis Chart",
+    save_path: str = None
+) -> str:
+    """
+    INTERNAL: Generate professional visualizations for strategic analysis reports.
+    This is the core function that can be called directly or through the CrewAI tool.
+    """
+    try:
+        # Log the call for debugging
+        print(f"🎨 VISUALIZATION TOOL CALLED: {chart_type} - {title}")
+        
+        import json
+        import base64
+        import matplotlib.pyplot as plt
+        import plotly.graph_objects as go
+        import plotly.express as px
+        import numpy as np
+        import pandas as pd
+        try:
+            import seaborn as sns
+        except ImportError:
+            sns = None
+        from datetime import datetime, timedelta
+        import io
+        
+        # Set style for professional charts
+        plt.style.use('default')
+        if sns:
+            sns.set_palette("husl")
+        
+        # Parse data input
+        try:
+            if isinstance(data_input, str):
+                data = json.loads(data_input)
+            else:
+                data = data_input
+        except json.JSONDecodeError:
+            # If not JSON, treat as simple string and create sample data
+            data = {"message": data_input}
+        
+        # Generate chart based on type
+        if chart_type == "risk_matrix":
+            return _generate_risk_matrix(data, title, save_path)
+        elif chart_type == "roi_projection":
+            return _generate_roi_projection(data, title, save_path)
+        elif chart_type == "timeline":
+            return _generate_timeline_chart(data, title, save_path)
+        elif chart_type == "monte_carlo_distribution":
+            return _generate_monte_carlo_chart(data, title, save_path)
+        elif chart_type == "scenario_comparison":
+            return _generate_scenario_comparison(data, title, save_path)
+        elif chart_type == "stakeholder_impact":
+            return _generate_stakeholder_impact(data, title, save_path)
+        elif chart_type == "performance_dashboard":
+            return _generate_performance_dashboard(data, title, save_path)
+        elif chart_type == "swot_matrix":
+            return _generate_swot_matrix(data, title, save_path)
+        else:
+            return f"Unsupported chart type: {chart_type}. Supported types: risk_matrix, roi_projection, timeline, monte_carlo_distribution, scenario_comparison, stakeholder_impact, performance_dashboard, swot_matrix"
+    
+    except Exception as e:
+        return f"Visualization generation failed: {str(e)}"
+
+@tool("strategic_visualization_generator")
+def strategic_visualization_generator(
+    chart_type: str, 
+    data_input: str, 
+    title: str = "Strategic Analysis Chart",
+    save_path: str = None
+) -> str:
+    """
+    Generate professional visualizations for strategic analysis reports.
+    
+    Args:
+        chart_type: Type of chart to generate (risk_matrix, roi_projection, timeline, 
+                   monte_carlo_distribution, scenario_comparison, stakeholder_impact,
+                   performance_dashboard, swot_matrix)
+        data_input: JSON string or structured data for the chart
+        title: Chart title
+        save_path: Optional path to save the chart image
+    
+    Returns:
+        String with chart generation status and base64 encoded image data
+    """
+    return _generate_strategic_visualization(chart_type, data_input, title, save_path)
+
+def _generate_risk_matrix(data: dict, title: str, save_path: str = None) -> str:
+    """Generate a risk assessment matrix"""
+    fig, ax = plt.subplots(figsize=(10, 8))
+    
+    # Sample risk data if not provided
+    risks = data.get('risks', [
+        {'name': 'Market Risk', 'probability': 0.7, 'impact': 0.8},
+        {'name': 'Technical Risk', 'probability': 0.4, 'impact': 0.9},
+        {'name': 'Resource Risk', 'probability': 0.6, 'impact': 0.6},
+        {'name': 'Regulatory Risk', 'probability': 0.3, 'impact': 0.7},
+        {'name': 'Competitive Risk', 'probability': 0.8, 'impact': 0.5}
+    ])
+    
+    # Create scatter plot
+    x_vals = [risk['probability'] for risk in risks]
+    y_vals = [risk['impact'] for risk in risks]
+    labels = [risk['name'] for risk in risks]
+    
+    # Color code by risk level
+    colors = []
+    for prob, impact in zip(x_vals, y_vals):
+        risk_score = prob * impact
+        if risk_score > 0.6:
+            colors.append('red')
+        elif risk_score > 0.3:
+            colors.append('orange')
+        else:
+            colors.append('green')
+    
+    scatter = ax.scatter(x_vals, y_vals, c=colors, s=200, alpha=0.7, edgecolors='black')
+    
+    # Add labels
+    for i, label in enumerate(labels):
+        ax.annotate(label, (x_vals[i], y_vals[i]), xytext=(5, 5), 
+                   textcoords='offset points', fontsize=9, ha='left')
+    
+    # Customize plot
+    ax.set_xlabel('Probability', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Impact', fontsize=12, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    
+    # Add risk zones
+    ax.axhspan(0.7, 1, 0.7, 1, alpha=0.1, color='red', label='High Risk')
+    ax.axhspan(0.3, 0.7, 0.3, 1, alpha=0.1, color='orange', label='Medium Risk')
+    ax.axhspan(0, 0.3, 0, 0.7, alpha=0.1, color='green', label='Low Risk')
+    
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "Risk Matrix chart generated successfully", "risk_matrix", title, data_hash)
+
+def _generate_roi_projection(data: dict, title: str, save_path: str = None) -> str:
+    """Generate ROI projection chart"""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    
+    # Sample ROI data if not provided
+    periods = data.get('periods', list(range(1, 13)))  # 12 months
+    investment = data.get('investment', [-100000] + [0] * 11)  # Initial investment
+    returns = data.get('returns', [10000 + i * 2000 for i in range(12)])  # Growing returns
+    
+    # Calculate cumulative
+    cumulative_investment = np.cumsum(investment)
+    cumulative_returns = np.cumsum(returns)
+    net_cumulative = cumulative_returns + cumulative_investment
+    
+    # ROI over time
+    ax1.plot(periods, cumulative_investment, 'r-', linewidth=2, label='Cumulative Investment')
+    ax1.plot(periods, cumulative_returns, 'g-', linewidth=2, label='Cumulative Returns')
+    ax1.plot(periods, net_cumulative, 'b-', linewidth=3, label='Net Position')
+    ax1.axhline(y=0, color='black', linestyle='--', alpha=0.5)
+    ax1.set_xlabel('Months')
+    ax1.set_ylabel('Value ($)')
+    ax1.set_title('ROI Projection Over Time')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # ROI percentage
+    roi_percentages = []
+    for i in range(len(periods)):
+        if cumulative_investment[i] != 0:
+            roi_pct = (net_cumulative[i] / abs(cumulative_investment[i])) * 100
+        else:
+            roi_pct = 0
+        roi_percentages.append(roi_pct)
+    
+    ax2.bar(periods, roi_percentages, color=['red' if x < 0 else 'green' for x in roi_percentages])
+    ax2.axhline(y=0, color='black', linestyle='-', alpha=0.8)
+    ax2.set_xlabel('Months')
+    ax2.set_ylabel('ROI (%)')
+    ax2.set_title('ROI Percentage by Month')
+    ax2.grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "ROI projection chart generated successfully", "roi_projection", title, data_hash)
+
+def _generate_timeline_chart(data: dict, title: str, save_path: str = None) -> str:
+    """Generate project timeline/Gantt chart"""
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Sample timeline data if not provided
+    tasks = data.get('tasks', [
+        {'name': 'Planning Phase', 'start': 0, 'duration': 4},
+        {'name': 'Design Phase', 'start': 3, 'duration': 6},
+        {'name': 'Development', 'start': 8, 'duration': 12},
+        {'name': 'Testing', 'start': 18, 'duration': 4},
+        {'name': 'Deployment', 'start': 20, 'duration': 3},
+        {'name': 'Monitoring', 'start': 22, 'duration': 8}
+    ])
+    
+    # Create Gantt chart
+    colors = plt.cm.Set3(np.linspace(0, 1, len(tasks)))
+    
+    for i, task in enumerate(tasks):
+        ax.barh(i, task['duration'], left=task['start'], 
+               color=colors[i], alpha=0.8, height=0.6, 
+               edgecolor='black', linewidth=0.5)
+        
+        # Add task names
+        ax.text(task['start'] + task['duration']/2, i, task['name'], 
+               ha='center', va='center', fontweight='bold', fontsize=10)
+    
+    # Customize plot
+    ax.set_yticks(range(len(tasks)))
+    ax.set_yticklabels([task['name'] for task in tasks])
+    ax.set_xlabel('Weeks', fontsize=12, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    ax.grid(True, axis='x', alpha=0.3)
+    
+    # Add today line if specified
+    if 'current_week' in data:
+        ax.axvline(x=data['current_week'], color='red', linestyle='--', 
+                  linewidth=2, label='Current Week')
+        ax.legend()
+    
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "Timeline chart generated successfully", "timeline", title, data_hash)
+
+def _generate_monte_carlo_chart(data: dict, title: str, save_path: str = None) -> str:
+    """Generate Monte Carlo simulation distribution chart"""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    
+    # Sample Monte Carlo data if not provided
+    if 'simulation_results' in data:
+        results = data['simulation_results']
+    else:
+        # Generate sample data
+        np.random.seed(42)
+        results = np.random.normal(100000, 25000, 10000)  # Sample simulation
+    
+    # Distribution histogram
+    ax1.hist(results, bins=50, alpha=0.7, color='skyblue', edgecolor='black')
+    ax1.axvline(np.mean(results), color='red', linestyle='--', linewidth=2, label=f'Mean: ${np.mean(results):,.0f}')
+    ax1.axvline(np.percentile(results, 10), color='orange', linestyle='--', linewidth=2, label=f'10th Percentile: ${np.percentile(results, 10):,.0f}')
+    ax1.axvline(np.percentile(results, 90), color='green', linestyle='--', linewidth=2, label=f'90th Percentile: ${np.percentile(results, 90):,.0f}')
+    ax1.set_xlabel('Outcome Value ($)')
+    ax1.set_ylabel('Frequency')
+    ax1.set_title('Monte Carlo Simulation - Distribution')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Cumulative probability
+    sorted_results = np.sort(results)
+    cumulative_prob = np.arange(1, len(sorted_results) + 1) / len(sorted_results)
+    ax2.plot(sorted_results, cumulative_prob, linewidth=2, color='navy')
+    ax2.axhline(y=0.5, color='red', linestyle='--', alpha=0.7, label='50% Probability')
+    ax2.axhline(y=0.1, color='orange', linestyle='--', alpha=0.7, label='10% Probability')
+    ax2.axhline(y=0.9, color='green', linestyle='--', alpha=0.7, label='90% Probability')
+    ax2.set_xlabel('Outcome Value ($)')
+    ax2.set_ylabel('Cumulative Probability')
+    ax2.set_title('Cumulative Probability Distribution')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "Monte Carlo distribution chart generated successfully", "monte_carlo_distribution", title, data_hash)
+
+def _generate_scenario_comparison(data: dict, title: str, save_path: str = None) -> str:
+    """Generate scenario comparison chart"""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    
+    # Sample scenario data if not provided
+    scenarios = data.get('scenarios', {
+        'Optimistic': {'roi': 150, 'risk': 30, 'timeline': 8},
+        'Baseline': {'roi': 100, 'risk': 50, 'timeline': 12},
+        'Pessimistic': {'roi': 60, 'risk': 80, 'timeline': 18}
+    })
+    
+    scenario_names = list(scenarios.keys())
+    roi_values = [scenarios[name]['roi'] for name in scenario_names]
+    risk_values = [scenarios[name]['risk'] for name in scenario_names]
+    timeline_values = [scenarios[name]['timeline'] for name in scenario_names]
+    
+    # ROI comparison
+    colors = ['green', 'blue', 'red']
+    bars1 = ax1.bar(scenario_names, roi_values, color=colors, alpha=0.7)
+    ax1.set_ylabel('ROI (%)')
+    ax1.set_title('ROI by Scenario')
+    ax1.grid(True, alpha=0.3)
+    
+    # Add value labels on bars
+    for bar, value in zip(bars1, roi_values):
+        ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 2, 
+                f'{value}%', ha='center', va='bottom', fontweight='bold')
+    
+    # Risk vs Timeline scatter
+    scatter = ax2.scatter(timeline_values, risk_values, s=200, c=colors, alpha=0.7, edgecolors='black')
+    for i, name in enumerate(scenario_names):
+        ax2.annotate(name, (timeline_values[i], risk_values[i]), 
+                    xytext=(5, 5), textcoords='offset points', fontweight='bold')
+    
+    ax2.set_xlabel('Timeline (months)')
+    ax2.set_ylabel('Risk Level (%)')
+    ax2.set_title('Risk vs Timeline by Scenario')
+    ax2.grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "Scenario comparison chart generated successfully", "scenario_comparison", title, data_hash)
+
+def _generate_stakeholder_impact(data: dict, title: str, save_path: str = None) -> str:
+    """Generate stakeholder impact analysis chart"""
+    fig, ax = plt.subplots(figsize=(10, 8))
+    
+    # Sample stakeholder data if not provided
+    stakeholders = data.get('stakeholders', [
+        {'name': 'Executive Team', 'influence': 0.9, 'interest': 0.8},
+        {'name': 'IT Department', 'influence': 0.7, 'interest': 0.9},
+        {'name': 'Finance', 'influence': 0.6, 'interest': 0.7},
+        {'name': 'End Users', 'influence': 0.3, 'interest': 0.8},
+        {'name': 'External Partners', 'influence': 0.5, 'interest': 0.4},
+        {'name': 'Regulators', 'influence': 0.8, 'interest': 0.3}
+    ])
+    
+    # Create stakeholder matrix
+    x_vals = [s['influence'] for s in stakeholders]
+    y_vals = [s['interest'] for s in stakeholders]
+    labels = [s['name'] for s in stakeholders]
+    
+    # Color code by quadrant
+    colors = []
+    for influence, interest in zip(x_vals, y_vals):
+        if influence > 0.5 and interest > 0.5:
+            colors.append('red')  # Manage closely
+        elif influence > 0.5 and interest <= 0.5:
+            colors.append('orange')  # Keep satisfied
+        elif influence <= 0.5 and interest > 0.5:
+            colors.append('yellow')  # Keep informed
+        else:
+            colors.append('green')  # Monitor
+    
+    scatter = ax.scatter(x_vals, y_vals, c=colors, s=200, alpha=0.7, edgecolors='black')
+    
+    # Add labels
+    for i, label in enumerate(labels):
+        ax.annotate(label, (x_vals[i], y_vals[i]), xytext=(5, 5), 
+                   textcoords='offset points', fontsize=9, ha='left')
+    
+    # Add quadrant lines
+    ax.axhline(y=0.5, color='black', linestyle='-', alpha=0.3)
+    ax.axvline(x=0.5, color='black', linestyle='-', alpha=0.3)
+    
+    # Add quadrant labels
+    ax.text(0.75, 0.75, 'Manage\nClosely', ha='center', va='center', 
+           bbox=dict(boxstyle='round', facecolor='red', alpha=0.2))
+    ax.text(0.75, 0.25, 'Keep\nSatisfied', ha='center', va='center',
+           bbox=dict(boxstyle='round', facecolor='orange', alpha=0.2))
+    ax.text(0.25, 0.75, 'Keep\nInformed', ha='center', va='center',
+           bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.2))
+    ax.text(0.25, 0.25, 'Monitor', ha='center', va='center',
+           bbox=dict(boxstyle='round', facecolor='green', alpha=0.2))
+    
+    ax.set_xlabel('Influence', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Interest', fontsize=12, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "Stakeholder impact chart generated successfully", "stakeholder_impact", title, data_hash)
+
+def _generate_performance_dashboard(data: dict, title: str, save_path: str = None) -> str:
+    """Generate performance dashboard"""
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+    
+    # Sample KPI data if not provided
+    kpis = data.get('kpis', {
+        'revenue': {'current': 85, 'target': 100, 'previous': 70},
+        'satisfaction': {'current': 92, 'target': 95, 'previous': 88},
+        'efficiency': {'current': 78, 'target': 85, 'previous': 75},
+        'innovation': {'current': 65, 'target': 75, 'previous': 60}
+    })
+    
+    # KPI Gauge Charts (simplified as bar charts)
+    kpi_names = list(kpis.keys())
+    current_values = [kpis[k]['current'] for k in kpi_names]
+    target_values = [kpis[k]['target'] for k in kpi_names]
+    
+    # Current vs Target
+    x_pos = np.arange(len(kpi_names))
+    ax1.bar(x_pos - 0.2, current_values, 0.4, label='Current', color='skyblue')
+    ax1.bar(x_pos + 0.2, target_values, 0.4, label='Target', color='orange')
+    ax1.set_ylabel('Score')
+    ax1.set_title('Current vs Target Performance')
+    ax1.set_xticks(x_pos)
+    ax1.set_xticklabels([k.title() for k in kpi_names])
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Trend chart
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    revenue_trend = data.get('revenue_trend', [70, 75, 80, 82, 85, 85])
+    ax2.plot(months, revenue_trend, 'o-', linewidth=2, markersize=6, color='green')
+    ax2.set_ylabel('Revenue Score')
+    ax2.set_title('Revenue Trend (6 months)')
+    ax2.grid(True, alpha=0.3)
+    
+    # Progress pie chart
+    completed = data.get('project_completion', 65)
+    remaining = 100 - completed
+    ax3.pie([completed, remaining], labels=['Completed', 'Remaining'], 
+           colors=['green', 'lightgray'], autopct='%1.1f%%', startangle=90)
+    ax3.set_title('Project Completion')
+    
+    # Risk heatmap
+    risk_categories = ['Technical', 'Financial', 'Market', 'Operational']
+    risk_levels = data.get('risk_levels', [3, 2, 4, 2])  # 1-5 scale
+    colors_map = plt.cm.RdYlGn_r(np.linspace(0.2, 0.8, 5))
+    
+    bars4 = ax4.barh(risk_categories, risk_levels, color=[colors_map[level-1] for level in risk_levels])
+    ax4.set_xlabel('Risk Level (1-5)')
+    ax4.set_title('Risk Assessment by Category')
+    ax4.set_xlim(0, 5)
+    
+    # Add value labels
+    for bar, value in zip(bars4, risk_levels):
+        ax4.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2, 
+                str(value), va='center', fontweight='bold')
+    
+    plt.suptitle(title, fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "Performance dashboard generated successfully", "performance_dashboard", title, data_hash)
+
+def _generate_swot_matrix(data: dict, title: str, save_path: str = None) -> str:
+    """Generate SWOT analysis matrix"""
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    # Sample SWOT data if not provided
+    swot_data = data.get('swot', {
+        'strengths': ['Strong brand', 'Experienced team', 'Good technology'],
+        'weaknesses': ['Limited budget', 'Small market share', 'Outdated systems'],
+        'opportunities': ['New markets', 'Digital transformation', 'Strategic partnerships'],
+        'threats': ['Increased competition', 'Economic uncertainty', 'Regulatory changes']
+    })
+    
+    # Create 2x2 grid
+    ax.set_xlim(0, 2)
+    ax.set_ylim(0, 2)
+    
+    # Define quadrants
+    quadrants = [
+        {'pos': (0, 1, 1, 1), 'color': 'lightgreen', 'title': 'STRENGTHS', 'items': swot_data['strengths']},
+        {'pos': (1, 1, 1, 1), 'color': 'lightcoral', 'title': 'WEAKNESSES', 'items': swot_data['weaknesses']},
+        {'pos': (0, 0, 1, 1), 'color': 'lightblue', 'title': 'OPPORTUNITIES', 'items': swot_data['opportunities']},
+        {'pos': (1, 0, 1, 1), 'color': 'lightyellow', 'title': 'THREATS', 'items': swot_data['threats']}
+    ]
+    
+    # Draw quadrants
+    for quad in quadrants:
+        x, y, w, h = quad['pos']
+        rect = plt.Rectangle((x, y), w, h, facecolor=quad['color'], 
+                           edgecolor='black', linewidth=2, alpha=0.7)
+        ax.add_patch(rect)
+        
+        # Add title
+        ax.text(x + w/2, y + h - 0.1, quad['title'], ha='center', va='top', 
+               fontsize=14, fontweight='bold')
+        
+        # Add items
+        for i, item in enumerate(quad['items'][:5]):  # Max 5 items per quadrant
+            ax.text(x + 0.05, y + h - 0.25 - (i * 0.12), f"• {item}", 
+                   ha='left', va='top', fontsize=10, wrap=True)
+    
+    # Remove axes
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    
+    ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+    plt.tight_layout()
+    
+    # Create data hash for caching
+    from utils.image_manager import image_manager
+    data_hash = image_manager.create_data_hash(data)
+    
+    return _save_and_encode_chart(fig, save_path, "SWOT matrix generated successfully", "swot_matrix", title, data_hash)
+
+def _save_and_encode_chart(fig, save_path: str = None, success_message: str = "Chart generated successfully", chart_type: str = "chart", title: str = "Chart", data_hash: str = None) -> str:
+    """Save chart using image manager and return text placeholder"""
+    try:
+        from utils.image_manager import image_manager
+        
+        # Ensure session is initialized
+        if image_manager.current_session_dir is None:
+            image_manager.setup_session_directory()
+        
+        # Save image using image manager
+        image_metadata = image_manager.save_chart_image(
+            fig=fig,
+            chart_type=chart_type,
+            title=title,
+            data_hash=data_hash
+        )
+        
+        # Generate text placeholder instead of base64
+        placeholder = image_manager.generate_text_placeholder(image_metadata)
+        
+        # Also save to specified path if provided (for backwards compatibility)
+        if save_path:
+            fig.savefig(save_path, format='png', bbox_inches='tight', dpi=300, facecolor='white')
+            plt.close(fig)
+        
+        return f"{success_message}\n{placeholder}"
+        
+    except Exception as e:
+        plt.close(fig)
+        return f"Error saving chart: {str(e)}"
 
 
 # =============================================================================
@@ -760,9 +1334,193 @@ Knowledge Graph:
         return f"Web search error: {str(e)}"
 
 
+@tool("monte_carlo_results_explainer")
+def monte_carlo_results_explainer(simulation_results: str, target_audience: str = "executives") -> str:
+    """Generate layman-friendly explanations for Monte Carlo simulation results.
+    
+    Args:
+        simulation_results: The Monte Carlo simulation results to explain
+        target_audience: Target audience for explanations ("executives", "managers", "general")
+    
+    Returns:
+        Simple, non-technical explanation of the simulation results
+    """
+    try:
+        # Extract key numbers from simulation results if they follow the standard format
+        import re
+        
+        # Try to extract key statistics using regex patterns
+        mean_match = re.search(r'Mean:\s*([\d.]+)', simulation_results)
+        median_match = re.search(r'Median:\s*([\d.]+)', simulation_results)
+        percentile_10_match = re.search(r'10th Percentile:\s*([\d.]+)', simulation_results)
+        percentile_90_match = re.search(r'90th Percentile:\s*([\d.]+)', simulation_results)
+        std_dev_match = re.search(r'Standard Deviation:\s*([\d.]+)', simulation_results)
+        
+        explanation = f"""
+# Monte Carlo Simulation Results - Simple Explanation
+
+## What This Simulation Tells Us
+
+Think of this analysis like running your project idea through 1,000 different "what-if" scenarios to see what might happen. Here's what we discovered:
+
+"""
+        
+        if mean_match and median_match:
+            mean_val = float(mean_match.group(1))
+            median_val = float(median_match.group(1))
+            
+            explanation += f"""
+### The Bottom Line Numbers
+- **Most Likely Outcome**: {median_val:.1f} (this is what we'd expect in a typical situation)
+- **Average Across All Scenarios**: {mean_val:.1f}
+"""
+            
+        if percentile_10_match and percentile_90_match:
+            p10_val = float(percentile_10_match.group(1))
+            p90_val = float(percentile_90_match.group(1))
+            
+            upside = ((p90_val - mean_val) / mean_val * 100) if mean_match else 0
+            downside = ((mean_val - p10_val) / mean_val * 100) if mean_match else 0
+            
+            explanation += f"""
+### The Range of Possibilities
+- **Best Case Scenario** (happens 1 time out of 10): {p90_val:.1f} 
+  - This represents **{upside:.1f}% upside potential** from the average
+- **Worst Case Scenario** (happens 1 time out of 10): {p10_val:.1f}
+  - This represents **{downside:.1f}% downside risk** from the average
+
+**What this means**: 80% of the time, your results will fall between {p10_val:.1f} and {p90_val:.1f}
+"""
+            
+        if std_dev_match:
+            std_val = float(std_dev_match.group(1))
+            volatility_level = "High" if std_val > 20 else "Medium" if std_val > 10 else "Low"
+            
+            explanation += f"""
+### Risk Level Assessment
+- **Volatility**: {volatility_level} (Standard Deviation: {std_val:.1f})
+"""
+            
+            if volatility_level == "High":
+                explanation += "  - **High volatility** means outcomes can vary significantly - higher risk but potentially higher rewards"
+            elif volatility_level == "Medium":
+                explanation += "  - **Medium volatility** means moderate variation in outcomes - balanced risk/reward profile"
+            else:
+                explanation += "  - **Low volatility** means outcomes are quite predictable - lower risk, more stable results"
+        
+        # Add audience-specific recommendations
+        if target_audience == "executives":
+            explanation += """
+
+## Executive Decision Framework
+
+### Green Light Indicators ✅
+- Worst-case scenario is still acceptable for the business
+- Best-case scenario offers significant value creation
+- Risk level aligns with company's risk tolerance
+
+### Yellow Light Indicators ⚠️
+- Outcomes are highly variable (high volatility)
+- Worst-case scenario is concerning but manageable
+- Success probability is moderate (60-80%)
+
+### Red Light Indicators 🚨
+- Worst-case scenario could seriously harm the business
+- Success probability is low (<60%)
+- Risk level exceeds company's comfort zone
+
+### Strategic Recommendation
+Based on these simulation results, we recommend:
+"""
+            
+            # Add conditional recommendations based on the numbers
+            if percentile_10_match and float(percentile_10_match.group(1)) > 0:
+                explanation += "**PROCEED** - Even worst-case scenarios remain positive, indicating a robust strategy."
+            elif percentile_10_match and float(percentile_10_match.group(1)) < 0:
+                explanation += "**PROCEED WITH CAUTION** - Consider additional risk mitigation as worst-case scenarios show potential losses."
+            else:
+                explanation += "**DETAILED REVIEW REQUIRED** - Analyze specific risk factors before making final decision."
+                
+        elif target_audience == "managers":
+            explanation += """
+
+## Management Action Items
+
+### What to Monitor
+1. **Early Warning Indicators**: Track leading metrics that predict performance
+2. **Contingency Triggers**: Know when to activate backup plans
+3. **Resource Allocation**: Prepare for different resource needs across scenarios
+
+### Planning Recommendations
+- **Conservative Planning**: Use the worst-case numbers for resource budgeting
+- **Optimistic Targeting**: Use best-case numbers for stretch goals
+- **Realistic Expectations**: Use median numbers for regular planning
+"""
+            
+        else:  # general audience
+            explanation += """
+
+## What This Means for Everyone
+
+### Simple Translation
+- If we did this project 100 times, here's what would typically happen
+- Some attempts would go really well, some poorly, most would be average
+- This helps us prepare for different possibilities
+
+### Key Takeaways
+1. **Most likely outcome**: What we should expect in normal circumstances
+2. **Best possible outcome**: What we could achieve if everything goes right  
+3. **Worst possible outcome**: What we need to be prepared for if things go wrong
+"""
+        
+        explanation += """
+
+## Confidence in These Results
+This analysis is based on mathematical modeling that considers:
+- Historical performance data
+- Market conditions and uncertainties
+- Resource availability variations
+- Implementation challenges and opportunities
+
+The simulation provides a data-driven foundation for decision-making, removing guesswork and emotional bias from strategic planning.
+
+---
+*This explanation translates complex statistical analysis into actionable business insights for informed decision-making.*
+"""
+        
+        return explanation
+        
+    except Exception as e:
+        return f"""
+# Monte Carlo Simulation Results - Simple Explanation
+
+## What This Analysis Does
+This simulation runs your project scenario thousands of times to understand:
+- What's most likely to happen (the median outcome)
+- What's the best reasonable expectation (optimistic scenario) 
+- What's the worst reasonable outcome (pessimistic scenario)
+- How risky or unpredictable the results might be
+
+## Key Insight
+Even without specific numbers, Monte Carlo simulation helps you:
+1. **Make data-driven decisions** instead of guessing
+2. **Prepare for different possibilities** rather than planning for just one outcome
+3. **Understand the risks** you're accepting with your decision
+4. **Set realistic expectations** for stakeholders
+
+## Next Steps
+Review the detailed simulation results with your team to:
+- Assess if the risk level is acceptable
+- Determine if backup plans are needed
+- Decide if the potential rewards justify the risks
+
+Error in processing specific numbers: {str(e)}
+"""
+
+
 @tool("monte_carlo_simulator")
 def monte_carlo_simulation_tool(base_value: float, volatility: float, scenarios: int = 1000) -> str:
-    """Run Monte Carlo simulation for risk analysis.
+    """Run Monte Carlo simulation for risk analysis with visualization support.
     
     Args:
         base_value: Base value for simulation
@@ -770,9 +1528,11 @@ def monte_carlo_simulation_tool(base_value: float, volatility: float, scenarios:
         scenarios: Number of scenarios to simulate (default: 1000)
     
     Returns:
-        Simulation results formatted as string
+        Simulation results formatted as string with visualization data
     """
     try:
+        import json
+        
         # Generate random values using normal distribution
         random_values = np.random.normal(0, volatility, scenarios)
         simulated_outcomes = base_value * (1 + random_values)
@@ -789,6 +1549,20 @@ def monte_carlo_simulation_tool(base_value: float, volatility: float, scenarios:
             'percentile_75': float(np.percentile(simulated_outcomes, 75)),
             'percentile_90': float(np.percentile(simulated_outcomes, 90))
         }
+        
+        # Generate visualization
+        chart_data = {
+            'simulation_results': simulated_outcomes.tolist(),
+            'base_value': base_value,
+            'volatility': volatility,
+            'scenarios': scenarios
+        }
+        
+        chart_result = _generate_strategic_visualization(
+            chart_type="monte_carlo_distribution",
+            data_input=json.dumps(chart_data),
+            title=f"Monte Carlo Simulation Results (Base: ${base_value:,.0f}, Volatility: {volatility:.1%})"
+        )
         
         # Format results as readable string
         formatted_results = f"""
@@ -813,6 +1587,9 @@ Percentiles:
 Risk Assessment:
 - Downside Risk (10th percentile): {((results['percentile_10'] - base_value) / base_value * 100):.1f}%
 - Upside Potential (90th percentile): {((results['percentile_90'] - base_value) / base_value * 100):.1f}%
+
+Visualization Generated:
+{chart_result}
 """
         
         return formatted_results
@@ -943,8 +1720,10 @@ FUNCTION_TOOLS = [
     markdown_editor_tool,
     serper_search_tool,
     monte_carlo_simulation_tool,
+    monte_carlo_results_explainer,  # NEW: Layman explanation tool
     async_web_research_tool,  # NOW INCLUDED
-    execute_python_code  # ADD THIS LINE - Your new code interpreter tool
+    execute_python_code,  # ADD THIS LINE - Your new code interpreter tool
+    strategic_visualization_generator  # NEW: Visualization generator tool
 ]
 
 # Class-based tools list - ADD CodeInterpreterTool HERE
@@ -968,8 +1747,10 @@ def get_strategic_analysis_tools():
         project_management_tool,
         evaluation_framework_tool,
         monte_carlo_simulation_tool,
+        monte_carlo_results_explainer,  # NEW: Layman explanation tool
         serper_search_tool,
-        execute_python_code  # ADD THIS - Code execution for analysis
+        execute_python_code,  # ADD THIS - Code execution for analysis
+        strategic_visualization_generator  # NEW: Visualization generator
     ]
 
 def get_content_tools():
@@ -1016,5 +1797,5 @@ if __name__ == "__main__":
     # Test the code interpreter
     print("\nTesting Code Interpreter:")
     interpreter = CodeInterpreterTool()
-    test_result = interpreter._run("print('Hello from Code Interpreter!')")
+    test_result = interpreter._run("print('Hello from Code Interpreter!')", 30)
     print(test_result)

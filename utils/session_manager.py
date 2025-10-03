@@ -30,6 +30,26 @@ class SessionManager:
         st.session_state.workflow_state['current_phase'] = phase
         if status == 'completed' and phase not in st.session_state.workflow_state['completed_phases']:
             st.session_state.workflow_state['completed_phases'].append(phase)
+            
+            # Check if all phases are completed
+            SessionManager.check_workflow_completion()
+    
+    @staticmethod
+    def check_workflow_completion():
+        """Check if all workflow phases are completed and mark workflow as complete"""
+        required_phases = [
+            'collection', 'analysis', 'definition', 'exploration', 
+            'creation', 'implementation', 'simulation', 'evaluation', 'report'
+        ]
+        
+        completed_phases = st.session_state.workflow_state.get('completed_phases', [])
+        
+        # Check if all required phases are completed
+        if all(phase in completed_phases for phase in required_phases):
+            if not st.session_state.workflow_state.get('workflow_completed', False):
+                st.session_state.workflow_state['workflow_completed'] = True
+                st.session_state.workflow_state['workflow_completion_time'] = datetime.now().isoformat()
+                SessionManager.add_log("INFO", "Complete DECIDE workflow execution finished successfully")
     
     @staticmethod
     def save_phase_output(phase: str, output: Dict[str, Any]):
@@ -96,18 +116,35 @@ class SessionManager:
             'completed_phases': st.session_state.workflow_state['completed_phases'],
             'total_documents': len(st.session_state.workflow_state['documents']),
             'agent_progress': st.session_state.agent_progress,
+            'workflow_completed': st.session_state.workflow_state.get('workflow_completed', False),
+            'workflow_completion_time': st.session_state.workflow_state.get('workflow_completion_time'),
             'last_updated': datetime.now().isoformat()
         }
     
     @staticmethod
+    def is_workflow_completed() -> bool:
+        """Check if the workflow is completed"""
+        return st.session_state.workflow_state.get('workflow_completed', False)
+    
+    @staticmethod
     def reset_workflow():
-        """Reset workflow state for new session and delete session vector collection"""
-        from utils.vector_store import VectorStore
-        VectorStore.delete_session_index()
+        """Reset workflow state for new session and clear session vector collection"""
+        try:
+            from utils.vector_store import VectorStore
+            # Use clear instead of delete to preserve collection structure
+            VectorStore.clear_session_collection()
+        except ImportError:
+            pass  # VectorStore not available
+        
         if 'workflow_state' in st.session_state:
             del st.session_state.workflow_state
         if 'agent_progress' in st.session_state:
             del st.session_state.agent_progress
         if 'logs' in st.session_state:
             del st.session_state.logs
+        
+        # Also clear workflow instance to force fresh initialization
+        if 'workflow_instance' in st.session_state:
+            del st.session_state.workflow_instance
+        
         SessionManager.init_session()

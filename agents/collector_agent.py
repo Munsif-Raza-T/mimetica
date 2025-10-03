@@ -1,11 +1,34 @@
 from crewai import Agent
 from tools.custom_tools import AdvancedPineconeVectorSearchTool, SessionDirectoryReadTool, SessionFileReadTool
 from config import config
+import streamlit as st
 
 class CollectorAgent:
     """Agent responsible for data collection, cleaning, and vectorization"""
     @staticmethod
     def create_agent():
+        # Get current model configuration with validation
+        selected_model = config.validate_and_fix_selected_model()
+        model_config = config.AVAILABLE_MODELS[selected_model]
+        provider = model_config['provider']
+        
+        # Set up LLM based on provider
+        llm = None
+        if provider == 'openai':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"openai/{selected_model}",
+                api_key=config.OPENAI_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        elif provider == 'anthropic':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"anthropic/{selected_model}",
+                api_key=config.ANTHROPIC_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        
         return Agent(
             role="Data Collection and Processing Specialist",
             goal="Efficiently collect, clean, normalize, and vectorize uploaded documents for analysis",
@@ -23,7 +46,8 @@ class CollectorAgent:
             verbose=True,
             allow_delegation=False,
             max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            llm=llm
         )
 
     @staticmethod

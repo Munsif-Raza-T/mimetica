@@ -9,13 +9,16 @@ import time
 import base64
 import re
 from typing import Dict, List, Any
+from PIL import Image
 from dotenv import load_dotenv
+from pathlib import Path
 load_dotenv()
 
 
 # Import custom modules
 from config import config
-from utils import AuthManager, SessionManager, DocumentProcessor, VectorStore
+from utils import AuthManager, SessionManager, DocumentProcessor, VectorStore, PDFGenerator
+from utils.docx_generator import DocxGenerator
 from workflows.decide_workflow import DecideWorkflow
 from utils.token_batch_manager import TokenBatchManager  # Import the TokenBatchManager
 
@@ -66,16 +69,64 @@ def main():
         border-color: #6c757d;
         background: #e9ecef;
     }
+    .workflow-completed {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: 3px solid #28a745;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1rem 0;
+        color: white;
+        text-align: center;
+    }
+    .workflow-completed h2 {
+        color: white;
+        margin-bottom: 1rem;
+    }
+    .view-results-btn {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        border-radius: 10px;
+        padding: 1rem 2rem;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        transition: all 0.3s ease;
+    }
+    .view-results-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,123,255,0.4);
+    }
     </style>
     """, unsafe_allow_html=True)
     
-    # Header
-    st.markdown(f"""
-    <div class="main-header">
-        <h1>{config.APP_TITLE}</h1>
-        <p style="color: white; text-align: center; margin: 0;">{config.APP_DESCRIPTION}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Header with logo
+    # Encode the logo image
+    import base64
+    logo_path = "assets/logo_white.png"
+    
+    try:
+        with open(logo_path, "rb") as img_file:
+            logo_data = base64.b64encode(img_file.read()).decode()
+        
+        st.markdown(f"""
+        <div class="main-header">
+            <div style="text-align: center;">
+                <img src="data:image/png;base64,{logo_data}" 
+                     style="height: 60px; margin-bottom: 10px;" 
+                     alt="MIMÉTICA Logo">
+            </div>
+            <p style="color: white; text-align: center; margin: 0;">{config.APP_DESCRIPTION}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    except FileNotFoundError:
+        # Fallback to text if logo file is not found
+        st.markdown(f"""
+        <div class="main-header">
+            <h1>{config.APP_TITLE}</h1>
+            <p style="color: white; text-align: center; margin: 0;">{config.APP_DESCRIPTION}</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Authentication check
     AuthManager.require_auth()
@@ -98,6 +149,76 @@ def main():
 def create_sidebar():
     """Create application sidebar"""
     with st.sidebar:
+        # Add icon and logo images at the top
+        try:
+            # Add icon.png
+            icon_path = "assets/icon.png"
+            with open(icon_path, "rb") as icon_file:
+                icon_data = base64.b64encode(icon_file.read()).decode()
+            
+            st.markdown(f"""
+            <div style="text-align: center; margin-bottom: 10px;">
+                <img src="data:image/png;base64,{icon_data}" 
+                     style="height: 80px;" 
+                     alt="Icon">
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Add logo_red.png
+            logo_red_path = "assets/logo_red.png"
+            with open(logo_red_path, "rb") as logo_file:
+                logo_data = base64.b64encode(logo_file.read()).decode()
+            
+            st.markdown(f"""
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="data:image/png;base64,{logo_data}" 
+                     style="height: 65px;" 
+                     alt="MIMÉTICA Logo">
+            </div>
+            """, unsafe_allow_html=True)
+            
+        except FileNotFoundError as e:
+            # Fallback if images are not found
+            st.info("Images not found in assets folder")
+        
+        # Model Selection Section
+        st.subheader("Select the model")
+        
+        # Initialize selected model in session state if not exists
+        if 'selected_model' not in st.session_state:
+            st.session_state.selected_model = config.DEFAULT_MODEL
+        
+        # Create model options for dropdown
+        model_options = {}
+        for model_key, model_config in config.AVAILABLE_MODELS.items():
+            provider = model_config['provider'].upper()
+            name = model_config['name']
+            description = model_config['description']
+            model_options[model_key] = f"{provider}: {name}"
+        
+        # Model selection dropdown
+        selected_model_key = st.selectbox(
+            "Choose model:",
+            options=list(model_options.keys()),
+            index=list(model_options.keys()).index(st.session_state.selected_model),
+            format_func=lambda x: model_options[x],
+            help="Select the AI model for workflow processing"
+        )
+        
+        # Show model description
+        selected_model_config = config.AVAILABLE_MODELS[selected_model_key]
+        st.caption(f"💡 {selected_model_config['description']}")
+        st.caption(f"🎯 Good for: {selected_model_config['good_for']}")
+        
+        # Update button (appears when model is changed from current selection)
+        if selected_model_key != st.session_state.selected_model:
+            if st.button("🔄 Update Model", type="primary", use_container_width=True):
+                st.session_state.selected_model = selected_model_key
+                st.success(f"✅ Model updated to {model_options[selected_model_key]}")
+                st.rerun()
+        
+        st.divider()
+        
         st.title("Navigation")
         
         # Workflow progress
@@ -118,14 +239,22 @@ def create_sidebar():
         
         completed_phases = st.session_state.workflow_state.get('completed_phases', [])
         current_phase = st.session_state.workflow_state.get('current_phase', 'setup')
+        workflow_completed = st.session_state.workflow_state.get('workflow_completed', False)
         
         for phase_name, phase_key in phases:
             if phase_key in completed_phases:
                 st.success(f"✅ {phase_name}")
-            elif phase_key == current_phase:
+            elif phase_key == current_phase and not workflow_completed:
                 st.warning(f"🔄 {phase_name}")
             else:
                 st.info(f"⏳ {phase_name}")
+        
+        # Show overall completion status
+        if workflow_completed:
+            st.success("🎉 **All Phases Complete!**")
+        elif len(completed_phases) > 0:
+            completion_percent = len(completed_phases) / len(phases) * 100
+            st.info(f"📊 Overall Progress: {completion_percent:.0f}%")
         
         st.divider()
         
@@ -136,9 +265,16 @@ def create_sidebar():
             st.session_state.workflow_state['current_phase'] = 'dashboard'
             st.rerun()
         
-        if st.button("View Results", use_container_width=True):
-            st.session_state.workflow_state['current_phase'] = 'results'
-            st.rerun()
+        # Make View Results button more prominent when workflow is completed
+        workflow_completed = st.session_state.workflow_state.get('workflow_completed', False)
+        if workflow_completed:
+            if st.button("🎯 **VIEW RESULTS**", use_container_width=True, type="primary"):
+                st.session_state.workflow_state['current_phase'] = 'results'
+                st.rerun()
+        else:
+            if st.button("View Results", use_container_width=True):
+                st.session_state.workflow_state['current_phase'] = 'results'
+                st.rerun()
         
         if st.button("New Workflow", use_container_width=True):
             SessionManager.reset_workflow()
@@ -153,16 +289,33 @@ def create_sidebar():
         st.write(f"**Documents:** {workflow_summary.get('total_documents', 0)}")
         st.write(f"**Current Phase:** {workflow_summary.get('current_phase', 'setup')}")
         
+        # Show completion status
+        if workflow_summary.get('workflow_completed', False):
+            completion_time = workflow_summary.get('workflow_completion_time')
+            if completion_time:
+                try:
+                    completion_dt = datetime.fromisoformat(completion_time)
+                    st.write(f"**Status:** ✅ Complete")
+                    st.write(f"**Completed:** {completion_dt.strftime('%m/%d %H:%M')}")
+                except:
+                    st.write(f"**Status:** ✅ Complete")
+            else:
+                st.write(f"**Status:** ✅ Complete")
+        else:
+            completed_count = len(workflow_summary.get('completed_phases', []))
+            st.write(f"**Status:** 🔄 In Progress ({completed_count}/9)")
+        
         # Logout
         st.divider()
         if st.button("🚪 Logout", use_container_width=True):
-            # Delete all data in 'mimetica' collection
+            # Clear all data in 'mimetica' collection
             try:
-                vector_store = VectorStore(collection_name="mimetica") if 'collection_name' in VectorStore.__init__.__code__.co_varnames else VectorStore()
-                if hasattr(vector_store, 'collection_exists') and vector_store.collection_exists("mimetica"):
-                    vector_store.delete_collection("mimetica")
+                vector_store = VectorStore()
+                # Use clear instead of delete to preserve collection structure
+                vector_store.clear_collection()
+                st.info("Vector store cleared successfully")
             except Exception as e:
-                st.warning(f"Could not delete 'mimetica' collection: {e}")
+                st.warning(f"Could not clear vector store: {e}")
             # Clear session and logout, then force rerun for a fresh app
             AuthManager.logout()
             st.session_state['workflow_state'] = {'current_phase': 'setup'}
@@ -178,29 +331,28 @@ def show_setup_page():
         # Project information
         st.subheader("Project Information")
         
-        with st.form("project_info"):
-            project_name = st.text_input("Project Name", value="Strategic Initiative Analysis")
-            project_description = st.text_area("Project Description", 
-                                             value="Comprehensive analysis of strategic initiative using MIMÉTICA methodology")
-            analysis_focus = st.selectbox("Analysis Focus", 
-                                        ["Campaign ROI Optimization", "Digital Transformation", 
-                                         "Customer Experience Improvement", "New Service Design", "Other"])
-            
-            if analysis_focus == "Other":
-                custom_focus = st.text_input("Specify Custom Focus")
-            
-            submitted = st.form_submit_button("💾 Save Project Info", use_container_width=True)
-            
-            if submitted:
-                # Save project info to session
-                st.session_state.workflow_state['project_info'] = {
-                    'name': project_name,
-                    'description': project_description,
-                    'focus': analysis_focus,
-                    'custom_focus': custom_focus if analysis_focus == "Other" else None,
-                    'created_at': datetime.now().isoformat()
-                }
-                st.success("✅ Project information saved!")
+        project_name = st.text_input("Project Name", value="Strategic Initiative Analysis")
+        project_description = st.text_area("Project Description", 
+                                         value="Comprehensive analysis of strategic initiative using MIMÉTICA methodology")
+        analysis_focus = st.selectbox("Analysis Focus", 
+                                    ["Campaign ROI Optimization", "Digital Transformation", 
+                                     "Customer Experience Improvement", "New Service Design", "Other"])
+        
+        # Show custom focus input immediately when "Other" is selected
+        custom_focus = None
+        if analysis_focus == "Other":
+            custom_focus = st.text_input("Specify Custom Focus")
+        
+        if st.button("💾 Save Project Info", type="primary", use_container_width=True):
+            # Save project info to session
+            st.session_state.workflow_state['project_info'] = {
+                'name': project_name,
+                'description': project_description,
+                'focus': analysis_focus,
+                'custom_focus': custom_focus if analysis_focus == "Other" else None,
+                'created_at': datetime.now().isoformat()
+            }
+            st.success("✅ Project information saved!")
 
 
         st.subheader("Document Upload")
@@ -309,6 +461,12 @@ def start_workflow():
         # Initialize workflow
         if 'workflow_instance' not in st.session_state:
             st.session_state.workflow_instance = DecideWorkflow()
+            
+            # Initialize image manager for the session
+            from utils.image_manager import image_manager
+            session_id = f"session_{int(time.time())}"
+            image_manager.setup_session_directory(session_id)
+            st.session_state.image_session_id = session_id
         
         st.success("🚀 DECIDE Workflow started successfully!")
         SessionManager.add_log("INFO", "DECIDE Workflow initiated")
@@ -333,476 +491,275 @@ def show_workflow_page():
     
     workflow = st.session_state.workflow_instance
     
-    # Workflow control panel
-    col1, col2, col3 = st.columns(3)
+    # Check if workflow is completed
+    workflow_completed = st.session_state.workflow_state.get('workflow_completed', False)
     
-    with col1:
-        if st.button("▶️ Run Complete Workflow", type="primary", use_container_width=True):
-            run_complete_workflow(workflow)
+    if workflow_completed:
+        # Show workflow completion status with enhanced styling
+        st.markdown("""
+        <div class="workflow-completed">
+            <h2>🎉 Workflow Completed Successfully!</h2>
+            <p>All phases of the DECIDE methodology have been executed successfully.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        completion_time = st.session_state.workflow_state.get('workflow_completion_time', 'Unknown')
+        if completion_time != 'Unknown':
+            try:
+                completion_dt = datetime.fromisoformat(completion_time)
+                st.info(f"✅ **Completed on:** {completion_dt.strftime('%Y-%m-%d at %H:%M:%S')}")
+            except:
+                st.info(f"✅ **Completed at:** {completion_time}")
+        
+        # Show summary of completed phases
+        completed_phases = st.session_state.workflow_state.get('completed_phases', [])
+        if completed_phases:
+            st.success(f"**📋 Phases Completed:** {len(completed_phases)}/9")
+            phase_names = [phase.replace('_', ' ').title() for phase in completed_phases]
+            st.write("**✅ Workflow Path:** " + " → ".join(phase_names))
+        
+        # Large, prominent "View Results" button with enhanced styling
+        st.markdown("---")
+        st.markdown("### 🎯 Your Comprehensive Analysis is Ready!")
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("🎯 **VIEW COMPREHENSIVE RESULTS**", 
+                        type="primary", 
+                        use_container_width=True,
+                        help="Access your complete analysis, reports, and downloadable deliverables"):
+                st.session_state.workflow_state['current_phase'] = 'results'
+                st.rerun()
+        
+        # Add call-to-action text
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; margin: 1rem 0;">
+            <p style="margin: 0; color: #666;">
+                📊 View detailed analysis results<br/>
+                📄 Download comprehensive reports<br/>
+                📈 Access simulation visualizations
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Show completion summary
+        st.subheader("📊 Workflow Summary")
+        
+        phase_outputs = st.session_state.workflow_state.get('phase_outputs', {})
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Deliverables", len(phase_outputs))
+        with col2:
+            total_tokens = sum(
+                phase_data.get('batch_processing_stats', {}).get('total_tokens_processed', 0)
+                for phase_data in phase_outputs.values()
+            )
+            st.metric("Tokens Processed", f"{total_tokens:,}")
+        with col3:
+            documents = st.session_state.workflow_state.get('documents', [])
+            st.metric("Documents Analyzed", len(documents))
+        with col4:
+            st.metric("Status", "Complete ✅")
+        
+        # Additional options
+        st.subheader("⚡ Additional Options")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("📊 Dashboard", use_container_width=True):
+                st.session_state.workflow_state['current_phase'] = 'dashboard'
+                st.rerun()
+        
+        with col2:
+            if st.button("🔄 New Workflow", use_container_width=True):
+                SessionManager.reset_workflow()
+                st.rerun()
+        
+        with col3:
+            if st.button("📝 View Logs", use_container_width=True):
+                with st.expander("📋 Execution Logs", expanded=True):
+                    display_workflow_logs()
     
-    with col2:
-        if st.button("Run Single Phase", use_container_width=True):
-            run_single_phase(workflow)
-    
-    with col3:
-        if st.button("View Progress", use_container_width=True):
-            show_workflow_progress()
-    
-    # Agent progress display
-    st.subheader("🤖 Agent Progress")
-    
-    agent_progress = st.session_state.get('agent_progress', {})
-    
-    if agent_progress:
-        for agent_name, progress_info in agent_progress.items():
-            with st.expander(f"🤖 {agent_name.replace('_', ' ').title()}", expanded=True):
-                col1, col2 = st.columns([3, 1])
-                
-                with col1:
-                    progress_value = progress_info.get('progress', 0)
-                    st.progress(progress_value)
-                    st.write(f"**Status:** {progress_info.get('status', 'Unknown')}")
-                    st.write(f"**Message:** {progress_info.get('message', 'No message')}")
-                
-                with col2:
-                    timestamp = progress_info.get('timestamp', '')
-                    if timestamp:
-                        st.write(f"**Updated:** {timestamp[:19]}")
     else:
-        st.info("No agent progress data available")
+        # Show workflow control panel (existing functionality)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("▶️ Run Complete Workflow", type="primary", use_container_width=True):
+                run_complete_workflow(workflow)
+        
+        with col2:
+            if st.button("View Progress", use_container_width=True):
+                show_workflow_progress()
     
-    # Live logs
-    st.subheader("📝 Live Logs")
-    
-    logs = st.session_state.get('logs', [])
-    if logs:
-        # Display last 10 logs
-        recent_logs = logs[-10:]
-        for log in reversed(recent_logs):
-            level = log.get('level', 'INFO')
-            message = log.get('message', '')
-            timestamp = log.get('timestamp', '')
-            agent = log.get('agent', '')
-            
-            if level == 'ERROR':
-                st.error(f"[{timestamp[:19]}] {agent}: {message}")
-            elif level == 'WARNING':
-                st.warning(f"[{timestamp[:19]}] {agent}: {message}")
-            else:
-                st.info(f"[{timestamp[:19]}] {agent}: {message}")
-    else:
-        st.info("No logs available")
+        # Agent progress display
+        st.subheader("🤖 Agent Progress")
+        
+        agent_progress = st.session_state.get('agent_progress', {})
+        
+        if agent_progress:
+            for agent_name, progress_info in agent_progress.items():
+                with st.expander(f"🤖 {agent_name.replace('_', ' ').title()}", expanded=True):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        progress_value = progress_info.get('progress', 0)
+                        st.progress(progress_value)
+                        st.write(f"**Status:** {progress_info.get('status', 'Unknown')}")
+                        st.write(f"**Message:** {progress_info.get('message', 'No message')}")
+                    
+                    with col2:
+                        timestamp = progress_info.get('timestamp', '')
+                        if timestamp:
+                            st.write(f"**Updated:** {timestamp[:19]}")
+        else:
+            st.info("No agent progress data available")
+        
+        # Live logs
+        st.subheader("📝 Live Logs")
+        
+        logs = st.session_state.get('logs', [])
+        if logs:
+            # Display last 10 logs
+            recent_logs = logs[-10:]
+            for log in reversed(recent_logs):
+                level = log.get('level', 'INFO')
+                message = log.get('message', '')
+                timestamp = log.get('timestamp', '')
+                agent = log.get('agent', '')
+                
+                if level == 'ERROR':
+                    st.error(f"[{timestamp[:19]}] {agent}: {message}")
+                elif level == 'WARNING':
+                    st.warning(f"[{timestamp[:19]}] {agent}: {message}")
+                else:
+                    st.info(f"[{timestamp[:19]}] {agent}: {message}")
+        else:
+            st.info("No logs available")
 
 def run_complete_workflow(workflow):
-    """Run the complete DECIDE workflow with TokenBatchManager"""
+    """Run the complete DECIDE workflow with enhanced rate limiting"""
     try:
         documents = st.session_state.workflow_state.get('documents', [])
         if not documents:
             st.error("No documents found. Please upload documents first.")
             return
 
-        with st.spinner("🔄 Running complete workflow, this might take 5-10 minutes to complete..."):
-            # Initialize TokenBatchManager with conservative settings for gpt-4o-mini
-            token_manager = TokenBatchManager(
-                tpm_limit=200000,           # Your actual TPM limit
-                safety_margin=0.7,          # Use 70% of limit for safety
-                max_tokens_per_request=120000,  # Conservative request limit
-                min_chunk_size=100,         # Minimum chunk size in words
-                max_chunk_size=800          # Maximum chunk size in words
-            )
+        with st.spinner("🔄 Running enhanced workflow with provider-aware rate limiting..."):
+            # Get current model and provider info
+            current_model = config.validate_and_fix_selected_model()
+            model_config = config.get_current_model_config()
+            provider = model_config['provider']
+            rate_limits = config.get_rate_limit_settings(current_model)
             
-            # Process documents into smart batches
-            st.info("📋 Processing documents into optimized batches...")
-            batches, processing_info = token_manager.process_documents_with_batching(documents)
+            # Display workflow information
+            st.info(f"🎯 Using {provider} provider ({current_model})")
+            st.info(f"📊 Rate limits: {rate_limits['tokens_per_minute']:,} TPM, {rate_limits['inter_phase_delay']}s between phases")
             
-            # Display batch processing information
-            st.success(f"✅ Document processing complete:")
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Documents", processing_info['original_documents'])
-            with col2:
-                st.metric("Chunks Created", processing_info['total_chunks'])
-            with col3:
-                st.metric("Batches", processing_info['total_batches'])
-            with col4:
-                st.metric("Est. Tokens", f"{processing_info['estimated_total_tokens']:,}")
+            # Execute enhanced workflow
+            result = workflow.run_complete_workflow()
             
-            # Process each batch
-            results = None
-            successful_batches = 0
-            failed_batches = 0
-            
-            progress_bar = st.progress(0)
-            status_container = st.empty()
-            
-            for batch_idx, batch in enumerate(batches):
-                try:
-                    # Calculate batch tokens
-                    batch_tokens = sum(doc.get('estimated_tokens', 0) for doc in batch)
+            if result.get('success'):
+                st.success("🎉 Workflow completed successfully!")
+                
+                # Display execution statistics if available
+                if 'execution_stats' in result:
+                    stats = result['execution_stats']
+                    col1, col2, col3, col4 = st.columns(4)
                     
-                    # Update progress
-                    progress = (batch_idx + 1) / len(batches)
-                    progress_bar.progress(progress)
+                    with col1:
+                        st.metric("Phases Completed", len(stats.get('phases_completed', [])))
+                    with col2:
+                        duration = stats.get('total_duration_minutes', 0)
+                        st.metric("Duration", f"{duration:.1f}m")
+                    with col3:
+                        st.metric("Rate Limit Hits", stats.get('rate_limit_hits', 0))
+                    with col4:
+                        wait_time = stats.get('total_wait_time', 0)
+                        st.metric("Wait Time", f"{wait_time:.0f}s")
+                
+                # Update session state with results
+                if 'phase_results' in result:
+                    st.session_state.workflow_state['last_workflow_result'] = result
                     
-                    status_container.info(
-                        f"🔄 Processing batch {batch_idx + 1}/{len(batches)} "
-                        f"({len(batch)} documents, ~{batch_tokens:,} tokens)"
-                    )
+                    # Save individual phase outputs
+                    for phase_name, phase_result in result['phase_results'].items():
+                        SessionManager.save_phase_output(phase_name, phase_result)
+                
+                # Display completion message
+                completed_phases = result.get('completed_phases', [])
+                st.success(f"✅ Successfully completed {len(completed_phases)} phases: {', '.join(completed_phases)}")
+                
+                # Mark workflow as completed in session state
+                st.session_state.workflow_state['workflow_completed'] = True
+                st.session_state.workflow_state['workflow_completion_time'] = datetime.now().isoformat()
+                
+                # Show provider-specific statistics
+                if 'execution_stats' in result and 'provider_stats' in result['execution_stats']:
+                    provider_stats = result['execution_stats']['provider_stats']
                     
-                    # Wait for rate limit window if needed
-                    if not token_manager.wait_for_rate_limit_window(batch_tokens):
-                        st.warning(f"⚠️ Rate limit timeout for batch {batch_idx + 1}, reducing batch size...")
-                        # Split batch in half and retry
-                        if len(batch) > 1:
-                            half_size = len(batch) // 2
-                            batch = batch[:half_size]
-                            batch_tokens = sum(doc.get('estimated_tokens', 0) for doc in batch)
-                    
-                    # Track token usage
-                    token_manager.add_token_usage(batch_tokens)
-                    
-                    # Execute workflow on batch
-                    workflow.current_batch = batch
-                    batch_results = workflow.run_complete_workflow()
-                    
-                    # Merge results
-                    if results is None:
-                        results = batch_results
-                    else:
-                        if isinstance(results.get('output'), dict) and isinstance(batch_results.get('output'), dict):
-                            results['output'].update(batch_results['output'])
-                    
-                    # Update statistics
-                    token_manager.update_batch_stats(True)
-                    successful_batches += 1
-                    
-                    # Show batch completion
-                    st.success(f"✅ Batch {batch_idx + 1} completed successfully")
-                    
-                except Exception as batch_error:
-                    token_manager.update_batch_stats(False)
-                    failed_batches += 1
-                    
-                    if "RateLimitError" in str(batch_error):
-                        st.warning(f"⚠️ Rate limit hit on batch {batch_idx + 1}, implementing exponential backoff...")
-                        
-                        # Exponential backoff
-                        wait_time = min(30 * (2 ** failed_batches), 120)
-                        status_container.warning(f"⏳ Waiting {wait_time}s before retry...")
-                        time.sleep(wait_time)
-                        
-                        # Retry with smaller batch
-                        if len(batch) > 1:
-                            retry_batch_size = max(1, len(batch) // 2)
-                            retry_batch = batch[:retry_batch_size]
-                            
-                            try:
-                                workflow.current_batch = retry_batch
-                                batch_results = workflow.run_complete_workflow()
-                                
-                                if results is None:
-                                    results = batch_results
-                                else:
-                                    if isinstance(results.get('output'), dict) and isinstance(batch_results.get('output'), dict):
-                                        results['output'].update(batch_results['output'])
-                                
-                                st.success(f"✅ Batch {batch_idx + 1} retry completed with {len(retry_batch)} documents")
-                                token_manager.update_batch_stats(True)
-                                successful_batches += 1
-                                failed_batches -= 1  # Adjust since retry succeeded
-                                
-                            except Exception as retry_error:
-                                st.error(f"❌ Batch {batch_idx + 1} failed even on retry: {str(retry_error)}")
+                    with st.expander("📈 Provider Performance Stats", expanded=False):
+                        if provider == 'anthropic':
+                            st.write("**Anthropic Rate Limiting Stats:**")
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("Total Requests", provider_stats.get('total_requests', 0))
+                                st.metric("Success Rate", f"{provider_stats.get('success_rate', 100):.1f}%")
+                            with col2:
+                                st.metric("Throttled Requests", provider_stats.get('throttled_requests', 0))
+                                st.metric("Avg Wait Time", f"{provider_stats.get('average_wait_time', 0):.1f}s")
                         else:
-                            st.error(f"❌ Batch {batch_idx + 1} failed and cannot be split further: {str(batch_error)}")
-                    else:
-                        st.error(f"❌ Batch {batch_idx + 1} failed: {str(batch_error)}")
-
-        # Processing complete - show summary
-        processing_summary = token_manager.get_processing_summary()
-        
-        st.success("🎉 Complete workflow processing finished!")
-        
-        # Display final statistics
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Successful Batches", successful_batches)
-        with col2:
-            st.metric("Failed Batches", failed_batches)
-        with col3:
-            st.metric("Success Rate", f"{processing_summary.get('success_rate', 0):.1f}%")
-        with col4:
-            st.metric("Tokens Processed", f"{processing_summary.get('total_tokens_processed', 0):,}")
-
-        # Convert and save results
-        if results and successful_batches > 0:
-            try:
-                if hasattr(results, '__dict__'):
-                    results_dict = {
-                        'success': True,
-                        'output': {},
-                        'agent_progress': {},
-                        'summary': processing_summary
-                    }
-                    
-                    if hasattr(results, 'output'):
-                        output_data = getattr(results, 'output')
-                        if isinstance(output_data, dict):
-                            results_dict['output'] = {
-                                k: str(v) if not isinstance(v, (str, int, float, bool, list, dict)) else v
-                                for k, v in output_data.items()
-                            }
-                        else:
-                            results_dict['output'] = str(output_data)
-                    
-                    # Handle agent progress
-                    agent_progress = getattr(results, 'agent_progress', {})
-                    if isinstance(agent_progress, dict):
-                        results_dict['agent_progress'] = {
-                            k: {
-                                'progress': float(v.get('progress', 0)),
-                                'status': str(v.get('status', '')),
-                                'message': str(v.get('message', '')),
-                                'timestamp': v.get('timestamp', '')
-                            } if isinstance(v, dict) else {'progress': 0, 'status': str(v)}
-                            for k, v in agent_progress.items()
-                        }
-                    
-                    results = results_dict
-                    
-            except Exception as e:
-                st.error(f"Error converting workflow output: {str(e)}")
-                results = {
-                    'success': False,
-                    'error': f"Failed to convert output: {str(e)}",
-                    'output': str(results)
-                }
-            
-            # Save results
-            if isinstance(results.get('agent_progress'), dict):
-                st.session_state['agent_progress'] = results['agent_progress']
-            
-            if results.get('success'):
-                st.success("✅ Complete workflow executed successfully!")
-                SessionManager.update_phase('results', 'completed')
+                            st.write("**OpenAI Token Management Stats:**")
+                            st.json(provider_stats)
                 
-                serializable_results = {
-                    'success': results.get('success', True),
-                    'output': results.get('output', {}),
-                    'agent_progress': results.get('agent_progress', {}),
-                    'summary': results.get('summary', {}),
-                    'batch_processing_stats': processing_summary
-                }
-                
-                SessionManager.save_phase_output('complete_workflow', serializable_results)
-                
-                st.subheader("Workflow Summary")
-                st.json(serializable_results.get('summary', {}))
-                
-                # Add View Results button after successful completion
-                if st.button("🔍 View Results", type="primary", use_container_width=True):
-                    st.session_state.workflow_state['current_phase'] = 'results'
-                    st.rerun()
+                return result
             else:
-                st.error(f"❌ Workflow execution failed: {results.get('error', 'Unknown error')}")
-        else:
-            st.error("❌ Workflow execution failed: No successful batches processed")
-            
+                error_msg = result.get('error', 'Unknown error')
+                failed_phase = result.get('failed_phase', 'Unknown')
+                completed_phases = result.get('completed_phases', [])
+                
+                st.error(f"❌ Workflow failed at {failed_phase} phase: {error_msg}")
+                
+                if completed_phases:
+                    st.info(f"✅ Completed phases before failure: {', '.join(completed_phases)}")
+                
+                # Show execution stats even for failed workflows
+                if 'execution_stats' in result:
+                    stats = result['execution_stats']
+                    st.warning(f"⏱️ Execution time before failure: {stats.get('total_duration_minutes', 0):.1f} minutes")
+                    
+                    if stats.get('rate_limit_hits', 0) > 0:
+                        st.warning(f"🚫 Rate limit hits encountered: {stats['rate_limit_hits']}")
+                
+                return result
+
     except Exception as e:
-        st.error(f"Failed to run workflow: {str(e)}")
-        SessionManager.add_log("ERROR", f"Complete workflow execution failed: {str(e)}")
+        st.error(f"❌ Workflow execution failed: {str(e)}")
+        SessionManager.add_log("ERROR", f"Workflow execution failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
-def run_single_phase(workflow):
-    """Run a single phase of the workflow with TokenBatchManager"""
-    phases = [
-        ("Document Collection", "collection"),
-        ("Multidisciplinary Analysis", "analysis"),
-        ("Problem Definition", "definition"),
-        ("Context Exploration", "exploration"),
-        ("Option Creation", "creation"),
-        ("Implementation Planning", "implementation"),
-        ("Simulation Analysis", "simulation"),
-        ("Evaluation Framework", "evaluation"),
-        ("Final Report", "report")
-    ]
-    
-    selected_phase = st.selectbox("Select Phase to Run", 
-                                 options=[p[1] for p in phases],
-                                 format_func=lambda x: next(p[0] for p in phases if p[1] == x))
-    
-    if st.button(f"▶️ Run {selected_phase} Phase", type="primary"):
-        try:
-            documents = st.session_state.workflow_state.get('documents', [])
-            if not documents:
-                st.error("No documents found. Please upload documents first.")
-                return
-                
-            with st.spinner(f"🔄 Running {selected_phase} phase with intelligent batching..."):
-                # Initialize TokenBatchManager for single phase
-                token_manager = TokenBatchManager(
-                    tpm_limit=200000,
-                    safety_margin=0.7,
-                    max_tokens_per_request=100000,
-                    min_chunk_size=100,
-                    max_chunk_size=600  # Smaller chunks for single phase
-                )
-                
-                # Process documents into batches
-                batches, processing_info = token_manager.process_documents_with_batching(documents)
-                
-                st.info(f"📋 Processing {selected_phase} phase in {len(batches)} batches...")
-                
-                result = None
-                progress_bar = st.progress(0)
-                
-                for batch_idx, batch in enumerate(batches):
-                    try:
-                        batch_tokens = sum(doc.get('estimated_tokens', 0) for doc in batch)
-                        
-                        # Update progress
-                        progress = (batch_idx + 1) / len(batches)
-                        progress_bar.progress(progress)
-                        
-                        st.info(f"🔄 Processing batch {batch_idx + 1}/{len(batches)} (~{batch_tokens:,} tokens)")
-                        
-                        # Rate limit management
-                        if not token_manager.wait_for_rate_limit_window(batch_tokens):
-                            st.warning(f"⚠️ Reducing batch size due to rate limits...")
-                            if len(batch) > 1:
-                                batch = batch[:len(batch)//2]
-                                batch_tokens = sum(doc.get('estimated_tokens', 0) for doc in batch)
-                        
-                        # Track token usage
-                        token_manager.add_token_usage(batch_tokens)
-                        
-                        # Execute phase on batch
-                        workflow.current_batch = batch
-                        batch_result = workflow.run_single_phase(selected_phase)
-                        
-                        # Merge results
-                        if result is None:
-                            result = batch_result
-                        else:
-                            if isinstance(result.get('output'), dict) and isinstance(batch_result.get('output'), dict):
-                                result['output'].update(batch_result['output'])
-                        
-                        token_manager.update_batch_stats(True)
-                        
-                    except Exception as batch_error:
-                        token_manager.update_batch_stats(False)
-                        
-                        if "RateLimitError" in str(batch_error):
-                            st.warning(f"⚠️ Rate limit hit, implementing backoff...")
-                            time.sleep(min(10 * (batch_idx + 1), 60))
-                            
-                            # Retry with smaller batch
-                            if len(batch) > 1:
-                                retry_batch = batch[:len(batch)//2]
-                                try:
-                                    workflow.current_batch = retry_batch
-                                    batch_result = workflow.run_single_phase(selected_phase)
-                                    
-                                    if result is None:
-                                        result = batch_result
-                                    else:
-                                        if isinstance(result.get('output'), dict) and isinstance(batch_result.get('output'), dict):
-                                            result['output'].update(batch_result['output'])
-                                    
-                                    st.success(f"✅ Batch {batch_idx + 1} completed on retry")
-                                    
-                                except Exception as retry_error:
-                                    st.error(f"❌ Batch {batch_idx + 1} failed on retry: {str(retry_error)}")
-                            else:
-                                st.error(f"❌ Single document batch failed: {str(batch_error)}")
-                        else:
-                            raise batch_error
 
-                # Convert and save results
-                if result:
-                    try:
-                        if hasattr(result, '__dict__'):
-                            result_dict = {
-                                'success': True,
-                                'output': {},
-                                'agent_progress': {},
-                                'summary': token_manager.get_processing_summary()
-                            }
-                            
-                            # Safely extract and convert output
-                            if hasattr(result, 'output'):
-                                output_data = getattr(result, 'output')
-                                if isinstance(output_data, dict):
-                                    result_dict['output'] = {
-                                        k: str(v) if not isinstance(v, (str, int, float, bool, list, dict)) else v
-                                        for k, v in output_data.items()
-                                    }
-                                else:
-                                    result_dict['output'] = str(output_data)
-                            
-                            # Safely extract and convert agent progress
-                            agent_progress = getattr(result, 'agent_progress', {})
-                            if isinstance(agent_progress, dict):
-                                result_dict['agent_progress'] = {
-                                    k: {
-                                        'progress': float(v.get('progress', 0)),
-                                        'status': str(v.get('status', '')),
-                                        'message': str(v.get('message', '')),
-                                        'timestamp': v.get('timestamp', '')
-                                    } if isinstance(v, dict) else {'progress': 0, 'status': str(v)}
-                                    for k, v in agent_progress.items()
-                                }
-                            
-                            result = result_dict
-                            
-                    except Exception as e:
-                        st.error(f"Error converting workflow output: {str(e)}")
-                        SessionManager.add_log("ERROR", f"Output conversion failed: {str(e)}")
-                        result = {
-                            'success': False,
-                            'error': f"Failed to convert output: {str(e)}",
-                            'output': str(result)
-                        }
-                    
-                    # Save agent progress if available
-                    if isinstance(result.get('agent_progress'), dict):
-                        st.session_state['agent_progress'] = result['agent_progress']
-
-            # Display results
-            processing_summary = token_manager.get_processing_summary()
-            
-            if result and result.get('success'):
-                st.success(f"✅ {selected_phase} phase completed successfully!")
-                
-                # Show processing stats
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Batches Processed", processing_summary.get('successful_batches', 0))
-                with col2:
-                    st.metric("Total Tokens", f"{processing_summary.get('total_tokens_processed', 0):,}")
-                with col3:
-                    st.metric("Success Rate", f"{processing_summary.get('success_rate', 0):.1f}%")
-                
-                # Ensure the result is JSON serializable
-                serializable_result = {
-                    'success': result.get('success', True),
-                    'output': result.get('output', {}),
-                    'agent_progress': result.get('agent_progress', {}),
-                    'summary': result.get('summary', {}),
-                    'batch_processing_stats': processing_summary
-                }
-                
-                SessionManager.save_phase_output(selected_phase, serializable_result)
-                
-                # Show phase output
-                if 'output' in serializable_result:
-                    st.subheader(f"📄 {selected_phase} Output")
-                    st.text_area("Result", str(serializable_result['output']), height=300)
+def display_workflow_logs():
+    """Display workflow execution logs"""
+    if st.session_state.get('logs'):
+        st.subheader("Workflow Execution Logs")
+        for log_entry in st.session_state.logs:
+            if log_entry.get('level') == 'ERROR':
+                st.error(f"[{log_entry.get('timestamp', '')}] {log_entry.get('message', '')}")
+            elif log_entry.get('level') == 'WARNING':
+                st.warning(f"[{log_entry.get('timestamp', '')}] {log_entry.get('message', '')}")
             else:
-                st.error(f"❌ {selected_phase} phase failed: {result.get('error', 'Unknown error') if result else 'No result returned'}")
-                
-        except Exception as e:
-            st.error(f"Failed to run {selected_phase} phase: {str(e)}")
-            SessionManager.add_log("ERROR", f"Single phase execution failed: {str(e)}")
+                st.info(f"[{log_entry.get('timestamp', '')}] {log_entry.get('message', '')}")
+    else:
+        st.info("No logs available")
+
 
 def show_workflow_progress():
     """Display detailed workflow progress"""
@@ -924,30 +881,25 @@ def show_results_page():
                         hover_data=['Batches', 'Success Rate'])
             st.plotly_chart(fig, use_container_width=True)
     
-    # Final report section - FIXED TO EXTRACT PROPER MARKDOWN
+    # Final report section - CLEAN DISPLAY WITH VISUALIZATIONS
     if 'report' in phase_outputs:
-        st.subheader("Final Comprehensive Report")
+        st.subheader("📊 Final Comprehensive Report with Visualizations")
         
         report_output = phase_outputs['report'].get('output', {})
         
         # Extract the actual markdown content from the nested structure
         markdown_content = ""
         if isinstance(report_output, str):
-            # If output is already a string, use it directly
             markdown_content = report_output
         elif isinstance(report_output, dict):
-            # If output is a dict, look for the markdown content
-            # Based on your document, it seems the content starts with "# MIMÉTICA"
             if 'output' in report_output:
                 markdown_content = report_output['output']
             else:
                 # Convert the entire dict to string and extract markdown
                 report_str = str(report_output)
-                # Find the start of the markdown content (after "# MIMÉTICA")
                 start_marker = "# MIMÉTICA Strategic Decision Support System"
                 if start_marker in report_str:
                     start_idx = report_str.find(start_marker)
-                    # Find the end (before any closing markers like quotes or braces)
                     end_markers = ["', 'includes_phases'", "\"', 'includes_phases'", "\\n---\\n\\nThis report contains"]
                     end_idx = len(report_str)
                     for marker in end_markers:
@@ -962,58 +914,237 @@ def show_results_page():
                     markdown_content = markdown_content.replace('\\"', '"')
                     markdown_content = markdown_content.replace("\\'", "'")
         
-        # Display the markdown content with proper formatting
-        if markdown_content:
-            st.markdown("### PDF Standard Format")
-            st.markdown(markdown_content)
-        else:
-            st.error("Could not extract markdown content from report output")
-            st.json(report_output)  # Show raw output for debugging
+        # Check for visualizations and display accordingly
+        has_visualizations = "data:image/png;base64," in str(markdown_content)
         
-        # Download options
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            if st.button("📄 Download PDF Report", type="primary", use_container_width=True):
-                download_final_report('pdf')
-        
-        with col2:
-            if st.button("📝 Download Markdown Report", use_container_width=True):
-                download_final_report('markdown')
-    
-    # Other output files section - SHOW AS THEY ARE
-    st.subheader("Other Output Files")
-    
-    # Display all non-report phases as they are
-    for phase, output_info in phase_outputs.items():
-        if phase != 'report':  # Skip report as it's already shown above
-            with st.expander(f"📄 {phase.replace('_', ' ').title()}", expanded=False):
-                col1, col2 = st.columns([3, 1])
+        if has_visualizations:
+            # Display content with embedded visualizations
+            import re
+            import base64
+            from PIL import Image
+            import io
+            
+            # Check if content contains image placeholders
+            placeholder_pattern = r'\[IMAGE_PLACEHOLDER: ([a-f0-9-]+)\].*?\[/IMAGE_PLACEHOLDER\]'
+            if re.search(placeholder_pattern, markdown_content, re.DOTALL):
+                # Content has image placeholders - process them
+                from utils.image_manager import image_manager
                 
-                with col1:
-                    output_content = output_info.get('output', {})
-                    # Display output files exactly as they are
-                    if isinstance(output_content, dict):
-                        st.json(output_content)
+                # Split content around image placeholders
+                parts = re.split(placeholder_pattern, markdown_content, flags=re.DOTALL)
+                
+                for i, part in enumerate(parts):
+                    if i % 2 == 0:
+                        # Text content - render as markdown
+                        if part.strip():
+                            # Clean the content from any tool artifacts
+                            clean_text = re.sub(r'.*successfully.*\n', '', part)
+                            clean_text = re.sub(r'.*generated successfully.*\n', '', clean_text)
+                            clean_text = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_text)
+                            if clean_text.strip():
+                                st.markdown(clean_text.strip())
                     else:
-                        st.text_area("Content", str(output_content), height=200, key=f"output_{phase}")
+                        # This is an image ID - load and display the image
+                        image_id = part
+                        try:
+                            image_bytes = image_manager.load_image_for_pdf(image_id)
+                            if image_bytes:
+                                image = Image.open(io.BytesIO(image_bytes))
+                                
+                                # Get image metadata for caption
+                                metadata = image_manager.get_image_by_id(image_id)
+                                if metadata and 'title' in metadata:
+                                    st.image(image, caption=metadata['title'], use_column_width=True)
+                                else:
+                                    st.image(image, use_column_width=True)
+                        except Exception as e:
+                            st.error(f"Failed to load image {image_id}: {str(e)}")
+            else:
+                # Legacy: Check for base64 images (for backwards compatibility)
+                base64_pattern = r'Base64 Image Data: data:image/png;base64,([A-Za-z0-9+/=]+)'
+                if re.search(base64_pattern, markdown_content):
+                    # Split content around base64 images
+                    parts = re.split(base64_pattern, markdown_content)
+                    
+                    for i, part in enumerate(parts):
+                        if i % 2 == 0:
+                            # Text content - render as markdown
+                            if part.strip():
+                                # Clean the content from any tool artifacts
+                                clean_text = re.sub(r'.*successfully.*\n', '', part)
+                                clean_text = re.sub(r'.*generated successfully.*\n', '', clean_text)
+                                clean_text = re.sub(r'Base64 Image Data:.*\n', '', clean_text)
+                                clean_text = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_text)
+                                if clean_text.strip():
+                                    st.markdown(clean_text.strip())
+                        else:
+                            # Base64 image data - display as image
+                            try:
+                                image_data = base64.b64decode(part)
+                                image = Image.open(io.BytesIO(image_data))
+                                st.image(image, use_column_width=True)
+                            except Exception:
+                                pass  # Skip invalid image data
+                else:
+                    # No images, just display text
+                    if markdown_content:
+                        # Clean the content from any tool artifacts and formatting issues
+                        clean_content = markdown_content
+                        
+                        # Remove tool output messages
+                        clean_content = re.sub(r'.*successfully.*\n', '', clean_content)
+                        clean_content = re.sub(r'.*generated successfully.*\n', '', clean_content) 
+                        clean_content = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_content)
+                        clean_content = re.sub(r'\*\*GENERATE.*?\*\*:', '', clean_content, flags=re.DOTALL)
+                        clean_content = re.sub(r'Use the strategic_visualization_generator tool.*?\n', '', clean_content)
+                        
+                        if clean_content.strip():
+                            st.markdown(clean_content.strip())
+        else:
+            # No image placeholders found, display as properly rendered markdown text
+            if markdown_content:
+                # Clean the content from any tool artifacts and formatting issues
+                import re
+                clean_content = markdown_content
                 
-                with col2:
-                    timestamp = output_info.get('timestamp', '')
-                    st.write(f"**Generated:** {timestamp[:19] if timestamp else 'Unknown'}")
+                # Remove tool output messages
+                clean_content = re.sub(r'.*successfully.*\n', '', clean_content)
+                clean_content = re.sub(r'.*generated successfully.*\n', '', clean_content) 
+                clean_content = re.sub(r'Base64 Image Data:.*\n', '', clean_content)
+                clean_content = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_content)
+                clean_content = re.sub(r'\*\*GENERATE.*?\*\*:', '', clean_content, flags=re.DOTALL)
+                clean_content = re.sub(r'Use the strategic_visualization_generator tool.*?\n', '', clean_content)
+                
+                # Clean up any remaining formatting artifacts
+                clean_content = clean_content.replace('\\n', '\n')
+                clean_content = clean_content.replace('\\t', '\t')
+                clean_content = clean_content.replace('\\"', '"')
+                clean_content = clean_content.replace("\\'", "'")
+                clean_content = clean_content.replace('\\\\', '\\')
+                
+                # Remove any CrewAI output wrappers
+                clean_content = re.sub(r'^.*?\n# MIMÉTICA', '# MIMÉTICA', clean_content, flags=re.DOTALL)
+                clean_content = re.sub(r"', 'includes_phases.*$", '', clean_content, flags=re.DOTALL)
+                clean_content = re.sub(r'", "includes_phases.*$', '', clean_content, flags=re.DOTALL)
+                
+                # Final cleanup - remove empty lines and ensure proper spacing
+                lines = clean_content.split('\n')
+                cleaned_lines = []
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('```') and 'strategic_visualization_generator' not in line:
+                        cleaned_lines.append(line)
+                
+                final_content = '\n\n'.join(cleaned_lines)
+                
+                # Render the cleaned markdown content
+                if final_content.strip():
+                    st.markdown(final_content)
+                else:
+                    st.write("Report content is being processed...")
+                    # Show debug info to help troubleshoot
+                    with st.expander("🔍 Debug: Raw Content Preview", expanded=False):
+                        st.text(f"Original content length: {len(markdown_content)}")
+                        st.text("First 500 characters:")
+                        st.code(markdown_content[:500])
                     
-                    # Show batch processing stats if available
-                    if 'batch_processing_stats' in output_info:
-                        stats = output_info['batch_processing_stats']
-                        st.write("**Batch Stats:**")
-                        st.write(f"- Chunks: {stats.get('total_chunks', 0)}")
-                        st.write(f"- Batches: {stats.get('total_batches', 0)}")
-                        st.write(f"- Tokens: {stats.get('total_tokens_processed', 0):,}")
-                        st.write(f"- Success: {stats.get('success_rate', 0):.1f}%")
-                    
-                    # Download button for individual deliverable
-                    if st.button(f"💾 Download", key=f"download_{phase}"):
-                        download_deliverable(phase, output_info)
+                    # Fallback: show a cleaned version without special formatting
+                    fallback_content = re.sub(r'[#*`]', '', markdown_content[:2000])
+                    if fallback_content.strip():
+                        st.text(fallback_content)
+                    else:
+                        st.error("Unable to extract readable content from report")
+            else:
+                st.error("No report content available")
+        
+        # Download options - PDF, DOCX (as requested)
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            try:
+                from utils.pdf_generator import PDFGenerator
+                pdf_generator = PDFGenerator()
+                pdf_bytes = pdf_generator.generate_comprehensive_report_pdf(phase_outputs)
+                filename = f"mimetica_final_report_{datetime.now().strftime('%Y%m%d')}.pdf"
+                
+                if pdf_bytes and len(pdf_bytes) > 0:
+                    st.download_button(
+                        label="📄 Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=filename,
+                        mime="application/pdf",
+                        type="primary",
+                        use_container_width=True
+                    )
+            except Exception as e:
+                st.download_button(
+                    label="📄 PDF Generation Failed",
+                    data="",
+                    file_name="error.txt",
+                    disabled=True,
+                    use_container_width=True
+                )
+        
+    with col2:
+            try:
+                docx_gen = DocxGenerator()
+                docx_bytes = docx_gen.generate_comprehensive_report_docx(phase_outputs)
+                filename = f"mimetica_final_report_{datetime.now().strftime('%Y%m%d')}.docx"
+                st.download_button(
+                    label="📘 Download DOCX Report",
+                    data=docx_bytes,
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"Failed to generate DOCX: {str(e)}")
+    
+    # Other outputs viewer: dropdown to select and render .md files from workspace, with PDF download
+    st.subheader("Other Output Markdown Files")
+    try:
+        project_root = Path(__file__).resolve().parent
+        md_files = sorted([
+            p for p in project_root.glob("*.md")
+            if p.name.lower().endswith('.md') and p.name not in {
+                'comprehensive_strategic_analysis_report.md', 'README.md'
+            }
+        ], key=lambda x: x.name.lower())
+
+        if md_files:
+            file_map = {p.name: p for p in md_files}
+            selected_name = st.selectbox("Select an output file", options=list(file_map.keys()))
+            if selected_name:
+                p = file_map[selected_name]
+                try:
+                    md_content = p.read_text(encoding='utf-8', errors='ignore')
+                except Exception:
+                    md_content = p.read_text(errors='ignore')
+
+                tabs = st.tabs(["Standard Text", "Rendered Markdown"])
+                with tabs[0]:
+                    st.text_area("Raw Content", md_content, height=300)
+                with tabs[1]:
+                    st.markdown(md_content, unsafe_allow_html=False)
+
+                # Download selected markdown as PDF
+                try:
+                    pdf_gen = PDFGenerator()
+                    title = selected_name.replace('_', ' ').replace('.md', '').title()
+                    pdf_bytes = pdf_gen.markdown_to_pdf(md_content, title=title)
+                    st.download_button(
+                        label="📄 Download Selected as PDF",
+                        data=pdf_bytes,
+                        file_name=f"{p.stem}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"PDF export failed: {str(e)}")
+        else:
+            st.info("No other markdown outputs found in the workspace.")
+    except Exception as e:
+        st.error(f"Failed to load markdown outputs: {str(e)}")
     
     # Simulation results visualization
     if 'simulation' in phase_outputs:
@@ -1021,8 +1152,45 @@ def show_results_page():
 
 
 def show_simulation_visualizations(simulation_output):
-    """Display Monte Carlo simulation visualizations"""
+    """Display Monte Carlo simulation visualizations with layman explanations"""
     st.subheader("Monte Carlo Simulation Results")
+    
+    # Display layman explanations first
+    try:
+        # Check if explanations are available in session state
+        explanations = st.session_state.workflow_state.get('simulation_explanations', {})
+        
+        if explanations:
+            st.success("📊 **Simulation Complete!** Below are the results explained in simple terms:")
+            
+            # Create tabs for different audience explanations
+            tab1, tab2, tab3 = st.tabs(["Executive Summary", "Management Details", "General Overview"])
+            
+            with tab1:
+                st.markdown("### For Decision Makers")
+                if 'executive' in explanations:
+                    st.markdown(explanations['executive'])
+                else:
+                    st.warning("Executive explanation not available")
+            
+            with tab2:
+                st.markdown("### For Project Managers") 
+                if 'manager' in explanations:
+                    st.markdown(explanations['manager'])
+                else:
+                    st.warning("Management explanation not available")
+            
+            with tab3:
+                st.markdown("### For Everyone")
+                if 'general' in explanations:
+                    st.markdown(explanations['general'])
+                else:
+                    st.warning("General explanation not available")
+            
+            st.divider()
+            
+    except Exception as e:
+        st.warning(f"Could not load simulation explanations: {str(e)}")
     
     # Create sample visualization data (replace with actual simulation data)
     try:
@@ -1034,42 +1202,92 @@ def show_simulation_visualizations(simulation_output):
         baseline_data = np.random.normal(100, 20, 1000)
         pessimistic_data = np.random.normal(80, 25, 1000)
         
+        st.subheader("📈 Detailed Charts and Statistics")
+        
         # Scenario comparison chart
         fig = go.Figure()
         
-        fig.add_trace(go.Histogram(x=optimistic_data, name="Optimistic", 
-                                  opacity=0.7, nbinsx=30))
-        fig.add_trace(go.Histogram(x=baseline_data, name="Baseline", 
-                                  opacity=0.7, nbinsx=30))
-        fig.add_trace(go.Histogram(x=pessimistic_data, name="Pessimistic", 
-                                  opacity=0.7, nbinsx=30))
+        fig.add_trace(go.Histogram(x=optimistic_data, name="Optimistic Scenario", 
+                                  opacity=0.7, nbinsx=30, marker_color="#2E8B57"))
+        fig.add_trace(go.Histogram(x=baseline_data, name="Most Likely Scenario", 
+                                  opacity=0.7, nbinsx=30, marker_color="#4682B4"))
+        fig.add_trace(go.Histogram(x=pessimistic_data, name="Conservative Scenario", 
+                                  opacity=0.7, nbinsx=30, marker_color="#DC143C"))
         
         fig.update_layout(
             title="Monte Carlo Simulation Results - Scenario Comparison",
             xaxis_title="Outcome Value",
-            yaxis_title="Frequency",
-            barmode='overlay'
+            yaxis_title="Frequency (How often this outcome occurred)",
+            barmode='overlay',
+            height=500
         )
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Summary statistics
+        # Add explanation below the chart
+        st.info("""
+        **How to read this chart:** 
+        - The X-axis shows possible outcome values
+        - The Y-axis shows how frequently each outcome occurred in our 1,000 simulations
+        - Taller bars mean more likely outcomes
+        - The spread shows the range of possibilities for each scenario
+        """)
+        
+        # Summary statistics with better explanations
+        st.subheader("📊 Key Numbers Summary")
+        
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Optimistic (P90)", f"{np.percentile(optimistic_data, 90):.1f}")
-            st.metric("Mean", f"{np.mean(optimistic_data):.1f}")
-            st.metric("Std Dev", f"{np.std(optimistic_data):.1f}")
+            st.markdown("**🟢 Best Case Scenario (Optimistic)**")
+            st.metric("90th Percentile", f"{np.percentile(optimistic_data, 90):.1f}", 
+                     help="Only 10% of outcomes are better than this")
+            st.metric("Average Outcome", f"{np.mean(optimistic_data):.1f}")
+            st.metric("Variability", f"{np.std(optimistic_data):.1f}", 
+                     help="Lower numbers mean more predictable results")
         
         with col2:
-            st.metric("Baseline (P50)", f"{np.percentile(baseline_data, 50):.1f}")
-            st.metric("Mean", f"{np.mean(baseline_data):.1f}")
-            st.metric("Std Dev", f"{np.std(baseline_data):.1f}")
+            st.markdown("**🟡 Most Likely Scenario (Baseline)**")
+            st.metric("50th Percentile (Median)", f"{np.percentile(baseline_data, 50):.1f}",
+                     help="Half of outcomes are above this, half below")
+            st.metric("Average Outcome", f"{np.mean(baseline_data):.1f}")
+            st.metric("Variability", f"{np.std(baseline_data):.1f}")
         
         with col3:
-            st.metric("Pessimistic (P10)", f"{np.percentile(pessimistic_data, 10):.1f}")
-            st.metric("Mean", f"{np.mean(pessimistic_data):.1f}")
-            st.metric("Std Dev", f"{np.std(pessimistic_data):.1f}")
+            st.markdown("**🔴 Worst Case Scenario (Pessimistic)**") 
+            st.metric("10th Percentile", f"{np.percentile(pessimistic_data, 10):.1f}",
+                     help="Only 10% of outcomes are worse than this")
+            st.metric("Average Outcome", f"{np.mean(pessimistic_data):.1f}")
+            st.metric("Variability", f"{np.std(pessimistic_data):.1f}")
+        
+        # Risk assessment summary
+        st.subheader("🎯 Risk Assessment Summary")
+        
+        best_case = np.percentile(optimistic_data, 90)
+        most_likely = np.percentile(baseline_data, 50)
+        worst_case = np.percentile(pessimistic_data, 10)
+        
+        risk_col1, risk_col2 = st.columns(2)
+        
+        with risk_col1:
+            upside_potential = ((best_case - most_likely) / most_likely * 100)
+            st.metric("🚀 Upside Potential", f"+{upside_potential:.1f}%", 
+                     help="How much better than expected you could do")
+            
+        with risk_col2:
+            downside_risk = ((most_likely - worst_case) / most_likely * 100)
+            st.metric("⚠️ Downside Risk", f"-{downside_risk:.1f}%",
+                     help="How much worse than expected you could do")
+        
+        # Simple recommendation
+        st.subheader("💡 Simple Recommendation")
+        
+        if downside_risk < 20:
+            st.success(f"✅ **Low Risk Profile**: Even in worst case, you only risk {downside_risk:.1f}% downside. This looks like a solid opportunity.")
+        elif downside_risk < 40:
+            st.warning(f"⚠️ **Moderate Risk Profile**: You could face up to {downside_risk:.1f}% downside. Make sure you have contingency plans.")
+        else:
+            st.error(f"🚨 **High Risk Profile**: Potential {downside_risk:.1f}% downside requires careful consideration. Consider risk mitigation strategies.")
         
     except Exception as e:
         st.error(f"Failed to generate simulation visualizations: {str(e)}")
@@ -1080,51 +1298,51 @@ def download_deliverable(phase: str, output_info: Dict[str, Any]):
         content = output_info.get('output', {})
         timestamp = output_info.get('timestamp', datetime.now().isoformat())
         
-        # Convert content to string
-        if isinstance(content, dict):
-            content_str = str(content)
-        else:
-            content_str = str(content)
+        # Create two columns for download options
+        col1, col2 = st.columns(2)
         
-        # Create download
-        filename = f"mimetica_{phase}_{timestamp[:10]}.txt"
+        with col1:
+            # TXT download
+            if isinstance(content, dict):
+                content_str = str(content)
+            else:
+                content_str = str(content)
+            
+            filename_txt = f"mimetica_{phase}_{timestamp[:10]}.txt"
+            
+            st.download_button(
+                label=f"📝 Download TXT",
+                data=content_str,
+                file_name=filename_txt,
+                mime="text/plain",
+                key=f"txt_{phase}"
+            )
         
-        st.download_button(
-            label=f"Download {phase}",
-            data=content_str,
-            file_name=filename,
-            mime="text/plain"
-        )
+        with col2:
+            # PDF download
+            try:
+                pdf_generator = PDFGenerator()
+                pdf_bytes = pdf_generator.generate_deliverable_pdf(phase, output_info)
+                filename_pdf = f"mimetica_{phase}_{timestamp[:10]}.pdf"
+                
+                st.download_button(
+                    label=f"📄 Download PDF",
+                    data=pdf_bytes,
+                    file_name=filename_pdf,
+                    mime="application/pdf",
+                    key=f"pdf_{phase}"
+                )
+            except Exception as e:
+                st.error(f"PDF generation failed: {str(e)}")
         
     except Exception as e:
-        st.error(f"Failed to prepare download: {str(e)}")
+        st.error(f"Failed to prepare downloads: {str(e)}")
 
 def download_final_report(format_type: str):
-    """Download final comprehensive report"""
-    try:
-        phase_outputs = st.session_state.workflow_state.get('phase_outputs', {})
-        
-        if format_type == 'pdf':
-            # For PDF, we would normally use a library like reportlab
-            # For now, create a text version
-            report_content = generate_comprehensive_report(phase_outputs)
-            filename = f"mimetica_final_report_{datetime.now().strftime('%Y%m%d')}.txt"
-            mime = "text/plain"
-            
-        else:  # markdown
-            report_content = generate_markdown_report(phase_outputs)
-            filename = f"mimetica_final_report_{datetime.now().strftime('%Y%m%d')}.md"
-            mime = "text/markdown"
-        
-        st.download_button(
-            label=f"Download {format_type.upper()} Report",
-            data=report_content,
-            file_name=filename,
-            mime=mime
-        )
-        
-    except Exception as e:
-        st.error(f"Failed to generate {format_type} report: {str(e)}")
+    """Download final comprehensive report - DEPRECATED: Use direct download buttons instead"""
+    # This function is deprecated and no longer used
+    # PDF and Markdown downloads are now handled directly in show_results_page()
+    pass
 
 def generate_comprehensive_report(phase_outputs: Dict[str, Any]) -> str:
     """Generate comprehensive text report"""

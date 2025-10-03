@@ -1,12 +1,35 @@
 from crewai import Agent
 # No external tools needed for this agent
 from config import config
+import streamlit as st
 
 class CreateAgent:
     """Agent responsible for creating intervention options and strategic alternatives"""
     
     @staticmethod
     def create_agent():
+        # Get current model configuration
+        selected_model = config.validate_and_fix_selected_model()
+        model_config = config.AVAILABLE_MODELS[selected_model]
+        provider = model_config['provider']
+        
+        # Set up LLM based on provider
+        llm = None
+        if provider == 'openai':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"openai/{selected_model}",
+                api_key=config.OPENAI_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        elif provider == 'anthropic':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"anthropic/{selected_model}",
+                api_key=config.ANTHROPIC_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        
         return Agent(
             role="Strategic Option Development Specialist",
             goal="Create multiple strategic intervention options with comprehensive analysis of pros, cons, and assumptions",
@@ -18,7 +41,8 @@ class CreateAgent:
             verbose=True,
             allow_delegation=False,
             max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            llm=llm
         )
     
     @staticmethod

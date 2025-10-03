@@ -2,12 +2,35 @@ from crewai import Agent
 # Using AdvancedPineconeVectorSearchTool for document search and serper_search_tool for web research
 from tools.custom_tools import AdvancedPineconeVectorSearchTool, serper_search_tool
 from config import config
+import streamlit as st
 
 class ExploreAgent:
     """Agent responsible for contextual research and risk mapping"""
     
     @staticmethod
     def create_agent():
+        # Get current model configuration
+        selected_model = config.validate_and_fix_selected_model()
+        model_config = config.AVAILABLE_MODELS[selected_model]
+        provider = model_config['provider']
+        
+        # Set up LLM based on provider
+        llm = None
+        if provider == 'openai':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"openai/{selected_model}",
+                api_key=config.OPENAI_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        elif provider == 'anthropic':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"anthropic/{selected_model}",
+                api_key=config.ANTHROPIC_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        
         return Agent(
             role="Strategic Research and Risk Analysis Specialist",
             goal="Conduct comprehensive contextual research and create detailed risk mapping for strategic initiatives",
@@ -23,7 +46,8 @@ class ExploreAgent:
             verbose=True,
             allow_delegation=False,
             max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            llm=llm
         )
     
     @staticmethod

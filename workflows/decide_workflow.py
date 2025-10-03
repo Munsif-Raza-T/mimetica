@@ -20,6 +20,7 @@ from agents import (
 
 # Import utilities
 from utils import SessionManager, VectorStore
+from utils.enhanced_workflow_manager import EnhancedWorkflowManager
 from config import config
 
 class DecideWorkflow:
@@ -38,123 +39,25 @@ class DecideWorkflow:
         SessionManager.add_log("INFO", f"DECIDE Workflow initialized: {self.workflow_id}")
     
     def run_complete_workflow(self) -> Dict[str, Any]:
-        """Run the complete DECIDE workflow from start to finish"""
+        """Run the complete DECIDE workflow using enhanced workflow manager"""
         try:
-            SessionManager.add_log("INFO", "Starting complete DECIDE workflow execution")
+            SessionManager.add_log("INFO", "Starting enhanced DECIDE workflow execution")
             
-            # Define the sequential phases
-            phases = [
-                ('collection', self.run_collection_phase),
-                ('analysis', self.run_multidisciplinary_analysis_phase),
-                ('definition', self.run_define_phase),
-                ('exploration', self.run_explore_phase),
-                ('creation', self.run_create_phase),
-                ('implementation', self.run_implement_phase),
-                ('simulation', self.run_simulate_phase),
-                ('evaluation', self.run_evaluate_phase),
-                ('report', self.run_report_phase)
-            ]
+            # Create enhanced workflow manager
+            enhanced_manager = EnhancedWorkflowManager(self)
             
-            # Execute phases sequentially
-            all_results = {}
+            # Execute workflow with proper rate limiting
+            result = enhanced_manager.run_enhanced_workflow()
             
-            for phase_name, phase_function in phases:
-                SessionManager.add_log("INFO", f"Starting {phase_name} phase")
-                SessionManager.update_phase(phase_name, 'in_progress')
-                
-                try:
-                    phase_result = phase_function()
-                    
-                    if phase_result.get('success'):
-                        all_results[phase_name] = phase_result
-                        SessionManager.update_phase(phase_name, 'completed')
-                        SessionManager.save_phase_output(phase_name, phase_result)
-                        SessionManager.add_log("INFO", f"Completed {phase_name} phase successfully")
-                    else:
-                        error_msg = f"Phase {phase_name} failed: {phase_result.get('error', 'Unknown error')}"
-                        SessionManager.add_log("ERROR", error_msg)
-                        return {
-                            'success': False,
-                            'error': error_msg,
-                            'completed_phases': list(all_results.keys()),
-                            'failed_phase': phase_name
-                        }
-                
-                except Exception as e:
-                    error_msg = f"Exception in {phase_name} phase: {str(e)}"
-                    SessionManager.add_log("ERROR", error_msg)
-                    return {
-                        'success': False,
-                        'error': error_msg,
-                        'completed_phases': list(all_results.keys()),
-                        'failed_phase': phase_name
-                    }
-            
-            # Workflow completed successfully
-            SessionManager.update_phase('completed', 'completed')
-            SessionManager.add_log("INFO", "Complete DECIDE workflow executed successfully")
-            
-            return {
-                'success': True,
-                'workflow_id': self.workflow_id,
-                'completed_phases': list(all_results.keys()),
-                'phase_results': all_results,
-                'summary': self.generate_workflow_summary(all_results)
-            }
+            return result
         
         except Exception as e:
-            error_msg = f"Workflow execution failed: {str(e)}"
+            error_msg = f"Enhanced workflow execution failed: {str(e)}"
             SessionManager.add_log("ERROR", error_msg)
             return {
                 'success': False,
                 'error': error_msg,
                 'workflow_id': self.workflow_id
-            }
-    
-    def run_single_phase(self, phase_name: str) -> Dict[str, Any]:
-        """Run a single phase of the workflow"""
-        try:
-            SessionManager.add_log("INFO", f"Running single phase: {phase_name}")
-            
-            phase_functions = {
-                'collection': self.run_collection_phase,
-                'analysis': self.run_multidisciplinary_analysis_phase,
-                'definition': self.run_define_phase,
-                'exploration': self.run_explore_phase,
-                'creation': self.run_create_phase,
-                'implementation': self.run_implement_phase,
-                'simulation': self.run_simulate_phase,
-                'evaluation': self.run_evaluate_phase,
-                'report': self.run_report_phase
-            }
-            
-            if phase_name not in phase_functions:
-                return {
-                    'success': False,
-                    'error': f"Unknown phase: {phase_name}",
-                    'available_phases': list(phase_functions.keys())
-                }
-            
-            # Execute the specific phase
-            SessionManager.update_phase(phase_name, 'in_progress')
-            result = phase_functions[phase_name]()
-            
-            if result.get('success'):
-                SessionManager.update_phase(phase_name, 'completed')
-                SessionManager.save_phase_output(phase_name, result)
-                SessionManager.add_log("INFO", f"Single phase {phase_name} completed successfully")
-            else:
-                SessionManager.add_log("ERROR", f"Single phase {phase_name} failed: {result.get('error')}")
-            
-            return result
-        
-        except Exception as e:
-            error_msg = f"Single phase execution failed: {str(e)}"
-            SessionManager.add_log("ERROR", error_msg)
-            return {
-                'success': False,
-                'error': error_msg,
-                'phase': phase_name
             }
     
     def run_collection_phase(self) -> Dict[str, Any]:
@@ -467,6 +370,37 @@ class DecideWorkflow:
             
             result = crew.kickoff()
             
+            # Generate additional layman explanation if result contains technical analysis
+            SessionManager.update_agent_progress("simulate_agent", 0.9, "running", "Generating layman-friendly explanations")
+            
+            try:
+                from tools.custom_tools import monte_carlo_results_explainer
+                
+                # Extract key simulation numbers from the result for explanation
+                result_text = str(result) if not isinstance(result, str) else result
+                
+                # Generate explanation for different audiences
+                exec_explanation = monte_carlo_results_explainer(result_text, "executives")
+                manager_explanation = monte_carlo_results_explainer(result_text, "managers")
+                general_explanation = monte_carlo_results_explainer(result_text, "general")
+                
+                # Store explanations in session state for easy access
+                if 'workflow_state' in st.session_state:
+                    if 'simulation_explanations' not in st.session_state.workflow_state:
+                        st.session_state.workflow_state['simulation_explanations'] = {}
+                    
+                    st.session_state.workflow_state['simulation_explanations'] = {
+                        'executive': exec_explanation,
+                        'manager': manager_explanation,
+                        'general': general_explanation,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                
+                SessionManager.add_log("INFO", "Generated layman-friendly explanations for Monte Carlo results")
+                
+            except Exception as e:
+                SessionManager.add_log("WARNING", f"Could not generate layman explanations: {str(e)}")
+            
             SessionManager.update_agent_progress("simulate_agent", 1.0, "completed", "Monte Carlo simulation completed")
             
             return {
@@ -474,7 +408,8 @@ class DecideWorkflow:
                 'phase': 'simulation',
                 'agent': 'simulate_agent',
                 'output': result,
-                'simulation_runs': config.MONTE_CARLO_RUNS
+                'simulation_runs': config.MONTE_CARLO_RUNS,
+                'explanations_generated': True
             }
         
         except Exception as e:
@@ -610,7 +545,16 @@ class DecideWorkflow:
             context += f"Project Information:\n"
             context += f"- Project Name: {project_info.get('name', 'Unknown')}\n"
             context += f"- Description: {project_info.get('description', 'Not provided')}\n"
-            context += f"- Analysis Focus: {project_info.get('focus', 'General')}\n\n"
+            
+            # Include analysis focus and custom focus if provided
+            focus = project_info.get('focus', 'General')
+            context += f"- Analysis Focus: {focus}\n"
+            
+            # Add custom focus if it exists and focus is "Other"
+            if focus == "Other" and project_info.get('custom_focus'):
+                context += f"- Custom Focus Details: {project_info.get('custom_focus')}\n"
+            
+            context += f"- Project Created: {project_info.get('created_at', 'Unknown')}\n\n"
         
         # Add document summary
         documents = st.session_state.workflow_state.get('documents', [])
@@ -665,6 +609,41 @@ class DecideWorkflow:
         consolidated_output = "CONSOLIDATED PHASE OUTPUTS FOR FINAL REPORT\n"
         consolidated_output += "=" * 60 + "\n\n"
         
+        # Add project information and document details at the beginning
+        project_info = st.session_state.workflow_state.get('project_info', {})
+        documents = st.session_state.workflow_state.get('documents', [])
+        
+        consolidated_output += "PROJECT INFORMATION\n"
+        consolidated_output += "-" * 30 + "\n"
+        consolidated_output += f"Project Name: {project_info.get('name', 'Not specified')}\n"
+        consolidated_output += f"Project Description: {project_info.get('description', 'Not specified')}\n"
+        
+        # Handle analysis focus including custom focus
+        analysis_focus = project_info.get('focus', 'Not specified')
+        if analysis_focus == "Other" and project_info.get('custom_focus'):
+            analysis_focus = project_info.get('custom_focus')
+        consolidated_output += f"Analysis Focus: {analysis_focus}\n"
+        
+        # Add files used information
+        if documents:
+            file_names = [doc.get('filename', 'Unknown filename') for doc in documents]
+            consolidated_output += f"Files Used: {', '.join(file_names)}\n"
+        else:
+            consolidated_output += "Files Used: No files uploaded\n"
+        
+        # Add simulation explanations if available
+        explanations = st.session_state.workflow_state.get('simulation_explanations', {})
+        if explanations:
+            consolidated_output += "SIMULATION RESULTS - EXECUTIVE SUMMARY\n"
+            consolidated_output += "-" * 40 + "\n"
+            consolidated_output += explanations.get('executive', 'Executive explanation not available')
+            consolidated_output += "\n\n" + "=" * 60 + "\n\n"
+            
+            consolidated_output += "SIMULATION RESULTS - MANAGEMENT SUMMARY\n"
+            consolidated_output += "-" * 40 + "\n"
+            consolidated_output += explanations.get('manager', 'Management explanation not available')
+            consolidated_output += "\n\n" + "=" * 60 + "\n\n"
+        
         for phase_name, output_info in phase_outputs.items():
             consolidated_output += f"PHASE: {phase_name.upper()}\n"
             consolidated_output += f"Timestamp: {output_info.get('timestamp', 'Unknown')}\n"
@@ -686,6 +665,31 @@ class DecideWorkflow:
             return self.vector_store.get_collection_info()
         except Exception as e:
             return {'error': str(e)}
+    
+    def get_simulation_explanations(self, audience_type: str = "executive") -> str:
+        """Get layman-friendly explanations for simulation results
+        
+        Args:
+            audience_type: Type of audience ("executive", "manager", "general")
+            
+        Returns:
+            Formatted explanation text for the specified audience
+        """
+        try:
+            explanations = st.session_state.workflow_state.get('simulation_explanations', {})
+            
+            if not explanations:
+                return "No simulation explanations available. Run the simulation phase first."
+            
+            if audience_type not in explanations:
+                available_types = list(explanations.keys())
+                available_types.remove('timestamp')  # Remove timestamp from available types
+                return f"Explanation for '{audience_type}' not available. Available types: {', '.join(available_types)}"
+            
+            return explanations[audience_type]
+            
+        except Exception as e:
+            return f"Error retrieving simulation explanations: {str(e)}"
     
     def generate_workflow_summary(self, all_results: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a summary of the complete workflow execution"""

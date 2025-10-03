@@ -241,14 +241,38 @@ class VectorStore:
             return False
 
     def clear_collection(self) -> bool:
-        """Clear all vectors from the current index"""
+        """Clear all vectors from the current index without deleting the collection"""
         try:
             if not self.index:
+                st.warning("Vector store not initialized")
                 return False
+            
+            # Get current stats before clearing
+            stats = self.index.describe_index_stats()
+            vector_count = stats.get('total_vector_count', 0)
+            
+            if vector_count == 0:
+                st.info("Collection is already empty")
+                return True
+            
+            # Clear all vectors
             self.index.delete(delete_all=True)
-            return True
+            
+            # Verify clearing was successful
+            import time
+            time.sleep(1)  # Small delay to ensure operation completes
+            new_stats = self.index.describe_index_stats()
+            new_count = new_stats.get('total_vector_count', 0)
+            
+            if new_count == 0:
+                st.info(f"Successfully cleared {vector_count} vectors from collection")
+                return True
+            else:
+                st.warning(f"Collection clearing incomplete: {new_count} vectors remaining")
+                return False
+                
         except Exception as e:
-            st.error(f"Failed to clear index: {str(e)}")
+            st.error(f"Failed to clear collection: {str(e)}")
             return False
 
     def reset_collection(self, name: str) -> bool:
@@ -273,4 +297,33 @@ class VectorStore:
             return False
         except Exception as e:
             st.error(f"Failed to reset collection: {str(e)}")
+            return False
+
+    @staticmethod
+    def delete_session_index():
+        """Delete the session-specific index - for compatibility with existing code"""
+        try:
+            if 'vector_index_name' in st.session_state:
+                index_name = st.session_state['vector_index_name']
+                pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY", ""))
+                
+                if index_name in pc.list_indexes().names():
+                    pc.delete_index(index_name)
+                    st.info(f"Deleted vector index: {index_name}")
+                    
+                # Clear the session state
+                del st.session_state['vector_index_name']
+        except Exception as e:
+            st.warning(f"Could not delete session index: {str(e)}")
+
+    @staticmethod 
+    def clear_session_collection():
+        """Clear the session collection without deleting it - preferred method"""
+        try:
+            if 'vector_index_name' in st.session_state:
+                vector_store = VectorStore()
+                return vector_store.clear_collection()
+            return True
+        except Exception as e:
+            st.warning(f"Could not clear session collection: {str(e)}")
             return False

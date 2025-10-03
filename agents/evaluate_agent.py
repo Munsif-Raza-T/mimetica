@@ -2,12 +2,35 @@ from crewai import Agent
 # Using evaluation_framework_tool for KPI development
 from tools.custom_tools import evaluation_framework_tool
 from config import config
+import streamlit as st
 
 class EvaluateAgent:
     """Agent responsible for defining KPIs, success metrics, and monitoring recommendations"""
     
     @staticmethod
     def create_agent():
+        # Get current model configuration
+        selected_model = config.validate_and_fix_selected_model()
+        model_config = config.AVAILABLE_MODELS[selected_model]
+        provider = model_config['provider']
+        
+        # Set up LLM based on provider
+        llm = None
+        if provider == 'openai':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"openai/{selected_model}",
+                api_key=config.OPENAI_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        elif provider == 'anthropic':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"anthropic/{selected_model}",
+                api_key=config.ANTHROPIC_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        
         return Agent(
             role="Evaluation Framework and KPI Specialist",
             goal="Define comprehensive KPIs, success metrics, and create monitoring frameworks for measuring initiative success",
@@ -22,7 +45,8 @@ class EvaluateAgent:
             verbose=True,
             allow_delegation=False,
             max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            llm=llm
         )
     
     @staticmethod

@@ -26,32 +26,33 @@ class AuthManager:
             st.session_state.authenticated = True
             st.session_state.login_time = datetime.now()
             
-            # Reset collection on successful login
+            # Clear collection data on successful login (without deleting/recreating)
             try:
                 from utils.vector_store import VectorStore
                 vector_store = VectorStore()
                 
-                # Use the improved reset_collection method
-                if vector_store.reset_collection("mimetica"):
-                    st.success("Vector store initialized successfully")
+                # Use clear_collection to empty the collection without deletion/recreation
+                if vector_store.clear_collection():
+                    st.success("Vector store cleared successfully")
                     st.session_state['collection_reset'] = True
                 else:
-                    st.warning("Vector store initialization may be incomplete")
+                    st.warning("Vector store clearing may be incomplete")
                     # Still return True for login as this is not critical
             except Exception as e:
-                st.warning(f"Could not reset vector store during login: {str(e)}")
+                st.warning(f"Could not clear vector store during login: {str(e)}")
                 # Log the full error for debugging
                 import traceback
-                print(f"Vector store reset error: {traceback.format_exc()}")
+                print(f"Vector store clear error: {traceback.format_exc()}")
             
             return True
         return False
     
     @staticmethod
     def logout():
-        """Clear authentication state and delete session vector collection"""
+        """Clear authentication state and clear session vector collection"""
         from utils.vector_store import VectorStore
-        VectorStore.delete_session_index()
+        # Use clear instead of delete to preserve collection structure
+        VectorStore.clear_session_collection()
         if 'authenticated' in st.session_state:
             del st.session_state.authenticated
         if 'login_time' in st.session_state:

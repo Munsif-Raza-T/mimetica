@@ -1,12 +1,35 @@
 from crewai import Agent
 from tools.custom_tools import CodeInterpreterTool
 from config import config
+import streamlit as st
 
 class DecisionMultidisciplinaryAgent:
     """Agent for integrated multidisciplinary feasibility analysis"""
     
     @staticmethod
     def create_agent():
+        # Get current model configuration
+        selected_model = config.validate_and_fix_selected_model()
+        model_config = config.AVAILABLE_MODELS[selected_model]
+        provider = model_config['provider']
+        
+        # Set up LLM based on provider
+        llm = None
+        if provider == 'openai':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"openai/{selected_model}",
+                api_key=config.OPENAI_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        elif provider == 'anthropic':
+            from crewai.llm import LLM
+            llm = LLM(
+                model=f"anthropic/{selected_model}",
+                api_key=config.ANTHROPIC_API_KEY,
+                temperature=config.TEMPERATURE
+            )
+        
         return Agent(
             role="Multidisciplinary Feasibility Analyst",
             goal="Conduct comprehensive feasibility analysis across technology, legal, finance, market, communication, and behavioral dimensions",
@@ -21,7 +44,8 @@ class DecisionMultidisciplinaryAgent:
             verbose=True,
             allow_delegation=False,
             max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            llm=llm
         )
     
     @staticmethod

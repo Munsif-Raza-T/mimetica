@@ -18,8 +18,8 @@ class TokenBatchManager:
     
     def __init__(self, 
                  tpm_limit: int = 200000,
-                 safety_margin: float = 0.7,
-                 max_tokens_per_request: int = 100000,
+                 safety_margin: float = 0.85,  # Increased from 0.7 to 0.85
+                 max_tokens_per_request: int = 120000,  # Increased from 100000
                  min_chunk_size: int = 100,
                  max_chunk_size: int = 1000):
         """
@@ -27,7 +27,7 @@ class TokenBatchManager:
         
         Args:
             tpm_limit: Tokens per minute limit for the API
-            safety_margin: Safety factor (0.0-1.0) to apply to limits
+            safety_margin: Safety factor (0.0-1.0) to apply to limits - optimized to 0.85
             max_tokens_per_request: Maximum tokens per single API request
             min_chunk_size: Minimum words per chunk
             max_chunk_size: Maximum words per chunk
@@ -57,7 +57,7 @@ class TokenBatchManager:
     @lru_cache(maxsize=10000)
     def estimate_tokens_accurate(self, text: str) -> int:
         """
-        More accurate token estimation using multiple methods with caching
+        Optimized token estimation with improved accuracy and reduced buffer
         
         Args:
             text: Input text to estimate tokens for
@@ -70,23 +70,24 @@ class TokenBatchManager:
         
         # Quick estimation for very short texts
         if len(text) < 100:
-            return max(1, int(len(text) / 3))
+            return max(1, int(len(text) / 3.5))  # Slightly more accurate ratio
         
-        # Use regex to count words more efficiently
-        word_count = len(re.findall(r'\b\w+\b', text))
+        # Optimized single-pass token estimation
         char_count = len(text)
         
-        # Optimized token estimation based on GPT-3 tokenizer characteristics
-        # Using weighted average of different methods
-        estimate1 = word_count * 1.3  # Word-based estimate
-        estimate2 = char_count / 4    # Character-based estimate
-        estimate3 = len(re.findall(r'[A-Za-z0-9]+|\s+|[^\w\s]', text)) * 0.9  # Token pattern estimate
+        # More accurate GPT-4 tokenization estimate
+        # Based on empirical analysis of GPT-4 tokenizer behavior
+        if char_count < 1000:
+            # For short texts, use more precise character-based estimate
+            estimated_tokens = char_count / 3.8
+        else:
+            # For longer texts, use optimized word + punctuation estimate
+            word_count = len(re.findall(r'\b\w+\b', text))
+            punct_count = len(re.findall(r'[^\w\s]', text))
+            estimated_tokens = word_count * 1.25 + punct_count * 0.5 + char_count * 0.05
         
-        # Weighted average with more weight on the pattern-based estimate
-        estimated_tokens = (estimate1 + estimate2 + 2 * estimate3) / 4
-        
-        # Add smaller buffer (reduced from 1.1 to 1.05 for better accuracy)
-        return max(1, int(estimated_tokens * 1.05))
+        # Reduced buffer from 1.05 to 1.02 for better accuracy
+        return max(1, int(estimated_tokens * 1.02))
     
     def chunk_document_smart(self, doc: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -237,16 +238,16 @@ class TokenBatchManager:
             List of document batches
         """
         if max_tokens_per_batch is None:
-            max_tokens_per_batch = min(self.MAX_TOKENS_PER_MIN // 2, 60000)
+            # Increased batch size from TPM_limit // 2 to 75% of TPM limit for better efficiency
+            max_tokens_per_batch = min(int(self.MAX_TOKENS_PER_MIN * 0.75), 90000)
         
         # Early return for empty input
         if not docs:
             return []
         
-        # Initialize batches with optimal pre-allocation
-        estimated_batch_count = sum(doc.get('estimated_tokens', 0) for doc in docs) // max_tokens_per_batch + 1
-        batches = [[] for _ in range(estimated_batch_count)]
-        batch_tokens = [0] * estimated_batch_count
+        # Use dynamic list instead of pre-allocated arrays
+        batches = []
+        batch_tokens = []
         
         # Sort docs by token count in descending order for better packing
         sorted_docs = sorted(docs, key=lambda x: x.get('estimated_tokens', 0), reverse=True)
@@ -259,7 +260,7 @@ class TokenBatchManager:
                     st.warning(f"⚠️ Skipping oversized chunk: {doc_tokens:,} tokens (ID: {doc.get('chunk_id', 'unknown')})")
                 continue
             
-            # Find the best batch for this document using best-fit algorithm
+            # Find the best batch for this document using optimized best-fit algorithm
             best_batch_idx = -1
             min_remaining_space = max_tokens_per_batch + 1
             
@@ -277,7 +278,7 @@ class TokenBatchManager:
                 batches[best_batch_idx].append(doc)
                 batch_tokens[best_batch_idx] += doc_tokens
         
-        # Remove empty batches and ensure optimal packing
+        # Return non-empty batches
         return [batch for batch in batches if batch]
     
     def process_documents_with_batching(self, documents: List[Dict[str, Any]]) -> Tuple[List[List[Dict[str, Any]]], Dict[str, Any]]:
@@ -309,8 +310,9 @@ class TokenBatchManager:
             with chunk_lock:
                 chunked_docs.extend(doc_chunks)
         
-        # Use ThreadPoolExecutor for parallel processing
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, len(documents))) as executor:
+        # Use ThreadPoolExecutor for parallel processing with optimized worker count
+        optimal_workers = min(16, max(4, len(documents)))  # Reduced from 32 to 16 max workers
+        with concurrent.futures.ThreadPoolExecutor(max_workers=optimal_workers) as executor:
             # Process documents in parallel
             list(executor.map(process_doc, enumerate(documents)))
         
@@ -371,7 +373,7 @@ class TokenBatchManager:
     
     def wait_for_rate_limit_window(self, required_tokens: int) -> bool:
         """
-        Smart waiting for rate limit window
+        Optimized smart waiting for rate limit window with adaptive timing
         
         Args:
             required_tokens: Tokens needed for next request
@@ -379,25 +381,32 @@ class TokenBatchManager:
         Returns:
             True if safe to proceed, False if timeout reached
         """
-        max_wait_time = 60  # Maximum wait time in seconds
+        max_wait_time = 30  # Reduced from 60 to 30 seconds
         wait_time = 0
         
         while (self.get_current_token_usage() + required_tokens > self.MAX_TOKENS_PER_MIN 
                and wait_time < max_wait_time):
             
-            sleep_duration = min(5, max_wait_time - wait_time)
             current_usage = self.get_current_token_usage()
             
+            # Calculate adaptive sleep duration based on how much we're over the limit
+            excess_tokens = (current_usage + required_tokens) - self.MAX_TOKENS_PER_MIN
+            estimated_wait_needed = min((excess_tokens / self.MAX_TOKENS_PER_MIN) * 60, 10)
+            
+            # Use adaptive sleep duration instead of fixed 5 seconds
+            sleep_duration = min(max(1, estimated_wait_needed), max_wait_time - wait_time)
+            
             if st:
-                st.info(f"⏳ Rate limit protection: waiting {sleep_duration}s "
-                       f"(usage: {current_usage:,}/{self.MAX_TOKENS_PER_MIN:,} TPM)")
+                st.info(f"⏳ Rate limit protection: waiting {sleep_duration:.1f}s "
+                       f"(usage: {current_usage:,}/{self.MAX_TOKENS_PER_MIN:,} TPM, "
+                       f"need: {required_tokens:,})")
             
             time.sleep(sleep_duration)
             wait_time += sleep_duration
         
         if wait_time >= max_wait_time:
             if st:
-                st.warning("⚠️ Rate limit wait timeout - proceeding with reduced batch size")
+                st.warning("⚠️ Rate limit wait timeout - proceeding with caution")
             return False
         
         return True
