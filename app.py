@@ -819,7 +819,7 @@ def show_workflow_progress():
 
 def show_results_page():
     """Display workflow results and deliverables"""
-    st.header("Workflow Results & Deliverables")
+    st.header("📊 Workflow Results & Deliverables")
     
     phase_outputs = st.session_state.workflow_state.get('phase_outputs', {})
     
@@ -830,60 +830,9 @@ def show_results_page():
             st.rerun()
         return
     
-    # Results summary with batch processing stats
-    st.subheader("Results Summary")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Deliverables", len(phase_outputs))
-    
-    with col2:
-        # Calculate total tokens processed across all phases
-        total_tokens = sum(
-            phase_data.get('batch_processing_stats', {}).get('total_tokens_processed', 0)
-            for phase_data in phase_outputs.values()
-        )
-        st.metric("Tokens Processed", f"{total_tokens:,}")
-    
-    with col3:
-        # Calculate total batches processed
-        total_batches = sum(
-            phase_data.get('batch_processing_stats', {}).get('total_batches', 0)
-            for phase_data in phase_outputs.values()
-        )
-        st.metric("Total Batches", total_batches)
-    
-    with col4:
-        completion_status = "Complete" if len(phase_outputs) >= 8 else "In Progress"
-        st.metric("Status", completion_status)
-    
-    # Token usage visualization
-    if total_tokens > 0:
-        st.subheader("Token Usage by Phase")
-        
-        # Create token usage chart
-        token_data = []
-        for phase, phase_data in phase_outputs.items():
-            stats = phase_data.get('batch_processing_stats', {})
-            if stats.get('total_tokens_processed', 0) > 0:
-                token_data.append({
-                    'Phase': phase.replace('_', ' ').title(),
-                    'Tokens': stats['total_tokens_processed'],
-                    'Batches': stats.get('total_batches', 0),
-                    'Success Rate': stats.get('success_rate', 0)
-                })
-        
-        if token_data:
-            df_tokens = pd.DataFrame(token_data)
-            fig = px.bar(df_tokens, x='Phase', y='Tokens', 
-                        title='Token Usage by Phase',
-                        hover_data=['Batches', 'Success Rate'])
-            st.plotly_chart(fig, use_container_width=True)
-    
-    # Final report section - CLEAN DISPLAY WITH VISUALIZATIONS
+    # 1. FINAL REPORT SECTION - PDF PREVIEW WITH DOWNLOAD BUTTONS
     if 'report' in phase_outputs:
-        st.subheader("📊 Final Comprehensive Report with Visualizations")
+        st.subheader("📄 Final Comprehensive Report")
         
         report_output = phase_outputs['report'].get('output', {})
         
@@ -914,57 +863,26 @@ def show_results_page():
                     markdown_content = markdown_content.replace('\\"', '"')
                     markdown_content = markdown_content.replace("\\'", "'")
         
-        # Check for visualizations and display accordingly
-        has_visualizations = "data:image/png;base64," in str(markdown_content)
-        
-        if has_visualizations:
-            # Display content with embedded visualizations
-            import re
-            import base64
-            from PIL import Image
-            import io
+        # Display the report content as PDF preview
+        with st.container():
+            # Check for visualizations and display accordingly
+            has_visualizations = "data:image/png;base64," in str(markdown_content)
             
-            # Check if content contains image placeholders
-            placeholder_pattern = r'\[IMAGE_PLACEHOLDER: ([a-f0-9-]+)\].*?\[/IMAGE_PLACEHOLDER\]'
-            if re.search(placeholder_pattern, markdown_content, re.DOTALL):
-                # Content has image placeholders - process them
-                from utils.image_manager import image_manager
+            if has_visualizations:
+                # Display content with embedded visualizations
+                import re
+                import base64
+                from PIL import Image
+                import io
                 
-                # Split content around image placeholders
-                parts = re.split(placeholder_pattern, markdown_content, flags=re.DOTALL)
-                
-                for i, part in enumerate(parts):
-                    if i % 2 == 0:
-                        # Text content - render as markdown
-                        if part.strip():
-                            # Clean the content from any tool artifacts
-                            clean_text = re.sub(r'.*successfully.*\n', '', part)
-                            clean_text = re.sub(r'.*generated successfully.*\n', '', clean_text)
-                            clean_text = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_text)
-                            if clean_text.strip():
-                                st.markdown(clean_text.strip())
-                    else:
-                        # This is an image ID - load and display the image
-                        image_id = part
-                        try:
-                            image_bytes = image_manager.load_image_for_pdf(image_id)
-                            if image_bytes:
-                                image = Image.open(io.BytesIO(image_bytes))
-                                
-                                # Get image metadata for caption
-                                metadata = image_manager.get_image_by_id(image_id)
-                                if metadata and 'title' in metadata:
-                                    st.image(image, caption=metadata['title'], use_column_width=True)
-                                else:
-                                    st.image(image, use_column_width=True)
-                        except Exception as e:
-                            st.error(f"Failed to load image {image_id}: {str(e)}")
-            else:
-                # Legacy: Check for base64 images (for backwards compatibility)
-                base64_pattern = r'Base64 Image Data: data:image/png;base64,([A-Za-z0-9+/=]+)'
-                if re.search(base64_pattern, markdown_content):
-                    # Split content around base64 images
-                    parts = re.split(base64_pattern, markdown_content)
+                # Check if content contains image placeholders
+                placeholder_pattern = r'\[IMAGE_PLACEHOLDER: ([a-f0-9-]+)\].*?\[/IMAGE_PLACEHOLDER\]'
+                if re.search(placeholder_pattern, markdown_content, re.DOTALL):
+                    # Content has image placeholders - process them
+                    from utils.image_manager import image_manager
+                    
+                    # Split content around image placeholders
+                    parts = re.split(placeholder_pattern, markdown_content, flags=re.DOTALL)
                     
                     for i, part in enumerate(parts):
                         if i % 2 == 0:
@@ -973,91 +891,125 @@ def show_results_page():
                                 # Clean the content from any tool artifacts
                                 clean_text = re.sub(r'.*successfully.*\n', '', part)
                                 clean_text = re.sub(r'.*generated successfully.*\n', '', clean_text)
-                                clean_text = re.sub(r'Base64 Image Data:.*\n', '', clean_text)
                                 clean_text = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_text)
                                 if clean_text.strip():
                                     st.markdown(clean_text.strip())
                         else:
-                            # Base64 image data - display as image
+                            # This is an image ID - load and display the image
+                            image_id = part
                             try:
-                                image_data = base64.b64decode(part)
-                                image = Image.open(io.BytesIO(image_data))
-                                st.image(image, use_column_width=True)
-                            except Exception:
-                                pass  # Skip invalid image data
+                                image_bytes = image_manager.load_image_for_pdf(image_id)
+                                if image_bytes:
+                                    image = Image.open(io.BytesIO(image_bytes))
+                                    
+                                    # Get image metadata for caption
+                                    metadata = image_manager.get_image_by_id(image_id)
+                                    if metadata and 'title' in metadata:
+                                        st.image(image, caption=metadata['title'], use_column_width=True)
+                                    else:
+                                        st.image(image, use_column_width=True)
+                            except Exception as e:
+                                st.error(f"Failed to load image {image_id}: {str(e)}")
                 else:
-                    # No images, just display text
-                    if markdown_content:
-                        # Clean the content from any tool artifacts and formatting issues
-                        clean_content = markdown_content
+                    # Legacy: Check for base64 images (for backwards compatibility)
+                    base64_pattern = r'Base64 Image Data: data:image/png;base64,([A-Za-z0-9+/=]+)'
+                    if re.search(base64_pattern, markdown_content):
+                        # Split content around base64 images
+                        parts = re.split(base64_pattern, markdown_content)
                         
-                        # Remove tool output messages
-                        clean_content = re.sub(r'.*successfully.*\n', '', clean_content)
-                        clean_content = re.sub(r'.*generated successfully.*\n', '', clean_content) 
-                        clean_content = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_content)
-                        clean_content = re.sub(r'\*\*GENERATE.*?\*\*:', '', clean_content, flags=re.DOTALL)
-                        clean_content = re.sub(r'Use the strategic_visualization_generator tool.*?\n', '', clean_content)
-                        
-                        if clean_content.strip():
-                            st.markdown(clean_content.strip())
-        else:
-            # No image placeholders found, display as properly rendered markdown text
-            if markdown_content:
-                # Clean the content from any tool artifacts and formatting issues
-                import re
-                clean_content = markdown_content
-                
-                # Remove tool output messages
-                clean_content = re.sub(r'.*successfully.*\n', '', clean_content)
-                clean_content = re.sub(r'.*generated successfully.*\n', '', clean_content) 
-                clean_content = re.sub(r'Base64 Image Data:.*\n', '', clean_content)
-                clean_content = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_content)
-                clean_content = re.sub(r'\*\*GENERATE.*?\*\*:', '', clean_content, flags=re.DOTALL)
-                clean_content = re.sub(r'Use the strategic_visualization_generator tool.*?\n', '', clean_content)
-                
-                # Clean up any remaining formatting artifacts
-                clean_content = clean_content.replace('\\n', '\n')
-                clean_content = clean_content.replace('\\t', '\t')
-                clean_content = clean_content.replace('\\"', '"')
-                clean_content = clean_content.replace("\\'", "'")
-                clean_content = clean_content.replace('\\\\', '\\')
-                
-                # Remove any CrewAI output wrappers
-                clean_content = re.sub(r'^.*?\n# MIMÉTICA', '# MIMÉTICA', clean_content, flags=re.DOTALL)
-                clean_content = re.sub(r"', 'includes_phases.*$", '', clean_content, flags=re.DOTALL)
-                clean_content = re.sub(r'", "includes_phases.*$', '', clean_content, flags=re.DOTALL)
-                
-                # Final cleanup - remove empty lines and ensure proper spacing
-                lines = clean_content.split('\n')
-                cleaned_lines = []
-                for line in lines:
-                    line = line.strip()
-                    if line and not line.startswith('```') and 'strategic_visualization_generator' not in line:
-                        cleaned_lines.append(line)
-                
-                final_content = '\n\n'.join(cleaned_lines)
-                
-                # Render the cleaned markdown content
-                if final_content.strip():
-                    st.markdown(final_content)
-                else:
-                    st.write("Report content is being processed...")
-                    # Show debug info to help troubleshoot
-                    with st.expander("🔍 Debug: Raw Content Preview", expanded=False):
-                        st.text(f"Original content length: {len(markdown_content)}")
-                        st.text("First 500 characters:")
-                        st.code(markdown_content[:500])
-                    
-                    # Fallback: show a cleaned version without special formatting
-                    fallback_content = re.sub(r'[#*`]', '', markdown_content[:2000])
-                    if fallback_content.strip():
-                        st.text(fallback_content)
+                        for i, part in enumerate(parts):
+                            if i % 2 == 0:
+                                # Text content - render as markdown
+                                if part.strip():
+                                    # Clean the content from any tool artifacts
+                                    clean_text = re.sub(r'.*successfully.*\n', '', part)
+                                    clean_text = re.sub(r'.*generated successfully.*\n', '', clean_text)
+                                    clean_text = re.sub(r'Base64 Image Data:.*\n', '', clean_text)
+                                    clean_text = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_text)
+                                    if clean_text.strip():
+                                        st.markdown(clean_text.strip())
+                            else:
+                                # Base64 image data - display as image
+                                try:
+                                    image_data = base64.b64decode(part)
+                                    image = Image.open(io.BytesIO(image_data))
+                                    st.image(image, use_column_width=True)
+                                except Exception:
+                                    pass  # Skip invalid image data
                     else:
-                        st.error("Unable to extract readable content from report")
+                        # No images, just display text
+                        if markdown_content:
+                            # Clean the content from any tool artifacts and formatting issues
+                            clean_content = markdown_content
+                            
+                            # Remove tool output messages
+                            clean_content = re.sub(r'.*successfully.*\n', '', clean_content)
+                            clean_content = re.sub(r'.*generated successfully.*\n', '', clean_content) 
+                            clean_content = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_content)
+                            clean_content = re.sub(r'\*\*GENERATE.*?\*\*:', '', clean_content, flags=re.DOTALL)
+                            clean_content = re.sub(r'Use the strategic_visualization_generator tool.*?\n', '', clean_content)
+                            
+                            if clean_content.strip():
+                                st.markdown(clean_content.strip())
             else:
-                st.error("No report content available")
+                # No image placeholders found, display as properly rendered markdown text
+                if markdown_content:
+                    # Clean the content from any tool artifacts and formatting issues
+                    import re
+                    clean_content = markdown_content
+                    
+                    # Remove tool output messages
+                    clean_content = re.sub(r'.*successfully.*\n', '', clean_content)
+                    clean_content = re.sub(r'.*generated successfully.*\n', '', clean_content) 
+                    clean_content = re.sub(r'Base64 Image Data:.*\n', '', clean_content)
+                    clean_content = re.sub(r'🎨 VISUALIZATION TOOL CALLED:.*\n', '', clean_content)
+                    clean_content = re.sub(r'\*\*GENERATE.*?\*\*:', '', clean_content, flags=re.DOTALL)
+                    clean_content = re.sub(r'Use the strategic_visualization_generator tool.*?\n', '', clean_content)
+                    
+                    # Clean up any remaining formatting artifacts
+                    clean_content = clean_content.replace('\\n', '\n')
+                    clean_content = clean_content.replace('\\t', '\t')
+                    clean_content = clean_content.replace('\\"', '"')
+                    clean_content = clean_content.replace("\\'", "'")
+                    clean_content = clean_content.replace('\\\\', '\\')
+                    
+                    # Remove any CrewAI output wrappers
+                    clean_content = re.sub(r'^.*?\n# MIMÉTICA', '# MIMÉTICA', clean_content, flags=re.DOTALL)
+                    clean_content = re.sub(r"', 'includes_phases.*$", '', clean_content, flags=re.DOTALL)
+                    clean_content = re.sub(r'", "includes_phases.*$', '', clean_content, flags=re.DOTALL)
+                    
+                    # Final cleanup - remove empty lines and ensure proper spacing
+                    lines = clean_content.split('\n')
+                    cleaned_lines = []
+                    for line in lines:
+                        line = line.strip()
+                        if line and not line.startswith('```') and 'strategic_visualization_generator' not in line:
+                            cleaned_lines.append(line)
+                    
+                    final_content = '\n\n'.join(cleaned_lines)
+                    
+                    # Render the cleaned markdown content
+                    if final_content.strip():
+                        st.markdown(final_content)
+                    else:
+                        st.write("Report content is being processed...")
+                        # Show debug info to help troubleshoot
+                        with st.expander("🔍 Debug: Raw Content Preview", expanded=False):
+                            st.text(f"Original content length: {len(markdown_content)}")
+                            st.text("First 500 characters:")
+                            st.code(markdown_content[:500])
+                        
+                        # Fallback: show a cleaned version without special formatting
+                        fallback_content = re.sub(r'[#*`]', '', markdown_content[:2000])
+                        if fallback_content.strip():
+                            st.text(fallback_content)
+                        else:
+                            st.error("Unable to extract readable content from report")
+                else:
+                    st.error("No report content available")
         
-        # Download options - PDF, DOCX (as requested)
+        # 2. DOWNLOAD BUTTONS FOR PDF AND DOCX (as requested)
+        st.markdown("### 📥 Download Final Report")
         col1, col2 = st.columns([1, 1])
 
         with col1:
@@ -1085,7 +1037,7 @@ def show_results_page():
                     use_container_width=True
                 )
         
-    with col2:
+        with col2:
             try:
                 docx_gen = DocxGenerator()
                 docx_bytes = docx_gen.generate_comprehensive_report_docx(phase_outputs)
@@ -1099,9 +1051,11 @@ def show_results_page():
                 )
             except Exception as e:
                 st.error(f"Failed to generate DOCX: {str(e)}")
+        
+        st.divider()
     
-    # Other outputs viewer: dropdown to select and render .md files from workspace, with PDF download
-    st.subheader("Other Output Markdown Files")
+    # 3. OTHER OUTPUT FILES DROPDOWN (as requested)
+    st.subheader("📋 Other Output Files")
     try:
         project_root = Path(__file__).resolve().parent
         md_files = sorted([
@@ -1113,7 +1067,7 @@ def show_results_page():
 
         if md_files:
             file_map = {p.name: p for p in md_files}
-            selected_name = st.selectbox("Select an output file", options=list(file_map.keys()))
+            selected_name = st.selectbox("Select an output file to view", options=list(file_map.keys()))
             if selected_name:
                 p = file_map[selected_name]
                 try:
@@ -1121,35 +1075,222 @@ def show_results_page():
                 except Exception:
                     md_content = p.read_text(errors='ignore')
 
-                tabs = st.tabs(["Standard Text", "Rendered Markdown"])
-                with tabs[0]:
-                    st.text_area("Raw Content", md_content, height=300)
-                with tabs[1]:
-                    st.markdown(md_content, unsafe_allow_html=False)
+                # Display the selected file content
+                with st.container():
+                    st.markdown(f"**Viewing:** {selected_name}")
+                    
+                    tabs = st.tabs(["📖 Rendered View", "📝 Raw Text"])
+                    with tabs[0]:
+                        st.markdown(md_content, unsafe_allow_html=False)
+                    with tabs[1]:
+                        st.text_area("Raw Content", md_content, height=300)
 
                 # Download selected markdown as PDF
-                try:
-                    pdf_gen = PDFGenerator()
-                    title = selected_name.replace('_', ' ').replace('.md', '').title()
-                    pdf_bytes = pdf_gen.markdown_to_pdf(md_content, title=title)
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col1:
+                    try:
+                        pdf_gen = PDFGenerator()
+                        title = selected_name.replace('_', ' ').replace('.md', '').title()
+                        pdf_bytes = pdf_gen.markdown_to_pdf(md_content, title=title)
+                        st.download_button(
+                            label="📄 Download as PDF",
+                            data=pdf_bytes,
+                            file_name=f"{p.stem}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"PDF export failed: {str(e)}")
+                
+                with col2:
                     st.download_button(
-                        label="📄 Download Selected as PDF",
-                        data=pdf_bytes,
-                        file_name=f"{p.stem}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
+                        label="📝 Download as Text",
+                        data=md_content,
+                        file_name=selected_name,
+                        mime="text/markdown",
                         use_container_width=True
                     )
-                except Exception as e:
-                    st.error(f"PDF export failed: {str(e)}")
         else:
-            st.info("No other markdown outputs found in the workspace.")
+            st.info("No other output files found in the workspace.")
     except Exception as e:
-        st.error(f"Failed to load markdown outputs: {str(e)}")
+        st.error(f"Failed to load output files: {str(e)}")
     
-    # Simulation results visualization
+    st.divider()
+    
+    # 4. MONTE CARLO SIMULATION SECTION (as requested)
     if 'simulation' in phase_outputs:
         show_simulation_visualizations(phase_outputs['simulation'])
-
+        st.divider()
+    
+    # 5. AGENT COMMUNICATION DROPDOWN (as requested)
+    st.subheader("🤖 Agent Communications & Execution Details")
+    
+    agent_comms = SessionManager.get_formatted_agent_communications()
+    
+    if agent_comms and agent_comms != "No agent communications recorded.":
+        with st.expander("📋 View Complete Agent Communication Log", expanded=False):
+            st.markdown("### Agent Interactions During Workflow Execution")
+            st.info("This section contains all the detailed communications, reasoning, and interactions between AI agents during the workflow execution. You can see exactly how each agent processed your documents and made decisions.")
+            
+            # Create tabs for different views
+            tab1, tab2, tab3 = st.tabs(["📝 Formatted View", "🔍 Raw Communications", "📊 Summary"])
+            
+            with tab1:
+                st.markdown(agent_comms)
+            
+            with tab2:
+                # Show raw communication data
+                raw_comms = SessionManager.get_agent_communications()
+                if raw_comms:
+                    st.json(raw_comms[-10:])  # Show last 10 communications as JSON
+                    st.caption(f"Showing last 10 of {len(raw_comms)} total communications")
+                else:
+                    st.info("No raw communications available")
+            
+            with tab3:
+                # Show communication summary
+                comm_logger = SessionManager.get_agent_comm_logger()
+                if comm_logger:
+                    summary = comm_logger.get_communications_summary()
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Communications", summary['total_communications'])
+                    with col2:
+                        st.metric("Phases Covered", len(summary['phases_covered']))
+                    with col3:
+                        st.metric("Duration", summary['duration_covered'])
+                    
+                    st.write("**Communication Types:**")
+                    for comm_type, count in summary['communication_types'].items():
+                        st.write(f"- {comm_type.replace('_', ' ').title()}: {count}")
+                    
+                    st.write("**Phases Covered:**")
+                    st.write(", ".join(summary['phases_covered']))
+                    
+                    st.write("**Active Sources:**")
+                    st.write(", ".join(summary['sources']))
+                else:
+                    st.info("Communication summary not available")
+            
+            # Download option for communications
+            col1, col2 = st.columns(2)
+            with col1:
+                st.download_button(
+                    label="📄 Download Communications as Text",
+                    data=agent_comms,
+                    file_name=f"agent_communications_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                )
+            with col2:
+                # Export as JSON
+                raw_comms = SessionManager.get_agent_communications()
+                if raw_comms:
+                    import json
+                    comms_json = json.dumps(raw_comms, indent=2)
+                    st.download_button(
+                        label="📊 Download Communications as JSON",
+                        data=comms_json,
+                        file_name=f"agent_communications_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
+    else:
+        st.info("No agent communications were recorded during this session. Communications are captured when the workflow is executed.")
+    
+    # ADDITIONAL FEATURES - Results summary with batch processing stats
+    with st.expander("📊 Workflow Statistics & Processing Details", expanded=False):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Deliverables", len(phase_outputs))
+        
+        with col2:
+            # Calculate total tokens processed across all phases
+            total_tokens = sum(
+                phase_data.get('batch_processing_stats', {}).get('total_tokens_processed', 0)
+                for phase_data in phase_outputs.values()
+            )
+            st.metric("Tokens Processed", f"{total_tokens:,}")
+        
+        with col3:
+            # Calculate total batches processed
+            total_batches = sum(
+                phase_data.get('batch_processing_stats', {}).get('total_batches', 0)
+                for phase_data in phase_outputs.values()
+            )
+            st.metric("Total Batches", total_batches)
+        
+        with col4:
+            completion_status = "Complete" if len(phase_outputs) >= 8 else "In Progress"
+            st.metric("Status", completion_status)
+        
+        # Token usage visualization
+        if total_tokens > 0:
+            st.subheader("Token Usage by Phase")
+            
+            # Create token usage chart
+            token_data = []
+            for phase, phase_data in phase_outputs.items():
+                stats = phase_data.get('batch_processing_stats', {})
+                if stats.get('total_tokens_processed', 0) > 0:
+                    token_data.append({
+                        'Phase': phase.replace('_', ' ').title(),
+                        'Tokens': stats['total_tokens_processed'],
+                        'Batches': stats.get('total_batches', 0),
+                        'Success Rate': stats.get('success_rate', 0)
+                    })
+            
+            if token_data:
+                df_tokens = pd.DataFrame(token_data)
+                fig = px.bar(df_tokens, x='Phase', y='Tokens', 
+                            title='Token Usage by Phase',
+                            hover_data=['Batches', 'Success Rate'])
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Individual phase deliverables in expander
+        st.subheader("Individual Phase Deliverables")
+        
+        # Show each phase output in tabs
+        if phase_outputs:
+            phase_names = list(phase_outputs.keys())
+            tabs = st.tabs([phase.replace('_', ' ').title() for phase in phase_names])
+            
+            for tab, phase in zip(tabs, phase_names):
+                with tab:
+                    output_info = phase_outputs[phase]
+                    
+                    st.write(f"**Generated:** {output_info.get('timestamp', 'Unknown')}")
+                    
+                    # Show batch processing stats if available
+                    if 'batch_processing_stats' in output_info:
+                        with st.expander("📊 Processing Statistics"):
+                            stats = output_info['batch_processing_stats']
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                st.metric("Documents", stats.get('total_documents', 0))
+                            with col2:
+                                st.metric("Chunks", stats.get('total_chunks', 0))
+                            with col3:
+                                st.metric("Batches", stats.get('total_batches', 0))
+                            with col4:
+                                st.metric("Success Rate", f"{stats.get('success_rate', 0):.1f}%")
+                    
+                    # Display content
+                    content = output_info.get('output', {})
+                    if isinstance(content, dict):
+                        for key, value in content.items():
+                            st.write(f"**{key}:**")
+                            st.write(str(value))
+                            st.write("")
+                    else:
+                        st.write(str(content))
+                    
+                    # Download options for individual deliverable
+                    st.write("**Download Options:**")
+                    download_deliverable(phase, output_info)
 
 def show_simulation_visualizations(simulation_output):
     """Display Monte Carlo simulation visualizations with layman explanations"""

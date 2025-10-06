@@ -12,7 +12,7 @@ import base64
 import markdown
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image, PageTemplate, Frame
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from datetime import datetime
@@ -28,16 +28,45 @@ class PDFGenerator:
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
     
+    def _add_page_number_and_logo(self, canvas, doc):
+        """Add page numbers and logo to PDF pages"""
+        page_num = canvas.getPageNumber()
+        text = f"Page {page_num}"
+        canvas.saveState()
+        
+        # Add page number on the right
+        canvas.setFont('Helvetica', 10)
+        canvas.setFillColor(colors.black)
+        canvas.drawRightString(letter[0] - 72, 36, text)  # Bottom right
+        
+        # Add logo on the left bottom, aligned with page number
+        try:
+            logo_path = "assets/logo_red.png"
+            # Position logo in bottom left, aligned with page number height
+            logo_x = 72  # 72 points from left edge (matching right margin)
+            logo_y = 36 - 12  # Aligned with page number baseline (36) minus half logo height
+            logo_width = 50  # Logo width in points
+            logo_height = 25  # Logo height in points
+            
+            canvas.drawImage(logo_path, logo_x, logo_y, width=logo_width, height=logo_height, mask='auto')
+        except Exception as e:
+            # If logo fails to load, just skip it
+            pass
+        
+        canvas.restoreState()
+    
     def _setup_custom_styles(self):
         """Setup custom paragraph styles for PDF generation"""
         # Title style
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Heading1'],
-            fontSize=24,
-            textColor=colors.black,  # Changed to black
-            spaceAfter=20,
-            alignment=1  # Center alignment
+            fontSize=26,
+            textColor=colors.black,
+            spaceAfter=30,
+            spaceBefore=20,
+            alignment=1,  # Center alignment
+            fontName='Helvetica-Bold'
         ))
         
         # Header style
@@ -45,9 +74,10 @@ class PDFGenerator:
             name='CustomHeader',
             parent=self.styles['Heading2'],
             fontSize=18,
-            textColor=colors.black,  # Changed to black
-            spaceAfter=15,
-            spaceBefore=20
+            textColor=colors.black,
+            spaceAfter=18,
+            spaceBefore=24,
+            fontName='Helvetica-Bold'
         ))
         
         # Subheader style
@@ -55,9 +85,10 @@ class PDFGenerator:
             name='CustomSubheader',
             parent=self.styles['Heading3'],
             fontSize=14,
-            textColor=colors.black,  # Changed to black
-            spaceAfter=10,
-            spaceBefore=15
+            textColor=colors.black,
+            spaceAfter=12,
+            spaceBefore=18,
+            fontName='Helvetica-Bold'
         ))
         
         # Body text style
@@ -66,8 +97,11 @@ class PDFGenerator:
             parent=self.styles['Normal'],
             fontSize=11,
             textColor=colors.black,
-            spaceAfter=10,
-            alignment=4  # Justify
+            spaceAfter=12,
+            spaceBefore=0,
+            alignment=4,  # Justify
+            fontName='Helvetica',
+            leading=14  # Line spacing
         ))
         
         # Footer style
@@ -75,7 +109,7 @@ class PDFGenerator:
             name='Footer',
             parent=self.styles['Normal'],
             fontSize=10,
-            textColor=colors.grey,
+            textColor=colors.black,  # Changed to black for professional look
             alignment=1  # Center alignment
         ))
     
@@ -115,6 +149,70 @@ class PDFGenerator:
                 
         return images
     
+    def _get_current_session_images(self):
+        """Get ALL images from the generated_images folder"""
+        import os
+        import glob
+        from pathlib import Path
+        
+        session_images = []
+        generated_images_path = Path("generated_images")
+        
+        if not generated_images_path.exists():
+            return session_images
+        
+        # Define image type mappings for better titles
+        image_type_titles = {
+            'monte_carlo_distribution': 'Monte Carlo Simulation Distribution',
+            'roi_projection': 'ROI Projection Analysis',
+            'timeline': 'Implementation Timeline',
+            'risk_assessment': 'Risk Assessment Chart',
+            'financial_analysis': 'Financial Analysis',
+            'performance_metrics': 'Performance Metrics'
+        }
+        
+        # Get ALL PNG files from ALL session folders
+        all_image_files = []
+        
+        # Get all session folders
+        session_folders = [d for d in generated_images_path.iterdir() if d.is_dir() and d.name.startswith('session_')]
+        
+        for session_folder in session_folders:
+            image_files = list(session_folder.glob("*.png"))
+            all_image_files.extend(image_files)
+        
+        # Sort by modification time (newest first) to show latest images first
+        all_image_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        for img_path in all_image_files:
+            # Extract image type from filename for better titles
+            filename = img_path.stem
+            image_type = None
+            
+            for key in image_type_titles.keys():
+                if key in filename.lower():
+                    image_type = key
+                    break
+            
+            # Create a descriptive title
+            if image_type:
+                title = image_type_titles[image_type]
+            else:
+                # Fallback: create title from filename
+                title = filename.replace('_', ' ').title()
+                # Remove timestamp and hash parts
+                title = ' '.join(word for word in title.split() if not (word.isdigit() or len(word) == 8 and all(c in '0123456789abcdef' for c in word.lower())))
+                if not title.strip():
+                    title = "Generated Visualization"
+            
+            session_images.append({
+                'path': str(img_path),
+                'title': title,
+                'filename': img_path.name
+            })
+        
+        return session_images
+
     def _clean_content_from_placeholders(self, content: str) -> str:
         """Remove image placeholders from content and replace with simple markers"""
         # Pattern to match image placeholders
@@ -230,8 +328,8 @@ class PDFGenerator:
             if images:
                 story = self._insert_images_in_story(story, images)
             
-            # Build PDF
-            doc.build(story)
+            # Build PDF with page numbers and logo
+            doc.build(story, onFirstPage=self._add_page_number_and_logo, onLaterPages=self._add_page_number_and_logo)
             
             # Get PDF bytes
             buffer.seek(0)
@@ -246,45 +344,114 @@ class PDFGenerator:
         story = []
         
         # Add title page
+        story.append(Spacer(1, 30))  # Top margin
         story.append(Paragraph(title, self.styles['CustomTitle']))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", self.styles['Normal']))
         story.append(Spacer(1, 20))
         
-        # If there are no explicit placeholders in content, include session images as Visualizations section
-        try:
-            placeholder_ids = re.findall(r'\[IMAGE_PLACEHOLDER: ([a-f0-9-]+)\]', markdown_content)
-            if not placeholder_ids:
-                from utils.image_manager import image_manager
-                images = image_manager.get_all_images()
-                if images:
-                    story.append(Paragraph("Visualizations", self.styles['CustomHeader']))
-                    story.append(Spacer(1, 6))
-                    for idx, meta in enumerate(images, start=1):
-                        try:
-                            with open(meta['filepath'], 'rb') as f:
-                                img = Image(io.BytesIO(f.read()), width=6*inch, height=4*inch)
-                                story.append(img)
-                                caption = f"Figure {idx}: {meta.get('title', meta.get('chart_type', 'Visualization'))}"
-                                story.append(Paragraph(caption, self.styles['Normal']))
-                                story.append(Spacer(1, 12))
-                        except Exception:
-                            continue
-                    story.append(PageBreak())
-        except Exception:
-            # If any issue occurs, continue without session images
-            pass
+        # Add subtitle/date with professional styling
+        date_style = ParagraphStyle(
+            'DateStyle',
+            parent=self.styles['Normal'],
+            fontSize=12,
+            textColor=colors.black,
+            alignment=1,  # Center
+            fontName='Helvetica'
+        )
+        story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %H:%M')}", date_style))
+        story.append(Spacer(1, 40))
+        
+        # Add a professional divider line
+        divider_style = ParagraphStyle(
+            'DividerStyle',
+            parent=self.styles['Normal'],
+            fontSize=12,
+            textColor=colors.black,
+            alignment=1,  # Center
+            fontName='Helvetica'
+        )
+        story.append(Paragraph("━" * 50, divider_style))
+        story.append(Spacer(1, 30))
         
         # Parse markdown content directly for tables before HTML conversion
         story.extend(self._parse_markdown_content(markdown_content))
         
-        # Add footer
-        story.append(Spacer(1, 30))
-        story.append(Paragraph("Generated by MIMÉTICA MVP 1.0 - Strategic Decision Support System", self.styles['Footer']))
-        story.append(Paragraph(f"© {datetime.now().year} Tuinkel", self.styles['Footer']))
+        # Add footer with professional spacing
+        story.append(Spacer(1, 40))
+        
+        # Add divider before footer
+        divider_style = ParagraphStyle(
+            'FooterDividerStyle',
+            parent=self.styles['Normal'],
+            fontSize=10,
+            textColor=colors.black,
+            alignment=1,  # Center
+            fontName='Helvetica'
+        )
+        story.append(Paragraph("━" * 60, divider_style))
+        story.append(Spacer(1, 20))
+        
+        # Professional footer
+        story.append(Paragraph("Generated by MIMÉTICA MVP 1.0", self.styles['Footer']))
+        story.append(Paragraph("Strategic Decision Support System", self.styles['Footer']))
+        story.append(Spacer(1, 10))
+        story.append(Paragraph(f"© {datetime.now().year} Tuinkel - All Rights Reserved", self.styles['Footer']))
+        
+        # Add ALL session visualizations at the very end
+        try:
+            session_images = self._get_current_session_images()
+            if session_images:
+                story.append(PageBreak())  # Start visualizations on a new page
+                story.append(Paragraph("Generated Visualizations", self.styles['CustomHeader']))
+                story.append(Spacer(1, 12))
+                
+                for idx, img_info in enumerate(session_images, start=1):
+                    try:
+                        # Add the image
+                        img = Image(img_info['path'], width=6*inch, height=4*inch)
+                        story.append(img)
+                        
+                        # Add caption with proper title
+                        caption = f"Figure {idx}: {img_info['title']}"
+                        story.append(Paragraph(caption, self.styles['Normal']))
+                        story.append(Spacer(1, 16))
+                        
+                        # Add page break after every 2 images for better layout
+                        if idx % 2 == 0 and idx < len(session_images):
+                            story.append(PageBreak())
+                            
+                    except Exception as e:
+                        # Skip images that can't be loaded
+                        print(f"Warning: Could not load image {img_info['path']}: {e}")
+                        continue
+        except Exception as e:
+            # If any issue occurs, continue without session images
+            print(f"Warning: Could not add session images: {e}")
+            pass
         
         return story
     
+    def _process_inline_markdown(self, text: str) -> str:
+        """Process inline markdown formatting like bold, italic, etc."""
+        if not text:
+            return text
+            
+        # Process bold text (**text** or __text__)
+        text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+        text = re.sub(r'__(.*?)__', r'<b>\1</b>', text)
+        
+        # Process italic text (*text* or _text_)
+        text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', text)
+        text = re.sub(r'_(.*?)_', r'<i>\1</i>', text)
+        
+        # Process inline code (`text`)
+        text = re.sub(r'`(.*?)`', r'<font name="Courier">\1</font>', text)
+        
+        # Clean up any remaining markdown artifacts
+        text = text.replace('\\n', ' ')
+        text = text.replace('\\t', ' ')
+        
+        return text
+
     def _parse_markdown_content(self, markdown_content: str) -> list:
         """Parse markdown content directly to handle tables and other elements"""
         story = []
@@ -351,10 +518,12 @@ class PDFGenerator:
                 else:
                     # Add to current paragraph
                     if line:
+                        # Process inline markdown formatting
+                        processed_line = self._process_inline_markdown(line)
                         if current_paragraph:
-                            current_paragraph += " " + line
+                            current_paragraph += " " + processed_line
                         else:
-                            current_paragraph = line
+                            current_paragraph = processed_line
             
             i += 1
         
@@ -366,7 +535,9 @@ class PDFGenerator:
                 story.append(Spacer(1, 12))
                 
         if current_paragraph:
-            story.append(Paragraph(current_paragraph, self.styles['CustomBody']))
+            # Process inline markdown formatting before creating paragraph
+            processed_paragraph = self._process_inline_markdown(current_paragraph)
+            story.append(Paragraph(processed_paragraph, self.styles['CustomBody']))
         
         return story
     
@@ -396,29 +567,91 @@ class PDFGenerator:
             if not table_data:
                 return None
             
-            # Create the table
-            table = Table(table_data)
+            # Calculate available width (page width minus margins)
+            available_width = letter[0] - 144  # 72pt margins on each side
             
-            # Apply table styling
+            # Determine number of columns
+            num_cols = len(table_data[0]) if table_data else 0
+            if num_cols == 0:
+                return None
+            
+            # Calculate column widths based on content length and available space
+            col_widths = []
+            
+            if num_cols == 2:
+                # For 2-column tables, use 30% for first column, 70% for second
+                col_widths = [available_width * 0.3, available_width * 0.7]
+            elif num_cols == 3:
+                # For 3-column tables, distribute evenly
+                col_widths = [available_width / 3] * 3
+            elif num_cols > 3:
+                # For tables with more columns, make first column narrower
+                first_col_width = available_width * 0.2
+                remaining_width = available_width - first_col_width
+                other_col_width = remaining_width / (num_cols - 1)
+                col_widths = [first_col_width] + [other_col_width] * (num_cols - 1)
+            else:
+                # Single column
+                col_widths = [available_width]
+            
+            # Convert text to Paragraph objects for better text wrapping
+            processed_table_data = []
+            for row_idx, row in enumerate(table_data):
+                processed_row = []
+                for col_idx, cell in enumerate(row):
+                    if cell:
+                        # Apply inline markdown processing to cell content
+                        processed_cell = self._process_inline_markdown(cell)
+                        
+                        # Use appropriate style for header vs data cells
+                        if row_idx == 0:  # Header row
+                            cell_style = ParagraphStyle(
+                                'TableHeader',
+                                parent=self.styles['Normal'],
+                                fontSize=10,
+                                fontName='Helvetica-Bold',
+                                textColor=colors.white,
+                                alignment=0,  # Left alignment
+                                leading=12
+                            )
+                        else:  # Data row
+                            cell_style = ParagraphStyle(
+                                'TableData',
+                                parent=self.styles['Normal'],
+                                fontSize=9,
+                                fontName='Helvetica',
+                                textColor=colors.black,
+                                alignment=0,  # Left alignment
+                                leading=11
+                            )
+                        
+                        # Create paragraph for text wrapping
+                        paragraph = Paragraph(processed_cell, cell_style)
+                        processed_row.append(paragraph)
+                    else:
+                        processed_row.append("")
+                processed_table_data.append(processed_row)
+            
+            # Create the table with calculated widths and processed data
+            table = Table(processed_table_data, colWidths=col_widths)
+            
+            # Apply table styling (simplified since we're using Paragraph objects)
             table_style = [
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A90E2')),  # Header background
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header text color
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2C3E50')),  # Professional dark header
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),  # Clean white background for data
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Left alignment
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
-                ('FONTSIZE', (0, 0), (-1, 0), 10),  # Header font size
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Header padding
-                ('TOPPADDING', (0, 0), (-1, 0), 8),  # Header padding
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F8F9FA')),  # Data background
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Data text color
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),  # Data font
-                ('FONTSIZE', (0, 1), (-1, -1), 9),  # Data font size
-                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#DDDDDD')),  # Grid lines
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Top vertical alignment for text wrapping
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')),  # Subtle grid lines
                 ('LEFTPADDING', (0, 0), (-1, -1), 6),  # Cell padding
                 ('RIGHTPADDING', (0, 0), (-1, -1), 6),  # Cell padding
+                ('TOPPADDING', (0, 0), (-1, -1), 6),  # Cell padding
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),  # Cell padding
             ]
             
             table.setStyle(TableStyle(table_style))
+            
+            # Set word wrap for all cells
+            table.hAlign = 'LEFT'
             
             return table
             
@@ -436,30 +669,68 @@ class PDFGenerator:
                 elements.append(Spacer(1, 6))
             return elements
         
+        # Clean up the line by removing raw markdown markers that shouldn't be displayed
+        cleaned_line = line.strip()
+        
         # Handle headers
-        if line.startswith('# '):
+        if cleaned_line.startswith('# '):
             if current_paragraph:
                 elements.append(Paragraph(current_paragraph, self.styles['CustomBody']))
                 elements.append(Spacer(1, 6))
-            text = line[2:].strip()
+            text = cleaned_line[2:].strip()
             elements.append(Paragraph(text, self.styles['CustomTitle']))
             elements.append(Spacer(1, 12))
             
-        elif line.startswith('## '):
+        elif cleaned_line.startswith('## '):
             if current_paragraph:
                 elements.append(Paragraph(current_paragraph, self.styles['CustomBody']))
                 elements.append(Spacer(1, 6))
-            text = line[3:].strip()
+            text = cleaned_line[3:].strip()
             elements.append(Paragraph(text, self.styles['CustomHeader']))
             elements.append(Spacer(1, 8))
             
-        elif line.startswith('### '):
+        elif cleaned_line.startswith('### '):
             if current_paragraph:
                 elements.append(Paragraph(current_paragraph, self.styles['CustomBody']))
                 elements.append(Spacer(1, 6))
-            text = line[4:].strip()
+            text = cleaned_line[4:].strip()
             elements.append(Paragraph(text, self.styles['CustomSubheader']))
             elements.append(Spacer(1, 6))
+            
+        elif cleaned_line.startswith('#### '):
+            if current_paragraph:
+                elements.append(Paragraph(current_paragraph, self.styles['CustomBody']))
+                elements.append(Spacer(1, 6))
+            text = cleaned_line[5:].strip()
+            # Use custom subheader for h4
+            elements.append(Paragraph(f"<b>{text}</b>", self.styles['CustomBody']))
+            elements.append(Spacer(1, 4))
+            
+        # Handle bullet points
+        elif cleaned_line.startswith('- ') or cleaned_line.startswith('* '):
+            if current_paragraph:
+                processed_paragraph = self._process_inline_markdown(current_paragraph)
+                elements.append(Paragraph(processed_paragraph, self.styles['CustomBody']))
+                elements.append(Spacer(1, 6))
+            text = self._process_inline_markdown(cleaned_line[2:].strip())
+            # Format as bullet point
+            bullet_text = f"• {text}"
+            elements.append(Paragraph(bullet_text, self.styles['CustomBody']))
+            elements.append(Spacer(1, 2))
+            
+        # Handle numbered lists
+        elif re.match(r'^\d+\.\s+', cleaned_line):
+            if current_paragraph:
+                processed_paragraph = self._process_inline_markdown(current_paragraph)
+                elements.append(Paragraph(processed_paragraph, self.styles['CustomBody']))
+                elements.append(Spacer(1, 6))
+            text = re.sub(r'^\d+\.\s+', '', cleaned_line)
+            text = self._process_inline_markdown(text)
+            # Get the number for proper formatting
+            number = re.match(r'^(\d+)\.', cleaned_line).group(1)
+            numbered_text = f"{number}. {text}"
+            elements.append(Paragraph(numbered_text, self.styles['CustomBody']))
+            elements.append(Spacer(1, 2))
             
         else:
             # Return empty list to indicate this should be added to current paragraph
@@ -587,18 +858,23 @@ class PDFGenerator:
             
             # Apply table styling
             table_style = [
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header background
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header text color
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center alignment
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2C3E50')),  # Professional dark header
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),  # White text on dark header
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Left alignment
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
-                ('FONTSIZE', (0, 0), (-1, 0), 10),  # Header font size
+                ('FONTSIZE', (0, 0), (-1, 0), 11),  # Header font size
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Header padding
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Data background
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Data text color
+                ('TOPPADDING', (0, 0), (-1, 0), 12),  # Header padding
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),  # Clean white background for data
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),  # Black text for all data
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),  # Data font
-                ('FONTSIZE', (0, 1), (-1, -1), 9),  # Data font size
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Grid lines
+                ('FONTSIZE', (0, 1), (-1, -1), 10),  # Data font size
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')),  # Subtle grid lines
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),  # Cell padding
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),  # Cell padding
+                ('TOPPADDING', (0, 1), (-1, -1), 8),  # Cell padding for data rows
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),  # Cell padding for data rows
             ]
             
             table.setStyle(TableStyle(table_style))

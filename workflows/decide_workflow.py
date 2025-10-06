@@ -4,6 +4,9 @@ from typing import Dict, List, Any, Optional
 import streamlit as st
 from crewai import Crew, Task
 import json
+import sys
+import io
+from contextlib import redirect_stdout, redirect_stderr
 
 # Import all agents
 from agents import (
@@ -21,6 +24,7 @@ from agents import (
 # Import utilities
 from utils import SessionManager, VectorStore
 from utils.enhanced_workflow_manager import EnhancedWorkflowManager
+from utils.agent_communication_logger import agent_comm_logger
 from config import config
 
 class DecideWorkflow:
@@ -37,6 +41,92 @@ class DecideWorkflow:
         
         # Initialize logging
         SessionManager.add_log("INFO", f"DECIDE Workflow initialized: {self.workflow_id}")
+        
+        # Set up agent communication logger
+        self.comm_logger = SessionManager.get_agent_comm_logger()
+        if not self.comm_logger:
+            # Create a new one if not available
+            from utils.agent_communication_logger import AgentCommunicationLogger
+            self.comm_logger = AgentCommunicationLogger()
+            st.session_state.agent_comm_logger = self.comm_logger
+    
+    def execute_crew_with_logging(self, crew: Crew, phase_name: str, agent_name: str) -> Any:
+        """Execute a CrewAI crew with comprehensive logging of all interactions"""
+        self.comm_logger.start_phase_logging(phase_name)
+        self.comm_logger.start_agent_execution(agent_name, f"Executing {phase_name} phase")
+        
+        # Capture stdout/stderr during execution
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
+        
+        try:
+            # Redirect output to capture CrewAI verbose logging
+            sys.stdout = stdout_buffer
+            sys.stderr = stderr_buffer
+            
+            # Execute the crew
+            result = crew.kickoff()
+            
+            # Get captured output
+            stdout_content = stdout_buffer.getvalue()
+            stderr_content = stderr_buffer.getvalue()
+            
+            # Log the captured output
+            if stdout_content:
+                self.comm_logger.log_crewai_output(stdout_content)
+                SessionManager.add_agent_communication(
+                    f"CrewAI-{agent_name}", 
+                    f"Verbose Output:\n{stdout_content[:1000]}...", 
+                    "crewai_verbose", 
+                    phase_name
+                )
+            
+            if stderr_content:
+                self.comm_logger.log_error("CrewAI", stderr_content)
+                SessionManager.add_agent_communication(
+                    f"CrewAI-{agent_name}", 
+                    f"Error Output:\n{stderr_content}", 
+                    "error", 
+                    phase_name
+                )
+            
+            # Log successful completion
+            result_summary = str(result)[:200] if result else "No result"
+            self.comm_logger.end_agent_execution(agent_name, result_summary)
+            self.comm_logger.end_phase_logging(phase_name, success=True)
+            
+            SessionManager.add_agent_communication(
+                agent_name, 
+                f"✅ Phase completed successfully\n📊 Result: {result_summary}...", 
+                "completion", 
+                phase_name
+            )
+            
+            return result
+            
+        except Exception as e:
+            # Log the error
+            error_msg = str(e)
+            self.comm_logger.log_error(agent_name, error_msg, e)
+            self.comm_logger.end_agent_execution(agent_name, f"Failed: {error_msg}")
+            self.comm_logger.end_phase_logging(phase_name, success=False)
+            
+            SessionManager.add_agent_communication(
+                agent_name, 
+                f"❌ Phase failed\n🔍 Error: {error_msg}", 
+                "error", 
+                phase_name
+            )
+            
+            raise e
+            
+        finally:
+            # Restore original stdout/stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
     
     def run_complete_workflow(self) -> Dict[str, Any]:
         """Run the complete DECIDE workflow using enhanced workflow manager"""
@@ -79,14 +169,16 @@ class DecideWorkflow:
             documents_info = self.format_documents_info(documents)
             
             SessionManager.update_agent_progress("collector_agent", 0.3, "running", "Creating collection agent")
+            SessionManager.add_agent_communication("collector_agent", f"📋 Starting document collection phase\n📊 Processing {len(documents)} documents", "phase_start", "collection")
             
             # Create agent and task
             collector_agent = CollectorAgent.create_agent()
             collector_task = CollectorAgent.create_task(documents_info)
             
             SessionManager.update_agent_progress("collector_agent", 0.5, "running", "Processing documents")
+            SessionManager.add_agent_communication("collector_agent", f"🤖 Agent created\n🎯 Task: Analyze and process {len(documents)} documents", "agent_start", "collection")
             
-            # Create and execute crew
+            # Create and execute crew with logging
             crew = Crew(
                 agents=[collector_agent],
                 tasks=[collector_task],
@@ -95,8 +187,8 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("collector_agent", 0.8, "running", "Executing analysis")
             
-            # Execute the crew
-            result = crew.kickoff()
+            # Execute the crew with comprehensive logging
+            result = self.execute_crew_with_logging(crew, "collection", "collector_agent")
             
             SessionManager.update_agent_progress("collector_agent", 1.0, "completed", "Document collection completed")
             
@@ -111,6 +203,7 @@ class DecideWorkflow:
         
         except Exception as e:
             SessionManager.update_agent_progress("collector_agent", 0.0, "failed", f"Error: {str(e)}")
+            SessionManager.add_agent_communication("collector_agent", f"❌ Collection phase failed\n🔍 Error: {str(e)}", "error", "collection")
             return {
                 'success': False,
                 'error': str(e),
@@ -126,14 +219,16 @@ class DecideWorkflow:
             context_data = self.get_context_for_analysis()
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.3, "running", "Creating analysis agent")
+            SessionManager.add_agent_communication("decision_multidisciplinary_agent", "🔬 Starting multidisciplinary feasibility analysis\n📊 Analyzing across 6 dimensions: Technology, Legal, Financial, Market, Communication, Behavioral", "phase_start", "analysis")
             
             # Create agent and task
             analysis_agent = DecisionMultidisciplinaryAgent.create_agent()
             analysis_task = DecisionMultidisciplinaryAgent.create_task(context_data)
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.5, "running", "Conducting feasibility analysis")
+            SessionManager.add_agent_communication("decision_multidisciplinary_agent", "🤖 Multidisciplinary agent created\n🎯 Task: Comprehensive feasibility analysis across all dimensions", "agent_start", "analysis")
             
-            # Create and execute crew
+            # Create and execute crew with logging
             crew = Crew(
                 agents=[analysis_agent],
                 tasks=[analysis_task],
@@ -142,7 +237,7 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.8, "running", "Finalizing analysis")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "analysis", "decision_multidisciplinary_agent")
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 1.0, "completed", "Multidisciplinary analysis completed")
             
@@ -156,6 +251,7 @@ class DecideWorkflow:
         
         except Exception as e:
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.0, "failed", f"Error: {str(e)}")
+            SessionManager.add_agent_communication("decision_multidisciplinary_agent", f"❌ Analysis phase failed\n🔍 Error: {str(e)}", "error", "analysis")
             return {
                 'success': False,
                 'error': str(e),
@@ -172,6 +268,7 @@ class DecideWorkflow:
             feasibility_report = self.get_previous_phase_output('analysis')
             
             SessionManager.update_agent_progress("define_agent", 0.3, "running", "Creating definition agent")
+            SessionManager.add_agent_communication("define_agent", "🎯 Starting problem definition phase\n📋 Analyzing feasibility report and context to define clear objectives", "phase_start", "definition")
             
             # Create agent and task
             define_agent = DefineAgent.create_agent()
@@ -179,7 +276,7 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("define_agent", 0.5, "running", "Defining problem and objectives")
             
-            # Create and execute crew
+            # Create and execute crew with logging
             crew = Crew(
                 agents=[define_agent],
                 tasks=[define_task],
@@ -188,7 +285,7 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("define_agent", 0.8, "running", "Finalizing definition")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "definition", "define_agent")
             
             SessionManager.update_agent_progress("define_agent", 1.0, "completed", "Problem definition completed")
             
@@ -201,6 +298,7 @@ class DecideWorkflow:
         
         except Exception as e:
             SessionManager.update_agent_progress("define_agent", 0.0, "failed", f"Error: {str(e)}")
+            SessionManager.add_agent_communication("define_agent", f"❌ Definition phase failed\n🔍 Error: {str(e)}", "error", "definition")
             return {
                 'success': False,
                 'error': str(e),
@@ -474,14 +572,16 @@ class DecideWorkflow:
             all_phase_outputs = self.collect_all_phase_outputs()
             
             SessionManager.update_agent_progress("report_agent", 0.3, "running", "Creating report agent")
+            SessionManager.add_agent_communication("report_agent", "📊 Starting final report generation\n📋 Synthesizing all phase outputs into comprehensive report", "phase_start", "report")
             
             # Create agent and task
             report_agent = ReportAgent.create_agent()
             report_task = ReportAgent.create_task(all_phase_outputs)
             
             SessionManager.update_agent_progress("report_agent", 0.5, "running", "Synthesizing comprehensive report")
+            SessionManager.add_agent_communication("report_agent", "🤖 Report agent created\n🎯 Task: Generate comprehensive final report with all insights", "agent_start", "report")
             
-            # Create and execute crew
+            # Create and execute crew with logging
             crew = Crew(
                 agents=[report_agent],
                 tasks=[report_task],
@@ -490,7 +590,7 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("report_agent", 0.8, "running", "Finalizing report")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "report", "report_agent")
             
             SessionManager.update_agent_progress("report_agent", 1.0, "completed", "Final report generation completed")
             
@@ -504,6 +604,7 @@ class DecideWorkflow:
         
         except Exception as e:
             SessionManager.update_agent_progress("report_agent", 0.0, "failed", f"Error: {str(e)}")
+            SessionManager.add_agent_communication("report_agent", f"❌ Report generation failed\n🔍 Error: {str(e)}", "error", "report")
             return {
                 'success': False,
                 'error': str(e),

@@ -6,6 +6,14 @@ import json
 class SessionManager:
     """Manages session state and workflow progress"""
     
+import streamlit as st
+from typing import Dict, Any, Optional
+from datetime import datetime
+import json
+
+class SessionManager:
+    """Manages session state and workflow progress"""
+    
     @staticmethod
     def init_session():
         """Initialize session state variables"""
@@ -23,6 +31,18 @@ class SessionManager:
         
         if 'logs' not in st.session_state:
             st.session_state.logs = []
+        
+        # Initialize agent communications storage
+        if 'agent_communications' not in st.session_state:
+            st.session_state.agent_communications = []
+        
+        # Initialize agent communication logger
+        if 'agent_comm_logger' not in st.session_state:
+            try:
+                from utils.agent_communication_logger import AgentCommunicationLogger
+                st.session_state.agent_comm_logger = AgentCommunicationLogger()
+            except ImportError:
+                st.session_state.agent_comm_logger = None
     
     @staticmethod
     def update_phase(phase: str, status: str = 'in_progress'):
@@ -108,6 +128,72 @@ class SessionManager:
             st.session_state.logs = st.session_state.logs[-1000:]
     
     @staticmethod
+    def get_agent_comm_logger():
+        """Get the agent communication logger instance"""
+        return st.session_state.get('agent_comm_logger')
+    
+    @staticmethod
+    def add_agent_communication(source: str, message: str, comm_type: str = "general", phase: str = None):
+        """Add agent communication entry"""
+        communication = {
+            'timestamp': datetime.now().isoformat(),
+            'phase': phase or st.session_state.workflow_state.get('current_phase'),
+            'source': source,
+            'message': message,
+            'type': comm_type,
+            'id': len(st.session_state.agent_communications) + 1
+        }
+        
+        st.session_state.agent_communications.append(communication)
+        
+        # Also use the logger if available
+        logger = SessionManager.get_agent_comm_logger()
+        if logger:
+            logger.add_communication(source, message, comm_type)
+    
+    @staticmethod
+    def get_agent_communications() -> list:
+        """Get all agent communications"""
+        return st.session_state.get('agent_communications', [])
+    
+    @staticmethod
+    def get_agent_communications_by_phase(phase_name: str) -> list:
+        """Get agent communications for a specific phase"""
+        all_comms = SessionManager.get_agent_communications()
+        return [comm for comm in all_comms if comm.get('phase') == phase_name]
+    
+    @staticmethod
+    def clear_agent_communications():
+        """Clear all agent communications"""
+        st.session_state.agent_communications = []
+        logger = SessionManager.get_agent_comm_logger()
+        if logger:
+            logger.clear_communications()
+    
+    @staticmethod
+    def get_formatted_agent_communications() -> str:
+        """Get formatted agent communications for display"""
+        logger = SessionManager.get_agent_comm_logger()
+        if logger:
+            return logger.format_for_display()
+        
+        # Fallback formatting
+        comms = SessionManager.get_agent_communications()
+        if not comms:
+            return "No agent communications recorded."
+        
+        formatted = "# MIMÉTICA Agent Communications Log\n\n"
+        formatted += f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        formatted += "## Communication Log\n\n"
+        
+        for comm in comms:
+            timestamp = datetime.fromisoformat(comm['timestamp']).strftime('%H:%M:%S')
+            formatted += f"**[{timestamp}] {comm['source']}**\n"
+            formatted += f"{comm['message']}\n\n"
+        
+        return formatted
+    
+    @staticmethod
     def get_workflow_summary() -> Dict[str, Any]:
         """Get complete workflow state summary"""
         return {
@@ -142,6 +228,10 @@ class SessionManager:
             del st.session_state.agent_progress
         if 'logs' in st.session_state:
             del st.session_state.logs
+        if 'agent_communications' in st.session_state:
+            del st.session_state.agent_communications
+        if 'agent_comm_logger' in st.session_state:
+            del st.session_state.agent_comm_logger
         
         # Also clear workflow instance to force fresh initialization
         if 'workflow_instance' in st.session_state:
