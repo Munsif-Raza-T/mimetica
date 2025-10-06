@@ -2,6 +2,8 @@ from crewai import Agent
 from tools.custom_tools import AdvancedPineconeVectorSearchTool, SessionDirectoryReadTool, SessionFileReadTool
 from config import config
 import streamlit as st
+import time
+from datetime import datetime
 
 class CollectorAgent:
     """Agent responsible for data collection, cleaning, and vectorization"""
@@ -53,9 +55,20 @@ class CollectorAgent:
     @staticmethod
     def create_task(documents_info: str):
         from crewai import Task
+        
+        # Get current system time for time awareness
+        current_time = datetime.now()
+        current_timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+        current_date = current_time.strftime("%A, %B %d, %Y")
+        
         return Task(
             description=f"""
 Process and vectorize uploaded documents for the MIMÉTICA analysis workflow.
+
+CURRENT TIME CONTEXT:
+- Processing Started: {current_timestamp}
+- Date: {current_date}
+- Timestamp for Reference: {int(time.time())}
 
 Documents to process:
 {documents_info}
@@ -68,6 +81,8 @@ Your tasks:
 5. Validate data integrity and completeness
 6. Generate a comprehensive data processing report
 
+Include the current time information in your processing report to document when this analysis was performed.
+
 Deliverables:
 - Cleaned and structured dataset summary (CSV/JSON format)
 - Document processing report with statistics
@@ -76,15 +91,17 @@ Deliverables:
 
 Ensure all documents are properly indexed and searchable for subsequent analysis phases.
 """,
-            expected_output="""
+            expected_output=f"""
 A comprehensive document processing report in markdown format containing:
 
 # Document Processing Report
 
 ## Processing Summary
+- Processing Date: {current_date}
+- Processing Time: {current_timestamp}
 - Total documents processed: [number]
 - Document types: [list of file types]
-- Processing time: [duration]
+- Processing duration: [duration]
 - Data quality issues: [summary]
 
 ## Data Cleaning and Normalization
@@ -106,6 +123,11 @@ A comprehensive document processing report in markdown format containing:
 - Data integrity checks
 - Completeness and consistency
 - Recommendations for improvement
+
+## Time Context
+- Analysis performed on: {current_date}
+- System timestamp: {current_timestamp}
+- Reference ID: {int(time.time())}
 
 ## Appendix
 - List of processed files
