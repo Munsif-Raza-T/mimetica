@@ -32,18 +32,27 @@ class DecisionMultidisciplinaryAgent:
         
         return Agent(
             role="Multidisciplinary Feasibility Analyst",
-            goal="Conduct comprehensive feasibility analysis across technology, legal, finance, market, communication, and behavioral dimensions",
+            goal="Conduct comprehensive feasibility analysis across technology, legal, finance, market, communication, and behavioral dimensions with context-aware assessment",
             backstory="""You are a senior consultant with expertise across multiple disciplines including
             technology assessment, legal compliance, financial analysis, market research, strategic
             communication, and behavioral psychology. Your role is to provide integrated feasibility
             analysis that considers all critical dimensions of strategic initiatives. You excel at
             identifying interdependencies between different domains and providing holistic risk assessments.
             
-            CRITICAL: For every decision, recommendation, or conclusion you make, you MUST provide clear
-            reasoning and justification. Always explain WHY you reached a particular decision, what factors
-            influenced your judgment, what evidence or analysis supports your conclusion, and what alternatives
-            you considered. Your decision-making process should be transparent and well-documented to build
-            stakeholder confidence and enable informed strategic choices.""",
+            CRITICAL: Your analysis must be contextually appropriate to the problem domain:
+            For market studies: emphasize market viability, competitive positioning, customer validation.
+            For customer experience: focus on user adoption, experience design feasibility, service delivery capability.
+            For ROI/financial optimization: prioritize financial viability, cost-benefit analysis, investment justification.
+            For digital transformation: balance technical feasibility with organizational readiness and change management.
+            For operational improvements: assess process feasibility, resource requirements, operational impact.
+            
+            DECISION-MAKING REQUIREMENTS:
+            For EVERY decision, recommendation, or conclusion you make, you MUST provide clear reasoning that is
+            contextually appropriate to the problem domain. Always explain WHY you reached a particular decision
+            within the specific context, what domain-relevant factors influenced your judgment, what evidence or
+            analysis supports your conclusion, and what alternatives you considered within the problem space.
+            Your decision-making process should be transparent, well-documented, and contextually informed to
+            build stakeholder confidence and enable domain-appropriate strategic choices.""",
             tools=[
                 CodeInterpreterTool()
             ],
@@ -60,56 +69,97 @@ class DecisionMultidisciplinaryAgent:
         return Task(
             description=(
                 f"""
-Conduct a comprehensive multidisciplinary feasibility analysis based on the processed documents and context.
+CRITICAL INSTRUCTION: Analyze the provided context to identify the problem domain and conduct contextually appropriate feasibility analysis.
 
 Available Context:
 {context_data}
 
+CONTEXT ANALYSIS REQUIREMENT:
+First, identify the problem domain from the available context:
+- MARKET STUDY indicators: "market research", "competitive analysis", "market positioning", "customer segments"
+- CUSTOMER EXPERIENCE indicators: "customer journey", "user experience", "customer satisfaction", "service quality"
+- FINANCIAL/ROI indicators: "ROI", "cost reduction", "revenue optimization", "profitability", "financial performance"
+- DIGITAL TRANSFORMATION indicators: "digital adoption", "technology implementation", "automation", "digital capabilities"
+- OPERATIONAL indicators: "process improvement", "efficiency", "workflow", "operational excellence", "productivity"
+
+DOMAIN-SPECIFIC FEASIBILITY ANALYSIS:
+Based on the identified domain, conduct feasibility analysis with appropriate emphasis:
+
+FOR MARKET STUDIES - Emphasize:
+1. **Market Viability Assessment**: Market size, growth potential, competitive landscape, customer demand validation
+2. **Competitive Positioning Feasibility**: Differentiation potential, competitive advantages, market entry barriers
+3. **Customer Validation**: Target segment validation, value proposition testing, customer acquisition feasibility
+4. **Go-to-Market Feasibility**: Channel viability, marketing approach effectiveness, sales process feasibility
+
+FOR CUSTOMER EXPERIENCE - Focus on:
+1. **Experience Design Feasibility**: Journey mapping viability, touchpoint optimization potential, service design capability
+2. **User Adoption Assessment**: Adoption barriers, user readiness, experience change management
+3. **Service Delivery Capability**: Operational capacity, service quality standards, delivery channel effectiveness
+4. **Experience Measurement**: Customer feedback systems, experience metrics, continuous improvement capability
+
+FOR FINANCIAL/ROI - Prioritize:
+1. **Financial Viability**: Cost-benefit analysis, ROI projections, payback period, financial risk assessment
+2. **Investment Justification**: Capital requirements, funding sources, financial sustainability, value creation
+3. **Cost Management**: Cost structure optimization, expense control, efficiency improvements
+4. **Revenue Enhancement**: Revenue model viability, pricing strategy, monetization opportunities
+
+FOR DIGITAL TRANSFORMATION - Balance:
+1. **Technical Feasibility**: Technology capability, infrastructure readiness, integration complexity, scalability
+2. **Organizational Readiness**: Digital maturity, change capacity, skill gaps, cultural alignment
+3. **Implementation Feasibility**: Rollout strategy, training requirements, adoption timeline, success factors
+4. **Value Realization**: Digital ROI, capability enhancement, competitive advantage, performance improvement
+
+FOR OPERATIONAL IMPROVEMENTS - Assess:
+1. **Process Feasibility**: Process redesign potential, workflow optimization, automation opportunities
+2. **Resource Capability**: Capacity requirements, skill availability, infrastructure needs, investment requirements
+3. **Operational Impact**: Performance improvement potential, efficiency gains, quality enhancement
+4. **Change Management**: Implementation readiness, stakeholder buy-in, transition planning, risk mitigation
+
 DECISION-MAKING REQUIREMENTS:
-- For EVERY decision, recommendation, assessment, or conclusion you make, provide explicit reasoning
-- Explain WHY you reached each decision and what factors influenced your judgment
-- Document what evidence or analysis supports your conclusions
-- Mention what alternatives you considered and why you chose the recommended path
-- Make your decision-making process transparent and traceable
+- For EVERY decision, recommendation, assessment, or conclusion, provide explicit reasoning that is contextually appropriate
+- Explain WHY you reached each decision within the specific problem domain
+- Document what domain-relevant evidence or analysis supports your conclusions
+- Mention what alternatives you considered within the problem context and why you chose the recommended path
+- Make your decision-making process transparent, traceable, and contextually informed
 
-Analysis Dimensions:
-1. **Technology Feasibility**
-   - Technical requirements and capabilities
-   - Infrastructure needs and constraints
-   - Technology risks and mitigation strategies
-   - DECISION REASONING: Explain why you assess the technology as feasible/not feasible
+Analysis Dimensions (Adapted to Context):
+1. **Technology Feasibility** (Context-Adapted)
+   - Technical requirements and capabilities relevant to the domain
+   - Infrastructure needs and constraints specific to the context
+   - Technology risks and mitigation strategies appropriate to the domain
+   - DECISION REASONING: Explain why you assess the technology as feasible/not feasible within this specific context
 
-2. **Legal and Regulatory Analysis**
-   - Compliance requirements and regulations
-   - Legal risks and liability considerations
-   - Regulatory approval processes
-   - DECISION REASONING: Justify your legal risk assessments and compliance recommendations
+2. **Legal and Regulatory Analysis** (Domain-Specific)
+   - Compliance requirements and regulations relevant to the problem domain
+   - Legal risks and liability considerations specific to the context
+   - Regulatory approval processes applicable to the domain
+   - DECISION REASONING: Justify your legal risk assessments with domain-specific compliance considerations
 
-3. **Financial Feasibility**
-   - Cost-benefit analysis framework
-   - Resource requirements and budget implications
-   - ROI projections and financial risks
-   - DECISION REASONING: Explain your financial viability conclusions and investment recommendations
+3. **Financial Feasibility** (Context-Appropriate)
+   - Cost-benefit analysis framework suitable for the domain
+   - Resource requirements and budget implications specific to the context
+   - ROI projections and financial risks relevant to the problem type
+   - DECISION REASONING: Explain your financial viability conclusions with domain-appropriate investment reasoning
 
-4. **Market Analysis**
-   - Market conditions and competitive landscape
-   - Target audience and stakeholder analysis
-   - Market entry barriers and opportunities
-   - DECISION REASONING: Justify your market opportunity assessments and strategic recommendations
+4. **Market Analysis** (Domain-Focused)
+   - Market conditions and competitive landscape specific to the context
+   - Target audience and stakeholder analysis relevant to the domain
+   - Market entry barriers and opportunities within the problem space
+   - DECISION REASONING: Justify your market opportunity assessments with context-specific strategic reasoning
 
-5. **Communication Strategy**
-   - Stakeholder communication requirements
-   - Change management considerations
-   - Internal and external messaging needs
-   - DECISION REASONING: Explain your communication strategy choices and approach rationale
+5. **Communication Strategy** (Context-Sensitive)
+   - Stakeholder communication requirements specific to the domain
+   - Change management considerations appropriate to the context
+   - Internal and external messaging needs relevant to the problem type
+   - DECISION REASONING: Explain your communication strategy choices with domain-appropriate rationale
 
-6. **Behavioral and Cultural Factors**
-   - User adoption challenges
-   - Organizational culture impact
-   - Behavioral change requirements
-   - DECISION REASONING: Justify your behavioral assessments and adoption strategy recommendations
+6. **Behavioral and Cultural Factors** (Domain-Relevant)
+   - User adoption challenges specific to the context
+   - Organizational culture impact relevant to the domain
+   - Behavioral change requirements appropriate to the problem type
+   - DECISION REASONING: Justify your behavioral assessments with context-specific adoption considerations
 
-Provide integrated analysis with cross-dimensional risk assessment and recommendations, ensuring every decision includes clear justification.
+Provide integrated analysis with cross-dimensional risk assessment and recommendations, ensuring every decision includes clear justification that is contextually appropriate to the identified problem domain.
 """
             ),
             expected_output=(
@@ -119,118 +169,191 @@ A comprehensive multidisciplinary feasibility report in PDF/Markdown format cont
 # Multidisciplinary Feasibility Analysis
 
 ## Executive Summary
-- Include decision rationale summary for all key recommendations
+- **Problem Domain Identified**: [Market Study/Customer Experience/Financial-ROI/Digital Transformation/Operational]
+- **Feasibility Assessment Approach**: [How analysis was tailored to the domain context]
+- **Overall Feasibility Rating**: [Feasible/Conditionally Feasible/Not Feasible with domain-specific reasoning]
+- **Critical Success Factors**: [Domain-appropriate factors for success]
+- **Key Risks**: [Highest priority risks specific to the context]
+- **Recommended Action**: [Go/No-Go/Conditional with contextual justification]
+- **Decision Rationale Summary**: [High-level reasoning for all key recommendations]
 
-## Technology Feasibility Assessment
-- **Decision Reasoning**: Explain why the technology is assessed as feasible/not feasible, what evidence supports this conclusion, and what alternatives were considered
+## Problem Context and Domain Analysis
+### Domain Identification
+- **Primary Domain**: [Identified problem domain with supporting evidence]
+- **Context Characteristics**: [Key features that define this problem space]
+- **Domain-Specific Requirements**: [Unique considerations for this context]
+- **Success Criteria**: [Domain-appropriate metrics and outcomes]
 
-## Legal and Regulatory Analysis
-   - Liability considerations
-   - Intellectual property issues
-   - Contract and partnership implications
-   - **Decision Reasoning**: Justify legal risk assessments and explain why certain compliance approaches are recommended
-   ### Compliance Strategy
-   - Required legal preparations
-   - Ongoing compliance monitoring
-   - Legal risk mitigation plans
-   - **Decision Reasoning**: Explain why this compliance strategy is optimal given the circumstances
+### Feasibility Framework Adaptation
+- **Analysis Approach**: [How feasibility assessment was tailored to the domain]
+- **Evaluation Criteria**: [Domain-specific criteria used for assessment]
+- **Risk Framework**: [Context-appropriate risk assessment methodology]
+- **Decision Framework**: [Domain-relevant decision-making criteria]
 
-## Financial Feasibility
-   ### Investment Requirements
-   - Initial capital needs
-   - Ongoing operational costs
-   - Resource allocation recommendations
-   - **Decision Reasoning**: Justify investment recommendations and explain cost estimation methodology
-   ### Financial Projections
-   - Revenue/benefit projections
-   - Cost structure analysis
-   - Break-even analysis
-   - **Decision Reasoning**: Explain assumptions behind projections and why they are realistic
-   ### Financial Risks
-   - Budget overrun risks
-   - Revenue shortfall scenarios
-   - Financial contingency plans
-   - **Decision Reasoning**: Justify risk assessments and explain contingency plan choices
+## Technology Feasibility Assessment (Context-Adapted)
 
-## Market Analysis
-   ### Market Environment
-   - Industry trends and dynamics
-   - Competitive positioning
-   - Market opportunity assessment
-   - **Decision Reasoning**: Explain market opportunity conclusions and competitive positioning rationale
-   ### Stakeholder Analysis
-   - Key stakeholder groups
-   - Stakeholder interests and concerns
-   - Influence and impact mapping
-   - **Decision Reasoning**: Justify stakeholder prioritization and engagement strategy choices
-   ### Market Entry Strategy
-   - Go-to-market considerations
-   - Competitive advantages
-   - Market penetration approach
-   - **Decision Reasoning**: Explain why this market entry strategy is recommended over alternatives
+FOR MARKET STUDIES:
+### Market Research Technology Capability
+- **Data Collection Technology**: [Feasibility of research tools and platforms]
+- **Analytics Capability**: [Market analysis and competitive intelligence tools]
+- **Integration Requirements**: [Technology integration with existing market research systems]
+- **DECISION REASONING**: [Why market research technology is assessed as feasible/not feasible for this specific market context]
 
-## Communication Strategy
-   ### Communication Requirements
-   - Internal communication needs
-   - External messaging strategy
-   - Stakeholder engagement plan
-   - **Decision Reasoning**: Justify communication approach and explain channel selection rationale
-   ### Change Management
-   - Organizational readiness assessment
-   - Change resistance factors
-   - Communication timeline and channels
-   - **Decision Reasoning**: Explain change management strategy choices and timeline rationale
+FOR CUSTOMER EXPERIENCE:
+### Experience Technology Platform
+- **Customer Journey Technology**: [Journey mapping and analytics platforms]
+- **Experience Measurement Tools**: [Customer feedback and satisfaction measurement systems]
+- **Service Delivery Technology**: [Digital touchpoint and service channel capabilities]
+- **DECISION REASONING**: [Why experience technology is viable/not viable for this specific customer context]
 
-## Behavioral and Cultural Factors
-   ### User Adoption Factors
-   - Adoption barriers and drivers
-   - User experience considerations
-   - Training and support needs
-   - **Decision Reasoning**: Justify adoption strategy and explain why certain interventions are prioritized
-   ### Organizational Impact
-   - Cultural alignment assessment
-   - Workflow and process changes
-   - Employee impact analysis
-   - **Decision Reasoning**: Explain organizational impact assessments and mitigation strategy choices
+FOR FINANCIAL/ROI:
+### Financial Technology Infrastructure
+- **Financial Analytics Platform**: [Cost analysis and ROI measurement capabilities]
+- **Performance Monitoring Tools**: [Financial tracking and reporting systems]
+- **Integration Capability**: [Financial system integration requirements]
+- **DECISION REASONING**: [Why financial technology approach is feasible/not feasible for this ROI context]
 
-## Integrated Risk Assessment
-   ### Cross-Dimensional Risks
-   - Interdependent risk factors
-   - Cascading risk scenarios
-   - Risk interaction matrix
-   - **Decision Reasoning**: Explain risk prioritization methodology and interaction analysis
-   ### Risk Prioritization
-   - High-impact, high-probability risks
-   - Risk mitigation priorities
-   - Contingency planning needs
-   - **Decision Reasoning**: Justify risk ranking and explain mitigation strategy selections
+FOR DIGITAL TRANSFORMATION:
+### Digital Platform Capability
+- **Technology Infrastructure**: [Digital platform and integration capabilities]
+- **Scalability Assessment**: [System performance and growth capacity]
+- **Security and Compliance**: [Data protection and regulatory compliance capability]
+- **DECISION REASONING**: [Why digital technology is ready/not ready for this transformation context]
 
-## Strategic Recommendations
-   ### Feasibility Conclusion
-   - Overall feasibility rating with justification
-   - Go/No-Go recommendation
-   - Conditional approval scenarios
-   - **CRITICAL DECISION REASONING**: Provide comprehensive justification for the final feasibility recommendation, explaining all factors considered, alternatives evaluated, and why this conclusion is the most appropriate given the analysis
-   ### Success Factors
-   - Critical elements for success
-   - Key performance indicators
-   - Success measurement framework
-   - **Decision Reasoning**: Explain why these success factors are critical and how KPIs were selected
-   ### Next Steps
-   - Immediate action items
-   - Preparation requirements
-   - Decision timeline recommendations
-   - **Decision Reasoning**: Justify action item prioritization and timeline recommendations
+FOR OPERATIONAL IMPROVEMENTS:
+### Operational Technology Assessment
+- **Process Technology**: [Workflow and process management capabilities]
+- **Automation Potential**: [Process automation and efficiency technology]
+- **Integration Requirements**: [Operational system integration needs]
+- **DECISION REASONING**: [Why operational technology supports/doesn't support this improvement context]
 
-## Decision Audit Trail
-   ### Key Decisions Made
-   - List all major decisions and recommendations made in this analysis
-   ### Decision Rationale Summary
-   - For each key decision, provide a concise explanation of the reasoning
-   ### Alternative Considerations
-   - Document what alternatives were considered for major decisions
-   ### Supporting Evidence
-   - Reference the evidence and analysis that supports each key decision
+## Legal and Regulatory Analysis (Domain-Specific)
+
+### Context-Relevant Compliance Requirements
+- **Domain-Specific Regulations**: [Laws and standards applicable to this problem context]
+- **Compliance Complexity**: [Regulatory burden specific to the domain]
+- **Legal Risk Assessment**: [Legal exposure relevant to the context]
+- **DECISION REASONING**: [Why legal approach is compliant/non-compliant for this specific domain]
+
+### Regulatory Strategy (Context-Appropriate)
+- **Compliance Approach**: [Domain-specific regulatory strategy]
+- **Risk Mitigation**: [Legal risk management for this context]
+- **Ongoing Compliance**: [Regulatory monitoring needs for this domain]
+- **DECISION REASONING**: [Why this compliance strategy is optimal for this specific context]
+
+## Financial Feasibility (Domain-Focused)
+
+### Investment Analysis (Context-Specific)
+- **Domain-Appropriate Investment**: [Investment requirements specific to the problem context]
+- **Cost Structure**: [Cost patterns typical for this domain]
+- **Funding Strategy**: [Financing approach suitable for this context]
+- **DECISION REASONING**: [Why investment is justified/not justified for this specific domain context]
+
+### Financial Projections (Context-Relevant)
+- **Domain-Specific ROI**: [Return expectations appropriate to the problem context]
+- **Financial Metrics**: [Performance indicators relevant to the domain]
+- **Risk Assessment**: [Financial risks specific to the context]
+- **DECISION REASONING**: [Why financial projections are realistic/unrealistic for this domain]
+
+### Financial Strategy (Domain-Appropriate)
+- **Resource Allocation**: [Financial resource strategy for this context]
+- **Performance Monitoring**: [Financial tracking approach for this domain]
+- **Contingency Planning**: [Financial risk management for this context]
+- **DECISION REASONING**: [Why financial strategy is sound/unsound for this specific situation]
+
+## Market Analysis (Context-Focused)
+
+### Market Viability (Domain-Specific)
+- **Market Context Assessment**: [Market conditions relevant to the specific domain]
+- **Competitive Landscape**: [Competition analysis specific to the problem context]
+- **Market Opportunity**: [Opportunities within the relevant domain]
+- **DECISION REASONING**: [Why market opportunity is viable/not viable for this specific context]
+
+### Stakeholder Analysis (Context-Relevant)
+- **Domain-Specific Stakeholders**: [Key stakeholders relevant to this problem context]
+- **Stakeholder Dynamics**: [Influence patterns specific to the domain]
+- **Engagement Strategy**: [Stakeholder management approach for this context]
+- **DECISION REASONING**: [Why stakeholder strategy is effective/ineffective for this domain]
+
+### Market Strategy (Domain-Appropriate)
+- **Go-to-Market Approach**: [Market entry strategy suitable for this context]
+- **Positioning Strategy**: [Market positioning relevant to the domain]
+- **Competitive Strategy**: [Competitive approach appropriate to the context]
+- **DECISION REASONING**: [Why market strategy is suitable/unsuitable for this specific domain]
+
+## Communication Strategy (Context-Sensitive)
+
+### Domain-Appropriate Communication
+- **Communication Framework**: [Communication approach tailored to the problem context]
+- **Stakeholder Messaging**: [Messages relevant to the specific domain]
+- **Channel Strategy**: [Communication channels appropriate to the context]
+- **DECISION REASONING**: [Why communication approach is effective/ineffective for this domain]
+
+### Change Management (Context-Specific)
+- **Change Strategy**: [Change management approach for this specific context]
+- **Resistance Management**: [Resistance handling specific to the domain]
+- **Adoption Strategy**: [Adoption approach relevant to the problem context]
+- **DECISION REASONING**: [Why change approach is suitable/unsuitable for this specific situation]
+
+## Behavioral and Cultural Factors (Domain-Relevant)
+
+### Adoption Feasibility (Context-Specific)
+- **User Adoption**: [Adoption patterns relevant to this domain]
+- **Behavioral Change**: [Change requirements specific to the context]
+- **Cultural Alignment**: [Cultural factors affecting this domain]
+- **DECISION REASONING**: [Why adoption is likely/unlikely in this specific context]
+
+### Organizational Impact (Domain-Focused)
+- **Cultural Readiness**: [Organizational preparedness for this domain]
+- **Capability Requirements**: [Skills and capabilities needed for this context]
+- **Change Capacity**: [Organizational change capability for this domain]
+- **DECISION REASONING**: [Why organizational impact is manageable/unmanageable for this context]
+
+## Integrated Risk Assessment (Context-Informed)
+
+### Domain-Specific Risk Analysis
+- **Context-Relevant Risks**: [Risks specific to the identified domain]
+- **Risk Interactions**: [How risks compound within this context]
+- **Mitigation Strategies**: [Risk management approaches for this domain]
+- **DECISION REASONING**: [Why risk profile is acceptable/unacceptable for this context]
+
+### Risk Prioritization (Domain-Appropriate)
+| Risk Category | Domain Relevance | Probability | Impact | Priority | Mitigation Strategy |
+|---------------|-----------------|-------------|---------|----------|-------------------|
+| [Context Risk 1] | [High/Med/Low] | [H/M/L] | [H/M/L] | [1-10] | [Domain-specific approach] |
+| [Context Risk 2] | [High/Med/Low] | [H/M/L] | [H/M/L] | [1-10] | [Domain-specific approach] |
+
+## Strategic Recommendations (Context-Informed)
+
+### Feasibility Conclusion (Domain-Specific)
+- **Overall Assessment**: [Feasible/Conditionally Feasible/Not Feasible for this specific domain]
+- **CRITICAL DECISION REASONING**: [Comprehensive justification for the feasibility recommendation within this domain context, explaining all domain-specific factors considered, alternatives evaluated within the context, and why this conclusion is most appropriate for this specific problem space]
+
+### Context-Appropriate Success Factors
+- **Domain-Specific Success Elements**: [Critical factors for success within this context]
+- **Context-Relevant KPIs**: [Performance indicators appropriate to the domain]
+- **Success Measurement**: [Measurement framework suitable for this context]
+- **DECISION REASONING**: [Why these success factors are critical for this specific domain]
+
+### Domain-Informed Next Steps
+- **Immediate Actions**: [Next steps appropriate to the problem context]
+- **Preparation Requirements**: [Preparation needs specific to the domain]
+- **Decision Timeline**: [Timeline recommendations suitable for this context]
+- **DECISION REASONING**: [Why these actions and timeline are appropriate for this specific domain]
+
+## Decision Audit Trail (Context-Specific)
+
+### Key Domain-Informed Decisions
+- [List all major decisions made with domain context noted]
+
+### Context-Appropriate Decision Rationale
+- [For each decision, explain reasoning within the specific domain context]
+
+### Domain-Relevant Alternative Considerations
+- [Document alternatives considered within the problem context]
+
+### Context-Specific Supporting Evidence
+- [Reference evidence and analysis supporting decisions within the domain]
 """
             ),
             agent=DecisionMultidisciplinaryAgent.create_agent(),
