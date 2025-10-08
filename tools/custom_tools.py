@@ -9,6 +9,11 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
+try:
+    import seaborn as sns 
+except Exception:
+    sns = None
+import matplotlib as mpl  
 from utils.vector_store import VectorStore
 from config import config
 
@@ -115,21 +120,21 @@ class CodeInterpreterTool(BaseTool):
     args_schema: Type[BaseModel] = CodeInterpreterToolInput
     
     # Define allowed modules as strings to avoid pickle issues
-    _allowed_module_names: List[str] = [
-        'pandas', 'numpy', 'matplotlib.pyplot', 'plotly.graph_objects', 
-        'plotly.express', 'datetime', 'json', 'math', 'statistics', 'random'
+    _allowed_module_names: List[str] = ["pandas", "numpy", "matplotlib", "matplotlib.pyplot", "seaborn",
+    "plotly", "plotly.graph_objects", "plotly.express", "datetime", "json", "math", "statistics", "random",
     ]
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     
     def _get_allowed_modules(self) -> Dict[str, Any]:
-        """Get allowed modules dynamically to avoid pickle issues"""
-        return {
+        """Get allowed modules dynamically to avoid pickle issues and missing refs."""
+        allowed = {
             'pandas': pd,
-            'numpy': np, 
-            'matplotlib': plt,
-            'plt': plt,  # Common alias
+            'numpy': np,
+            'matplotlib': mpl,   
+            'matplotlib.pyplot': plt,   
+            'plt': plt,              
             'go': go,
             'px': px,
             'datetime': datetime,
@@ -139,6 +144,11 @@ class CodeInterpreterTool(BaseTool):
             'statistics': __import__('statistics'),
             'random': __import__('random'),
         }
+        # Agrega seaborn solo si está disponible
+        if sns is not None:
+            allowed['seaborn'] = sns
+        return allowed
+
     
     def _create_safe_globals(self) -> Dict[str, Any]:
         """Create a safe global namespace for code execution"""
@@ -367,6 +377,86 @@ class CodeInterpreterTool(BaseTool):
         except Exception as e:
             return f"Code interpreter error: {str(e)}"
 
+# ===== DECIDE optional tools (safe stubs) ====================================
+
+class JSONSchemaValidatorTool(BaseTool):
+    name: str = "JSONSchemaValidatorTool"
+    description: str = "Validates a feasibility JSON against a known schema name."
+    def __init__(self, schema_name: str = "feasibility_v1"): self.schema_name = schema_name
+    def _run(self, json_text: str = "") -> str:
+        try:
+            json.loads(json_text or "{}")
+            return f"validated:{self.schema_name}:true"
+        except Exception as e:
+            return f"validated:{self.schema_name}:false; error={e}"
+
+class CriteriaLockerTool(BaseTool):
+    name: str = "CriteriaLockerTool"
+    description: str = "Checks that criteria are locked and weights sum to 1."
+    def _run(self, json_text: str = "") -> str:
+        try:
+            data = json.loads(json_text or "{}")
+            items = (data.get("criteria") or {}).get("items") or []
+            total = sum(float(i.get("weight", 0)) for i in items)
+            locked = (data.get("criteria") or {}).get("locked", False)
+            return f"criteria_locked:{bool(locked)};weights_sum:{total:.4f}"
+        except Exception as e:
+            return f"criteria_locked:false;weights_sum:error;error={e}"
+
+class RiskRegisterTool(BaseTool):
+    name: str = "RiskRegisterTool"
+    description: str = "Verifies a risk matrix and basic fields."
+    def _run(self, json_text: str = "") -> str:
+        try:
+            data = json.loads(json_text or "{}")
+            risks = data.get("risk_register", [])
+            ok = all(set(r).issuperset({"id","desc","prob","impact"}) for r in risks)
+            return f"risk_matrix_present:{bool(ok)};count:{len(risks)}"
+        except Exception as e:
+            return f"risk_matrix_present:false;error={e}"
+
+class MarketSizingTool(BaseTool):
+    name: str = "MarketSizingTool"
+    description: str = "Assists with TAM/SAM/SOM sanity checks."
+    def _run(self, json_text: str = "") -> str:
+        try:
+            data = json.loads(json_text or "{}")
+            mb = data.get("market_block", {})
+            td = (mb.get("tam_sam_som") or {}).get("method_topdown") or {}
+            bu = (mb.get("tam_sam_som") or {}).get("method_bottomup") or {}
+            return f"tam_sam_som_present:{bool(td or bu)}"
+        except Exception as e:
+            return f"tam_sam_som_present:false;error={e}"
+
+class ElasticityEstimatorTool(BaseTool):
+    name: str = "ElasticityEstimatorTool"
+    description: str = "Returns placeholder elasticity or suggests test plan."
+    def _run(self, input: str = "") -> str:
+        return "elasticity_stub:own=-1.2;cross=[];note=placeholder_or_design_test"
+
+class TimeSeriesForecastTool(BaseTool):
+    name: str = "TimeSeriesForecastTool"
+    description: str = "Returns placeholder O/B/P forecast."
+    def _run(self, input: str = "") -> str:
+        return "forecast_stub:base=100;optimistic=120;pessimistic=80;horizon_months=12"
+
+class PositioningMapTool(BaseTool):
+    name: str = "PositioningMapTool"
+    description: str = "Generates a 2D positioning map placeholder."
+    def _run(self, input: str = "") -> str:
+        return "positioning_map_stub:x=price;y=perceived_value;points=[('You',0.6,0.7)]"
+
+class UnitEconomicsTool(BaseTool):
+    name: str = "UnitEconomicsTool"
+    description: str = "Computes/validates basic CAC/LTV/payback placeholders."
+    def _run(self, input: str = "") -> str:
+        return "unit_economics_stub:cac=200;ltv=900;payback_months=4.5"
+
+class MarkdownFormatterTool(BaseTool):
+    name: str = "MarkdownFormatterTool"
+    description: str = "Pass-through formatter for Markdown."
+    def _run(self, md_text: str = "") -> str:
+        return md_text or ""
 
 # Function-based version using @tool decorator
 @tool("execute_python_code")
@@ -468,19 +558,20 @@ def strategic_visualization_generator(
 ) -> str:
     """
     Generate professional visualizations for strategic analysis reports.
-    
+
     Args:
-        chart_type: Type of chart to generate (risk_matrix, roi_projection, timeline, 
-                   monte_carlo_distribution, scenario_comparison, stakeholder_impact,
-                   performance_dashboard, swot_matrix)
+        chart_type: One of: risk_matrix, roi_projection, timeline,
+                    monte_carlo_distribution, scenario_comparison,
+                    stakeholder_impact, performance_dashboard, swot_matrix
         data_input: JSON string or structured data for the chart
         title: Chart title
-        save_path: Optional path to save the chart image
-    
+        save_path: Optional path to also save the PNG (besides session image manager)
+
     Returns:
-        String with chart generation status and base64 encoded image data
+        String with generation status and a text placeholder created by image_manager.
     """
     return _generate_strategic_visualization(chart_type, data_input, title, save_path)
+
 
 def _generate_risk_matrix(data: dict, title: str, save_path: str = None) -> str:
     """Generate a risk assessment matrix"""
@@ -943,14 +1034,15 @@ def _save_and_encode_chart(fig, save_path: str = None, success_message: str = "C
         # Also save to specified path if provided (for backwards compatibility)
         if save_path:
             fig.savefig(save_path, format='png', bbox_inches='tight', dpi=300, facecolor='white')
-            plt.close(fig)
+            
         
         return f"{success_message}\n{placeholder}"
         
     except Exception as e:
         plt.close(fig)
         return f"Error saving chart: {str(e)}"
-
+    finally: 
+        plt.close(fig)
 
 # =============================================================================
 # FUNCTION-BASED TOOLS (Using @tool decorator) - YOUR EXISTING TOOLS
