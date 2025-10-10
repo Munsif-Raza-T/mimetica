@@ -1799,6 +1799,66 @@ Search Summary:
         except Exception as e:
             return f"Advanced vector search failed: {str(e)}"
 
+# === SIMPLE PACK (80/20) ======================================================
+# Minimal toolset for a “SaaS-friendly” default experience:
+# - Internal semantic search
+# - Fresh external web lookup
+# - Lightweight code execution for small calculations
+# - Markdown formatter for clean delivery
+#
+# Drop this block into your custom_tools.py and (optionally) export the
+# getters from __all__.
+
+def get_simple_tools():
+    """
+    Return the minimal, low-friction toolset intended for default (non-expert) mode.
+    Includes:
+      - AdvancedPineconeVectorSearchTool (class)
+      - serper_search_tool (function tool)
+      - CodeInterpreterTool (class)
+      - MarkdownFormatterTool (class)
+    """
+    tools = [
+        AdvancedPineconeVectorSearchTool(),  # internal corpus search
+        serper_search_tool,                  # external web SERP
+        CodeInterpreterTool(),               # quick calculations / tables
+        MarkdownFormatterTool(),             # clean markdown output
+    ]
+    return tools
+
+
+# Optional: tiny, opinionated template for short deliverables in simple mode.
+# You can feed this to your formatter/agent as a scaffold for concise outputs.
+SIMPLE_EXPECTED_OUTPUT_TEMPLATE = """
+# Strategic Brief (Concise)
+
+## 1) Executive Summary (≤5 bullets)
+- Finding #1 — *WHAT* (value + unit + timeframe) — **WHY** it matters
+- Finding #2 — …
+- Finding #3 — …
+- Finding #4 — …
+- Finding #5 — …
+
+## 2) Open Questions / Assumptions
+- Q1 (TBD) — why it blocks a decision
+- Q2 (TBD) — data needed (source/system/owner)
+
+## 3) Top 3 Risks (Evidence-first)
+| Risk | Prob (L/M/H) | Impact (€/%, unit) | Early Signal | Mitigation |
+|---|---|---|---|---|
+
+## 4) Quick Wins / Next Steps (2–5)
+- Step, owner, expected impact (unit), ETA
+
+## 5) Sources (Short Cues)
+- Doc-ID or URL + access date
+"""
+
+# (Optional) Convenience helper to access the template.
+def get_simple_expected_output_template() -> str:
+    """Return the minimal output scaffold for simple mode."""
+    return SIMPLE_EXPECTED_OUTPUT_TEMPLATE
+
 
 # =============================================================================
 # TOOL COLLECTIONS - UPDATE THIS SECTION

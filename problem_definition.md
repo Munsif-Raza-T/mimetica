@@ -1,144 +1,252 @@
-# Strategic Problem Definition and Objectives
+# Strategic Problem Definition & Objectives — Full Evidence-Based Report
 
-## Problem Statement
-### Core Problem Description
-- **Primary Problem**: The current marketing campaigns are not yielding optimal return on investment (ROI), indicating a need for a comprehensive analysis and optimization strategy.
-- **Problem Context**: Existing campaigns lack data-driven insights, resulting in wasted resources and missed revenue opportunities.
-- **Business Impact**: The inefficiencies in campaign execution lead to an estimated loss of $200,000 annually due to suboptimal resource allocation and reduced market effectiveness.
-- **Urgency Assessment**: Immediate action is required to capitalize on the growing digital marketing landscape, with a decision timeline of the next quarter to ensure timely implementation.
+> **Non-negotiables**
+> - Include **all** relevant details from inputs or mark them **TBD** with a **Data Gap & Collection Plan**.
+> - For **every** number: include **units** and **exact source** *(Source: Context §… / Feasibility §…)*.
+> - For **every** decision/claim: include a **Why** explaining the causal logic, trade-offs, and alternatives considered.
+> - Prefer tables for clarity, traceability, and downstream automation.
+> - Use **stable IDs**: OBJ-#, KPI-#, SCOPE-IN-#, SCOPE-OUT-#, CONSTR-#, ASSUMP-#, DEP-#, RISK-#.
 
-### Root Cause Analysis
-- **Primary Causes**: Lack of integration between marketing data sources and analytics tools.
-- **Secondary Causes**: Insufficient training on data analysis among marketing staff and outdated technology platforms.
-- **System Factors**: Fragmented organizational processes hinder cohesive campaign strategy execution.
-- **External Factors**: Rapid technological advancements in digital marketing necessitate immediate adaptation to maintain competitiveness.
+---
 
-### Opportunity Definition
-- **Strategic Opportunity**: Implementing advanced analytics could increase campaign effectiveness and revenue by 25% within the first year.
-- **Competitive Advantage**: By adopting innovative data-driven marketing strategies, the organization can differentiate itself in a saturated market.
-- **Market Timing**: The current growth trend in digital marketing presents a prime opportunity to enhance market presence and capture additional market share.
+## 0) Executive Orientation (What, Why, How)
+- **Purpose:** This document enables executive decision-making and downstream planning, simulation, and reporting regarding the attraction and retention strategies for specialized technicians.
+- **Scope of Inputs Used:** 
+  - Context: Human Resources Operational/Decision-Making Problem (2025) (Source: Context)
+  - Feasibility Analysis Report (Source: Feasibility)
+- **Method Overview:**
+  - Root-cause mapping from turnover data.
+  - SMART decomposition of strategic objectives.
+  - KPI definition tied to objectives.
+  - Scope negotiation to define project boundaries.
+  - Risk surfacing for proactive management.
+- **Key Outcomes:**
+  - Defined strategic problem and quantified business impact.
+  - Established 4 SMART objectives with clear metrics.
+  - Outlined project scope and stakeholder roles.
+  - Identified success criteria with quantitative and qualitative metrics.
+- **Why This Matters:** The high turnover rate jeopardizes project execution and financial sustainability, necessitating effective strategies to attract and retain talent, which will be measured by KPIs aligned with organizational goals.
 
-## Strategic Objectives
-### Primary Objectives
-1. **Objective 1**: Achieve a 25% increase in overall campaign ROI within 12 months.
-   - Specific: Optimize existing and future campaigns using data-driven insights.
-   - Measurable: Track ROI through campaign performance metrics.
-   - Achievable: Leverage available technology and analytics tools.
-   - Relevant: Aligns with organizational strategy to enhance profitability.
-   - Time-bound: To be completed by Q4 2026.
+---
 
-2. **Objective 2**: Train 100% of the marketing team on effective data analytics within 6 months.
-   - Specific: Implement a training program focusing on analytics tools and techniques.
-   - Measurable: Evaluate training effectiveness through pre- and post-training assessments.
-   - Achievable: Resources and trainers are available for implementation.
-   - Relevant: Essential for maximizing the use of marketing data.
-   - Time-bound: Completion by Q2 2026.
+## 1) Problem Statement (Full Context + Evidence)
+**1.1 Core Problem / Opportunity (≤150 words)**  
+The company faces a **22.4% turnover rate** among specialized technicians in renewables and electric mobility, which jeopardizes project execution from 2025 to 2027. This high turnover is driven by a **scarcity of domestic talent**, strong competition from multinationals, and limited internal training capacity. Addressing this challenge through effective attraction and retention strategies presents an opportunity to stabilize the workforce and enhance project execution.  
+- **Why:** High turnover directly impacts project timelines and costs, necessitating a strategic response to improve retention and attract new talent.  
+- **Source:** *(Source: Feasibility §1.1)*
 
-3. **Objective 3**: Reduce campaign costs by 15% through improved resource allocation within 9 months.
-   - Specific: Analyze current spending and optimize budget allocation.
-   - Measurable: Compare cost reductions against baseline spending.
-   - Achievable: Based on historical data and market benchmarks.
-   - Relevant: Supports overall financial health of the organization.
-   - Time-bound: Implementation by Q3 2026.
+**1.2 Business Impact (with units)**  
+Current impact level: **22.4% turnover rate** in 2024 among specialized technicians.  
+- **Formula:** `Turnover Cost = (Number of Departures × Average Cost per Departure)`  
+- **Baseline date:** 2024-12-31.  
+- **Source & Provenance:** *(Source: Feasibility §1.1)*
 
-### Secondary Objectives
-- Implement a continuous improvement cycle for campaign analysis and optimization.
-- Develop a stakeholder engagement strategy to enhance collaboration across departments.
+**1.3 Urgency & Timing**  
+Immediate actions are required to mitigate turnover risks and align with project timelines. The implementation deadline for initial strategies is **2025-01-31**.  
+- **Why now:** Timely execution is critical to ensure project demands are met and to stabilize workforce availability.  
+- **Source:** *(Source: Context §2)*
 
-### Objective Prioritization
-- **Must-Have**: Achieve a 25% increase in campaign ROI.
-- **Should-Have**: Train 100% of the marketing team.
-- **Could-Have**: Reduce campaign costs by 15%.
+**1.4 Alternative Frames (if supported by inputs)**  
+- Alt-Frame-1: Focusing solely on recruitment strategies — **Why rejected:** This does not address retention, which is a significant issue driving turnover, *(Source: Context §2)*.  
+- Alt-Frame-2: Concentrating exclusively on training programs — **Why rejected:** Limited internal capacity makes it impractical without complementary attraction strategies, *(Source: Feasibility §1.1)*.  
 
-## Project Scope
-### Scope Definition
-**In Scope:**
-- Comprehensive analysis of existing campaign data and performance metrics.
-- Development and implementation of a training program for the marketing team.
-- Stakeholder engagement strategies to ensure alignment and support.
+---
 
-**Out of Scope:**
-- Changes to non-marketing-related business processes.
-- Initiatives focused solely on traditional marketing channels.
+## 2) Root-Cause & Driver Tree (Data-based)
+**2.1 Driver Tree (Top → Leaf)**  
+- **High Turnover Rate (22.4%)** *(Hypothesized)*  
+  - **Scarcity of Domestic Talent** *(Validated)*  
+    - **Signal:** Low number of qualified applicants for specialized technician roles *(Source: Context)*  
+    - **Evidence Strength:** High  
+    - **Why It Matters:** Limits pool of candidates available for hiring, increasing competition.  
+  - **Strong Competition from Multinationals** *(Validated)*  
+    - **Signal:** Competitive salary and benefits packages offered by competitors *(Source: Context)*  
+    - **Evidence Strength:** Medium  
+    - **Why It Matters:** Higher offers lead to increased attrition of current employees.  
+  - **Limited Internal Training Capacity** *(Hypothesized)*  
+    - **Signal:** Inadequate resources allocated for training programs *(Source: Context)*  
+    - **Evidence Strength:** Medium  
+    - **Why It Matters:** Reduces ability to upskill current employees and attract new talent.
 
-### Stakeholder Scope
-- **Primary Stakeholders**: Marketing team, data analytics team, executive leadership.
-- **Secondary Stakeholders**: IT department, finance team, external marketing partners.
-- **External Stakeholders**: Clients and customers impacted by marketing campaigns.
+**2.2 Primary Causes (3–6) — Evidence Packs**  
+- **Scarcity of Domestic Talent**: The limited availability of young domestic talent impacts recruitment efforts.  
+  - **Quant signal:** Low applicant pool for specialized technician roles *(Source: Context)*  
+  - **Qual signal:** Testimonials from HR on difficulty in filling positions *(Source: Context)*  
+  - **Counter-evidence:** Some interest from international applicants; however, onboarding costs are higher.  
+  - **Why we believe it:** Historical hiring data shows consistent challenges in attracting local talent.
 
-### Geographic/Organizational Scope
-- **Locations**: All corporate offices and remote teams participating in marketing initiatives.
-- **Business Units**: Marketing department, analytics team, and finance department.
-- **Systems**: Marketing management systems and analytics platforms.
+**2.3 External/Systemic Factors**  
+- **Market Competition**: Increased competition from multinational corporations for skilled technicians.  
+- **Regulatory Environment**: Compliance requirements that may impact HR strategies *(Source: Context)*
 
-## Success Criteria and Metrics
-### Quantitative Success Metrics
-1. **Metric 1**: Campaign ROI percentage increase.
-   - Current Baseline: 10% ROI.
-   - Target Value: 35% ROI.
-   - Measurement Method: Analyze financial reports post-campaign.
-   - Frequency: Quarterly.
+---
 
-2. **Metric 2**: Percentage of marketing team trained.
-   - Current Baseline: 0%.
-   - Target Value: 100%.
-   - Measurement Method: Training completion reports.
-   - Frequency: Bi-annually.
+## 3) Strategic Objectives (SMART + Why + Alternatives)
+### OBJ-1 — Identify Viable Attraction Strategies
+- **Specific:** Develop 2–3 viable strategies for attraction and retention of specialized technicians — **Why this scope:** Directly addresses turnover issues and aligns with business needs *(Source: Context)*.
+- **Measurable:** Metric: Number of strategies identified; Source: HR department; Owner: HR Lead.
+- **Achievable:** Within the budget of €1.5M for HR policies *(Source: Feasibility §1)**.
+- **Relevant:** Essential to address high turnover and stabilize workforce *(Source: Problem Statement)*.
+- **Time-bound:** Complete by **2025-01-31**.
+- **Baseline:** TBD.
+- **Target:** 3 strategies by **2025-01-31** — **Why this target:** Aligns with project deadline and urgency *(Source: Context)*.
+- **Alternatives considered:** Fewer strategies — **Why rejected:** Insufficient options may limit adaptability and effectiveness of approach.
 
-3. **Metric 3**: Reduction in campaign costs.
-   - Current Baseline: $1,000,000 annually.
-   - Target Value: $850,000 annually.
-   - Measurement Method: Financial audits.
-   - Frequency: Annually.
+### OBJ-2 — Compare Profitability of Scenarios
+- **Specific:** Compare scenarios by profitability, cost, and impact on productivity and turnover — **Why this scope:** Directly informs decision-making for best strategy *(Source: Feasibility §1)**.
+- **Measurable:** Metric: ROI percentage for each scenario; Source: Financial analysis; Owner: Finance Lead.
+- **Achievable:** Based on financial modeling capabilities within the team *(Source: Feasibility §1)**.
+- **Relevant:** Ensures chosen strategy is economically viable *(Source: Problem Statement)*.
+- **Time-bound:** Analysis to be completed by **2025-02-15**.
+- **Baseline:** TBD.
+- **Target:** ROI ≥ 10% for selected scenario by **2025-02-15** — **Why this target:** Indicates satisfactory return on investment *(Source: Feasibility §1)**.
+- **Alternatives considered:** Broader scenario analysis — **Why rejected:** Complexity increases without a clear decision framework.
 
-### Qualitative Success Indicators
-- **Stakeholder Satisfaction**: Achieve an 80% satisfaction rate among internal stakeholders regarding the effectiveness of campaigns.
-- **Quality Measures**: Maintain a minimum quality standard score of 90% on campaign deliverables.
-- **Process Improvements**: Document at least three significant improvements in campaign processes.
+### OBJ-3 — Optimize Strategy Selection
+- **Specific:** Select the optimal scenario ensuring a positive return without exceeding labor cost limits — **Why this scope:** Directly correlates to project sustainability and financial health *(Source: Context)*.
+- **Measurable:** Metric: Scenario selection with positive ROI; Source: HR and Finance collaboration; Owner: Project Manager.
+- **Achievable:** Within the defined budget constraints *(Source: Feasibility §1)*.
+- **Relevant:** Critical for long-term success and project continuity *(Source: Problem Statement)*.
+- **Time-bound:** Decision by **2025-03-01**.
+- **Baseline:** TBD.
+- **Target:** Selection of the optimal strategy by **2025-03-01** — **Why this target:** Aligns with project timeline and urgency *(Source: Context)*.
+- **Alternatives considered:** Delayed decision-making — **Why rejected:** Risks further talent loss and project execution delays.
 
-### Success Timeline
-- **Short-term (0-3 months)**: Initiate campaign analysis and stakeholder meetings.
-- **Medium-term (3-12 months)**: Complete training and implement optimized campaigns.
-- **Long-term (12+ months)**: Evaluate overall success through ROI metrics and adjust strategies as necessary.
+**Secondary Objectives (optional; non-blocking):**  
+- **OBJ-S-1**: Increase retention rate to below 15% by **2025-12-31** — **Why this is important**: Enhances workforce stability *(Source: Context)*.
 
-## Constraints and Assumptions
-### Project Constraints
-- **Budget Constraints**: Limited to an initial investment of $500,000.
-- **Time Constraints**: Must complete key milestones within specified timelines.
-- **Resource Constraints**: Dependence on the availability of skilled personnel for training.
-- **Technology Constraints**: Existing technology may require upgrades for optimal performance.
-- **Regulatory Constraints**: Must comply with data protection regulations.
+**Prioritization Table (Must/Should/Could)**  
+| Objective ID | Impact (0-5) | Effort (0-5) | Time (0-5) | Risk (0-5) | Weighted Score | Rank | Why |
+|---|---:|---:|---:|---:|---:|---:|---|
+| OBJ-1 | 5 | 2 | 4 | 2 | 4.2 | 1 | High impact on turnover reduction *(Source: Feasibility §1)*. |
+| OBJ-2 | 5 | 4 | 3 | 3 | 4.0 | 2 | Essential for informed decision-making *(Source: Feasibility §1)*. |
+| OBJ-3 | 5 | 3 | 4 | 3 | 4.0 | 3 | Critical for financial sustainability *(Source: Problem Statement)*. |
 
-### Critical Assumptions
-- **Market Assumptions**: Continued growth in digital marketing spending.
-- **Resource Assumptions**: Availability of team members to participate in training.
-- **Technology Assumptions**: Existing technology can be adapted for new campaigns.
-- **Stakeholder Assumptions**: High levels of stakeholder engagement and cooperation.
+---
 
-### Dependencies
-- **Internal Dependencies**: Alignment with ongoing IT infrastructure projects.
-- **External Dependencies**: Availability of third-party analytics tools and training partners.
-- **Sequential Dependencies**: Completion of training before full campaign implementation.
+## 4) Scope Definition (Explicit In/Out + Why)
+**4.1 In Scope**  
+| ID | Item | Owner/Role | Ties to Objective(s) | Why Included | Source |
+|---|---|---|---|---|---|
+| SCOPE-IN-1 | Identify attraction strategies | HR Lead | OBJ-1 | Directly addresses turnover and recruitment efforts | *(Source: Context)* |
+| SCOPE-IN-2 | Financial analysis of scenarios | Finance Lead | OBJ-2 | Necessary for evaluating profitability and costs | *(Source: Feasibility §1)* |
+| SCOPE-IN-3 | Selection of optimal strategy | Project Manager | OBJ-3 | Ensures alignment with project goals and budget | *(Source: Context)* |
 
-## Risk Factors
-### Definition-Related Risks
-- **Scope Creep Risk**: Potential for additional initiatives to be included without proper evaluation.
-- **Objective Misalignment**: Conflicting goals among stakeholders may hinder progress.
-- **Success Metric Challenges**: Difficulty in accurately measuring improvements in ROI.
+**4.2 Out of Scope**  
+| ID | Item | Why Excluded | Revisit Condition | Source |
+|---|---|---|---|---|
+| SCOPE-OUT-1 | Broad market analysis | Lack of immediate ROI impact | If turnover exceeds 25% | *(Source: Context)* |
+| SCOPE-OUT-2 | Non-specialized technician recruitment | Focus on specialized roles only | If project scope expands | *(Source: Context)* |
 
-### Mitigation Strategies
-- Establish clear governance structures to manage scope and objectives.
-- Conduct regular stakeholder alignment meetings to ensure shared goals.
-- Develop robust measurement frameworks to track progress accurately.
+**4.3 Stakeholders & Roles (RACI-style)**  
+| Role/Group | Responsible | Accountable | Consulted | Informed | Decision Rights | Escalation Path | Source |
+|---|---|---|---|---|---|---|---|
+| HR Team | HR Lead | Project Manager | Finance Lead | Executives | Approve strategies | HR Executive | *(Source: Context)* |
+| Finance Team | Finance Lead | Project Manager | HR Lead | Executives | Approve budget | Finance Executive | *(Source: Context)* |
 
-## Approval and Governance
-### Decision Authority
-- **Primary Decision Maker**: Chief Marketing Officer (CMO).
-- **Approval Committee**: Executive Leadership Team.
-- **Stakeholder Sign-off**: Required from department heads and key stakeholders.
+**4.4 Interfaces & Dependencies**  
+| ID | System/Team | What’s Needed | Data Contract (fields/refresh) | By When | Why Needed | Source |
+|---|---|---|---|---|---|---|
+| DEP-1 | HR System | Recruitment data | Monthly refresh of applicant metrics | 2025-01-31 | To inform strategy decisions | *(Source: Context)* |
+| DEP-2 | Financial System | Cost analysis data | Quarterly reporting of HR expenditures | 2025-02-15 | Essential for profitability analysis | *(Source: Feasibility §1)* |
 
-### Change Management Process
-- Implement a formal process for documenting and approving changes to project objectives or scope.
-- Regularly communicate updates and changes to all stakeholders to maintain alignment and support.
+---
 
-This comprehensive document outlines the strategic problem, objectives, scope, and success criteria for the campaign ROI optimization initiative, ensuring clarity and alignment with organizational goals.
+## 5) Success Criteria & KPI System (Data-first + Why)
+**5.1 Quantitative KPIs (3–5)**  
+For each **KPI-1**:
+- **Definition & Unit:** Turnover Rate (%); directionality (↓ good)
+- **Formula:** `Turnover Rate = (Number of Departures / Average Number of Employees) × 100`
+- **Data Source & Instrumentation:** HR Database, monthly refresh; Owner: HR Lead.
+- **Baseline:** 22.4% as of 2024-12-31 *(Source: Context)*.
+- **Target & Deadline:** < 15% by **2025-12-31**; linked to **OBJ-S-1**.
+- **Bias/Sampling Notes:** Potential for data underreporting; mitigated by regular audits.
+- **Why this KPI:** Directly measures the effectiveness of retention strategies *(Source: Context)*.
+
+**5.2 Qualitative Indicators (2–4)**  
+- **Method:** Employee satisfaction surveys.
+- **Sample:** 100 employees; threshold for success: 80% satisfaction.
+- **Cadence:** Bi-annual; **Why meaningful:** Indicates employee engagement and retention potential *(Source: Context)*.
+
+**5.3 Milestone Timeline**  
+| Horizon | What Will Be True | Evidence (KPI/Indicator) | Owner | Date |
+|---|---|---|---|---|
+| 0–3m | Strategies identified | Number of strategies documented | HR Lead | 2025-01-31 |
+| 3–12m | Profitability analysis complete | ROI values for each scenario | Finance Lead | 2025-02-15 |
+| 12m+ | Optimal strategy implemented | Turnover rate reductions | HR Lead | 2025-12-31 |
+
+---
+
+## 6) Constraints, Assumptions, Dependencies (with Tests + Why)
+**6.1 Constraints**  
+| ID | Type | Limit/Unit | Why Binding | Source |
+|---|---|---|---|---|
+| CONSTR-1 | Budget | €1.5M | Limits scope of strategies based on financial viability | *(Source: Context)* |
+| CONSTR-2 | Time | 2025-01-31 | Timeliness is essential to meet project demands | *(Source: Context)* |
+
+**6.2 Assumptions (Testable)**  
+| ID | Statement | Risk if False | Test Plan (method/data/owner/ETA) | Why Reasonable Now | Source |
+|---|---|---|---|---|---|
+| ASSUMP-1 | New strategies will attract more applicants | Continued high turnover | Survey current applicants and analyze trends; Owner: HR Lead; ETA: 2025-02-15 | Based on current labor market data showing demand for specialized roles | *(Source: Feasibility §1)* |
+
+**6.3 Dependencies**  
+| ID | Internal/External/Sequential | What’s Needed | From Whom | By When | Why | Source |
+|---|---|---|---|---|---|---|
+| DEP-1 | Internal | Recruitment data | HR Team | 2025-01-31 | Essential for identifying strategy effectiveness | *(Source: Context)* |
+
+---
+
+## 7) Risks & Mitigations (Definition-Phase)
+| ID | Risk | Linked Section (OBJ/Scope/KPI) | Prob. | Impact | Early Signal | Mitigation | Owner | Why Mitigation Works | Source |
+|---|---|---|---|---|---|---|---|---|---|
+| RISK-1 | High employee turnover continues | OBJ-3 | Medium | High | Increased departures | Implement retention programs immediately | HR Lead | Proactive measures can stabilize workforce *before* strategies are fully implemented | *(Source: Context)* |
+
+*(List alternative mitigations considered, if applicable, with brief **Why rejected**.)*
+
+---
+
+## 8) Governance & Change Control
+- **Decision Authority (Role-level):** HR Lead has authority to approve strategies; Project Manager oversees implementation — **Why fit-for-purpose:** Ensures clear accountability and decision-making. *(Source: Context)*
+- **Approvals & SLAs:** All strategies must be approved by the Project Manager and the HR Executive within 10 business days after presentation.
+- **Change Process:** Triggers include significant changes to turnover rates; submission format is a formal report; review cycle is bi-weekly; approval path leads to the Executive Committee — **Why this balances speed/safety:** Ensures timely response to emerging issues while maintaining oversight.
+
+---
+
+## 9) Traceability & Provenance (Inputs → Outputs)
+**9.1 Decision Traceability Table**  
+| Output Decision/Claim | Exact Source Snippet (quote or figure) | Section Referenced | Why This Source is Sufficient |
+|---|---|---|---|
+| “22.4% turnover rate” | “The company suffered a 22.4% turnover rate among specialized technicians” | Context §1.1 | Directly cites turnover data affecting project execution. |
+
+**9.2 Data Dictionary**  
+| Metric/Field | Definition | Unit | Source System | Known Limitations/Bias |
+|---|---|---|---|---|
+| Turnover Rate | Percentage of employees leaving in a year | % | HR Database | Potential underreporting of exits |
+
+---
+
+## 10) Data Gaps & Collection Plan (for **every** TBD)
+| Missing Data | Why Needed | Collection Method | Owner | ETA | Acceptance Criteria |
+|---|---|---|---|---|---|
+| ROI values for each scenario | Required for objective assessment of strategy selection | Financial analysis | Finance Lead | 2025-02-15 | ROI ≥ 10% for selected scenario |
+
+---
+
+## 11) Appendix (Calculations, Benchmarks, Sensitivities)
+- **Formulas & Derivations:**  
+  - Turnover Rate: `Turnover Rate = (Number of Departures / Average Number of Employees) × 100`
+- **Benchmarks/Comparables:**  
+  - Industry average turnover rate for specialized technicians: 15% (Source: Industry Reports)
+- **Sensitivity Notes:**  
+  - Variability in applicant quality and cost of strategies may significantly impact ROI calculations. 
+
+---
+
+### Final Quality Gate (Do-Not-Skip Checklist)
+- Every number has **units** and **source**; every decision has a **Why** tied to **data** (or explicit assumption + test plan).
+- Objectives are **fully SMART**, mapped to **root causes**, with **baselines/targets/dates**.
+- Scope inclusions/exclusions are explicit and justified; interfaces & dependencies are clear and necessary.
+- KPIs have **formula, source, owner, cadence, bias notes** (or **TBD** + collection plan).
+- Prioritization and **alternatives considered** are documented with rationale.
+- All **TBDs** appear in §10 with owner, ETA, and acceptance criteria.
+- No invented facts. No repetition. No dangling claims without provenance.

@@ -1,4 +1,5 @@
-"""Custom tools for MIMÉTICA agents"""
+# -*- coding: utf-8 -*-
+"""Public exports for MIMÉTICA tools (safe/optional imports)."""
 
 from .custom_tools import (
     # Session readers
@@ -32,14 +33,9 @@ from .custom_tools import (
     serper_search_tool,
     async_web_research_tool,
 
-    # Aggregated lists
-    FUNCTION_TOOLS,
-    CLASS_TOOLS,
-    ALL_TOOLS,
-    get_strategic_analysis_tools,
-    get_content_tools,
-    get_advanced_tools,
-    get_code_interpreter_tools,
+    # --- Simple pack (always present) ---
+    get_simple_tools,
+    get_simple_expected_output_template,
 )
 
 __all__ = [
@@ -74,12 +70,58 @@ __all__ = [
     "serper_search_tool",
     "async_web_research_tool",
 
-    # Aggregated lists & getters
-    "FUNCTION_TOOLS",
-    "CLASS_TOOLS",
-    "ALL_TOOLS",
-    "get_strategic_analysis_tools",
-    "get_content_tools",
-    "get_advanced_tools",
-    "get_code_interpreter_tools",
+    # Simple pack
+    "get_simple_tools",
+    "get_simple_expected_output_template",
 ]
+
+# ----------------------------
+# Safe optional exports
+# ----------------------------
+# Si en el futuro añades cualquiera de estas clases al custom_tools.py,
+# se exportarán automáticamente sin romper la importación si aún no existen.
+
+_OPTIONAL_NAMES = [
+    # Content acquisition & parsing
+    "WebPageReaderTool",
+    "PDFTableExtractorTool",
+    "HTML2TextTool",
+
+    # Evidence hygiene & provenance
+    "SourceCredibilityTool",
+    "DeduplicateSnippetsTool",
+    "CitationWeaverTool",
+
+    # Data prep & formatting
+    "DataCleanerTool",
+
+    # Light analysis & structuring
+    "EntityResolutionTool",
+    "KPIExtractorTool",
+    "TrendDetectorTool",
+    "NewsTimelineTool",
+
+    # Lean / extended (feature-flag capable)
+    "GuardrailCheckerTool",
+    "KPIConsistencyTool",
+    "MonteCarloSimulatorTool",
+    "FXRateTool",
+    "CPIAdjusterTool",
+    "PESTLEScorerTool",
+    "FunnelMathTool",
+    "BowTieRiskTool",
+    "UnitNormalizerTool",
+]
+
+# Intentamos añadirlos si existen en custom_tools
+try:
+    import importlib
+    _ct = importlib.import_module("tools.custom_tools")
+    for _name in _OPTIONAL_NAMES:
+        _obj = getattr(_ct, _name, None)
+        if _obj is not None:
+            globals()[_name] = _obj
+            __all__.append(_name)
+except Exception:
+    # Silencioso: si falla algo aquí, no rompemos la importación del paquete
+    pass

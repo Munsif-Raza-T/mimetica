@@ -35,10 +35,10 @@ class DecisionMultidisciplinaryAgent:
                 temperature=min(0.4, getattr(config, "TEMPERATURE", 0.4)),
             )
 
-        # --- Tools: baseline + optional tools with failure tolerance ---
+       # --- Tools: baseline + optional tools (silent, failure-tolerant) ---
         tools_list = [CodeInterpreterTool()]
 
-        # Flags (you can move/define them in config.py)
+        # Feature flags (override in config.py if needed)
         USE_OPTIONAL_TOOLS = getattr(config, "USE_OPTIONAL_TOOLS", True)
         TOOLS_ENABLED = getattr(
             config,
@@ -59,7 +59,6 @@ class DecisionMultidisciplinaryAgent:
         if USE_OPTIONAL_TOOLS:
             try:
                 import importlib
-
                 ct = importlib.import_module("tools.custom_tools")
 
                 optional_tools = [
@@ -75,33 +74,33 @@ class DecisionMultidisciplinaryAgent:
                 ]
 
                 for class_name, kwargs in optional_tools:
-                    # Allow disabling specific tools via config.TOOLS_ENABLED
+                    # Respect per-tool enable flags without emitting UI logs
                     if not TOOLS_ENABLED.get(class_name, True):
-                        if st:
-                            st.info(f"⏭️ Tool disabled by config: {class_name}")
                         continue
 
                     try:
                         cls = getattr(ct, class_name, None)
                         if cls is None:
-                            if st:
-                                st.info(f"🔎 Tool not found: {class_name} (skipped)")
+                            # Tool class not found in custom_tools; skip silently
                             continue
 
-                        tool_instance = cls(**kwargs)
-                        tools_list.append(tool_instance)
-                        if st:
-                            st.success(f"🧩 Tool ready: {class_name}")
+                        # Some tools may not accept kwargs (or signature may differ).
+                        # Try kwargs first, then no-arg fallback.
+                        try:
+                            tool_instance = cls(**kwargs)
+                        except TypeError:
+                            tool_instance = cls()
 
-                    except Exception as e:
-                        # Do not break the agent because of an optional tool failure
-                        if st:
-                            st.warning(f"⚠️ {class_name} failed to initialize: {e} (skipped)")
+                        tools_list.append(tool_instance)
+
+                    except Exception:
+                        # Any initialization error: skip silently to avoid breaking agent startup
                         continue
 
-            except Exception as e:
-                if st:
-                    st.warning(f"⚠️ Optional tools could not be loaded: {e}")
+            except Exception:
+                # custom_tools module not available; proceed with baseline tool only
+                pass
+
 
         # --- Agent profile (role/goal/backstory) ---
         return Agent(
@@ -816,4 +815,8 @@ Every table/metric must include **units**, **time frame**, and **source**; every
 - **G. Tool Artifacts** (validation logs, model summaries).
 
 """
-))            
+),
+            agent=DecisionMultidisciplinaryAgent.create_agent(),
+            markdown=True,
+            output_file="feasibility_report.md"
+        )
