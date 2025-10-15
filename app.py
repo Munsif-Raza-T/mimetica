@@ -348,8 +348,7 @@ def show_setup_page():
             st.session_state.workflow_state['project_info'] = {
                 'name': project_name,
                 'description': project_description,
-                'focus': analysis_focus,
-                'custom_focus': custom_focus if analysis_focus == "Other" else None,
+                'focus': analysis_focus if analysis_focus != "Other" else custom_focus,
                 'created_at': datetime.now().isoformat()
             }
             st.success("✅ Project information saved!")

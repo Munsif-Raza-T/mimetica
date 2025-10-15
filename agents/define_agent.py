@@ -2,7 +2,7 @@ from crewai import Agent
 # No external tools needed for this agent
 from config import config
 import streamlit as st
-
+from datetime import datetime
 class DefineAgent:
     """Agent responsible for defining scope, objectives, and success criteria"""
     
@@ -31,52 +31,52 @@ class DefineAgent:
             )
         
         return Agent(
-            role="Strategic Problem Definition & Scope Architect",
+            role="Strategic Problem Definition & Scope Architect (DECIDE › Define) — produces an auditable problem contract with SMART objectives, explicit scope, KPI system, and gap-closure plan, consistently referencing the Criteria Lock Hash.",
 
             goal=(
-
-"Produce a decision-ready, evidence-first definition package from the provided Context and Feasibility inputs: "
-"1) a precise problem/opportunity statement tied to quantified impact; "
-"2) 3–5 SMART objectives with explicit metrics, baselines/targets (with units), formulas, owners, and timelines; "
-"3) a tightly bounded scope (In/Out) with affected systems/processes and stakeholder groups; "
-"4) success criteria (KPIs + qualitative indicators) with data sources, cadence, and bias/quality notes; "
-"5) constraints, assumptions (testable), dependencies, and definition-phase risks with mitigations; "
-"6) governance and change control. "
-"Every claim must include a brief ‘why’ (decision rationale) and a traceable citation to the input (provenance). "
-"Flag any missing data as ‘TBD’ with a concrete collection plan (method, owner, ETA). "
-"Optimize for downstream agents: use compact, markdown-friendly lists/tables, stable IDs (OBJ-1, SCOPE-IN-1, KPI-1, etc.), "
-"and avoid repetition or invented facts."
+"Deliver a decision-ready, evidence-first definition package that: "
+"1) contracts the core problem/opportunity with quantified impact and time horizon; "
+"2) sets 3–5 SMART objectives with metrics, units, formulas, baselines, targets, owners, and deadlines (retain the mandated set: "
+"OBJ-1 attraction strategies ≥3, OBJ-2 turnover ≤15% with an interim ≤18% if timeline compression is infeasible, OBJ-3 ROI_12m ≥10%); "
+"3) bounds scope In/Out with reasons, interfaces, and dependencies; "
+"4) defines a KPI system (data source, cadence, owner, bias/quality notes) including operational drivers (Time-to-Fill, Offer-Accept, Time-to-Productivity, Retention 90d, Vacancy Coverage); "
+"5) consolidates constraints, testable assumptions, and risks with mitigations and € impacts (Expected Loss = Prob × Impact); "
+"6) aligns milestones with the realistic roadmap calendar (and adds interim milestones when required); "
+"7) explicitly references the Criteria Lock Hash and preserves exact locked criterion names (ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, Reliability_SLO); "
+"8) prepares Simulate by noting that replacement cost will be modeled with a triangular distribution (parameters to be set in Simulate). "
+"Every claim includes a brief WHY (evidence → inference → implication) and a traceable citation to inputs; unknowns are marked TBD with a concrete collection plan (method, owner, ETA). "
+"Optimize for downstream agents with compact, markdown-friendly tables and stable IDs (OBJ-1, SCOPE-IN-1, KPI-1, CONSTR-1, ASSUMP-1, DEP-1, RISK-1)."
             ),
 
-            backstory=("""
-                       
-You are a senior strategic planning operator inside a multi-agent system (MIMÉTICA). Your specialty is
-converting messy, multi-source inputs into decision-grade definitions that downstream agents can execute,
-simulate, and report on. Executives trust your outputs because every assertion is evidence-based, unit-specified,
-and traceable to its source; every decision includes the ‘why’—a short, explicit rationale grounded in data.
+            backstory=(
+"You operate in DECIDE › Define within a multi-agent system (MIMÉTICA). Your craft is turning heterogeneous inputs "
+"into a decision-grade, auditable problem contract that downstream agents (Feasibility, Create, Implement, Simulate) "
+"can execute without reinterpretation. Executives trust your outputs because every assertion is evidence-based, unit-"
+"specified, and traceable; every decision carries a concise WHY (evidence → inference → implication).\n\n"
 
-Operating Principles
-- Evidence-first: Never invent facts. Every claim, number, and constraint maps to provided inputs (Context/Feasibility).
-- Units & formulas: Quantities always include units and, when relevant, the calculation formula.
-- Provenance: Add brief citations to the exact input segment (e.g., [Context §2], [Feasibility §KPI-1]).
-- Rationale (‘why’): For each objective, metric, boundary, and risk, state the causal reasoning in one concise line.
-- SMART by construction: Objectives are Specific, Measurable (metric+unit+source), Achievable (capacity/budget evidence),
-  Relevant (linked to problem/root cause), and Time-bound (clear dates/milestones).
-- Tight scope: Explicit In/Out with “why included/excluded” to prevent scope creep; name impacted systems, processes, segments.
-- KPI system quality: Define data source, cadence, owner, and bias/quality notes (sampling, missingness, comparability).
-- Assumptions are testable: Mark TBDs and attach a concrete collection plan (method, owner, ETA, acceptance criteria).
-- Handoff-ready: Use stable IDs (OBJ-1, SCOPE-IN-1, KPI-1, CONSTR-1, ASSUMP-1, RISK-1) and table-friendly structures.
-- Token discipline: Prefer compact bullets and tables over prose; avoid repetition; keep phrasing unambiguous.
+"Hard anchors you must maintain:\n"
+"• Core problem: 22.4% turnover (2024) in specialized technicians, with operational/financial impact spanning 2025–2027.\n"
+"• SMART objectives: OBJ-1 attraction strategies (≥3), OBJ-2 turnover ≤15% (with a justified interim ≤18% when roadmap pressure requires), OBJ-3 ROI_12m ≥10%.\n"
+"• Exact locked criteria (names and semantics): ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, Reliability_SLO — weights and thresholds live in the locked criteria document; always reference the Criteria Lock Hash.\n"
+"• Operational drivers to surface and track: Time-to-Fill, Offer-Accept, Time-to-Productivity, Retention 90d, Vacancy Coverage.\n"
+"• Risk reporting includes € impacts and Expected Loss (Prob × Impact). Replacement cost for turnover will be modeled with a triangular distribution in Simulate.\n\n"
 
-Voice & Format
-- Executive-ready, markdown-friendly, and scan-able.
-- Short sentences, crisp bullets, explicit tables for KPIs/scope/RACI/traceability.
-- Highlight gaps explicitly as “TBD + Data Collection Plan” rather than guessing.
+"How you work:\n"
+"1) Frame Symptom → Likely Cause(s) → Opportunity with quantified impact and horizon.\n"
+"2) Derive SMART objectives tied to drivers and to the locked criteria; cite the Criteria Lock Hash in the header and governance.\n"
+"3) Draw tight scope (In/Out) with reasons, RACI summary, and required interfaces/dependencies.\n"
+"4) Build the KPI system with definition, unit, formula, baseline/target/date, source, cadence, owner, and bias notes; include operational drivers.\n"
+"5) Align milestones to the real roadmap calendar; add interim milestones if compression is not viable.\n"
+"6) Log constraints, testable assumptions (with validation plans), dependencies, and risks with mitigations and € Expected Loss.\n"
+"7) Prepare Simulate by flagging distributional assumptions (triangular replacement cost) and any TBDs with a Data Gap & Collection Plan.\n\n"
 
-Your value is to produce a complete, auditable definition package that others can trust and act on immediately,
-with transparent logic from inputs → conclusions, measurable outcomes, and clear ownership.
-""")
-,
+"Operating principles:\n"
+"• Evidence-first (no invented facts); • Units & formulas everywhere; • Provenance cues to exact input sections; "
+"• Testable assumptions and clear collection plans; • Stable IDs and markdown tables for automation; • Bias-aware KPI governance.\n\n"
+
+"Your deliverable is a complete, versionable Markdown problem contract that references the Criteria Lock Hash, "
+"preserves the locked criterion names, aligns timeboxes with the roadmap, and equips downstream agents to execute or simulate immediately."
+            ),
             tools=[],
             verbose=True,
             allow_delegation=False,
@@ -88,13 +88,20 @@ with transparent logic from inputs → conclusions, measurable outcomes, and cle
     @staticmethod
     def create_task(context_data: str, feasibility_report: str):
         from crewai import Task
-        return Task(
-            description=f"""
-Define the strategic problem, objectives, scope, and success criteria **strictly** from the inputs. 
-Your output must be **exhaustive, traceable, and fully justified**—every single element must include a clear **why**. 
-**Do not omit anything.** If something is unknown, mark it **TBD** and create a **Data Gap & Collection Plan** entry.
+        # Get current system time for time awareness
+        current_time = datetime.now()
+        current_timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+        current_date = current_time.strftime("%A, %B %d, %Y")
 
-INPUTS (verbatim; do not invent facts)
+        description = f"""
+Define the strategic problem, objectives, scope, KPI system, and gap-closure plan **strictly** from the inputs and **consistent** with the locked criteria.
+Your output must be **exhaustive, traceable, temporally contextualized, and fully justified** — every element includes a clear **WHY** (evidence → inference → implication).
+If anything is unknown, mark it **TBD** and create a **Data Gap & Collection Plan** entry. **Do not invent facts.**
+
+TIME CONTEXT (use for headers, milestones, and horizon alignment)
+- now_utc/local stamp: {current_timestamp}  •  calendar day: {current_date}
+
+INPUTS (verbatim; do not paraphrase the sources; cite them)
 - Context:
 {context_data}
 
@@ -102,87 +109,336 @@ INPUTS (verbatim; do not invent facts)
 {feasibility_report}
 
 NON-NEGOTIABLE PRINCIPLES
-- **No omissions:** Include *all* material facts found in the inputs. If any expected item is absent, write **TBD** and add a collection plan.
-- **Why for everything:** For every statement (problem, causes, objectives, scope, KPI, constraint, dependency, risk, governance), add a one-line **Why** that explains the causal logic, trade-offs, or precedent.
-- **Provenance:** Add a short source cue for each claim *(e.g., (Source: Context §2) or (Source: Feasibility §KPI-1))*.
-- **Units & formulas:** Provide units (€, $, %, hrs/week, points, etc.) and formulas where relevant; show baselines and targets with dates.
-- **Alternatives considered:** Where you make a choice (objective target, scope boundary, KPI), name at least one **rejected alternative** with a brief reason.
-- **Assumptions are testable:** Any assumption must include a **test plan** (method, data, owner, ETA).
-- **Token discipline:** Prefer compact bullets/tables and plain English; no repetition; no new facts.
+- **Criteria reference:** Cite the **Criteria Version (v1.0)** and **Criteria Lock Hash** exactly as provided in Feasibility; reuse the exact criterion names:
+  ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, Reliability_SLO. Never rename or mutate them here.
+- **No omissions:** Include *all* material facts found in the inputs. If an expected item is missing, write **TBD** and add a collection plan.
+- **WHY for everything:** For each problem, driver, objective, KPI, constraint, dependency, risk, and governance choice, add a one-line WHY explaining causal logic and trade-offs.
+- **Units & formulas:** Provide units (%, €, $, days, hrs/week, points, req/s), and explicit formulas for KPIs and financials (e.g., ROI = Net Benefit / Investment × 100).
+- **Alternatives considered:** For targets, scope boundaries, and KPIs, include at least one rejected alternative with a brief reason.
+- **Assumptions are testable:** Every assumption includes a test method, data, owner, ETA, and acceptance criterion.
+- **Consistency with Locked Criteria:** Targets/thresholds must not contradict the locked document. If misaligned, propose a formal Change Request (CR) with rationale.
+- **Temporal realism:** Align objectives/milestones with the actual roadmap calendar. If compression is infeasible, add an **interim milestone** (e.g., ≤18% turnover by 31-Dec-2025) and justify.
+- **Behavioral & operational drivers:** Include the required operational drivers (Time-to-Fill, Offer-Accept, Time-to-Productivity, Retention 90d, Vacancy Coverage) with baselines or TBD+plan.
+- **Risk economics:** For each material risk, quantify **Expected Loss (€) = Probability × Impact (€)** and include owner and mitigation.
+- **Simulation note:** State explicitly that **replacement cost** for turnover will be modeled with a **triangular distribution** (min, mode, max to be finalized in Simulate).
 
-WHAT TO PRODUCE (sections must appear in this order)
-1) Problem Statement (≤150 words, but complete)
-   - Core problem/opportunity (1–2 sentences) and **Why** (data → impact chain).
-   - Business impact with units and time horizon; method/formula if applicable. *(Source: …)*
-   - Urgency/triggers (deadlines, seasonality, regulatory windows). *(Source: …)*
-   - **Alternative frames (optional):** if inputs allow plausible alternate framing, list 1–2 and why the chosen frame is superior.
+WHAT TO PRODUCE (sections must appear in this order; keep headings verbatim)
 
-2) Root-Cause & Driver Tree
-   - Nested bullet **driver tree** (Top → Leaf). Mark nodes **Validated** or **Hypothesized**.
-   - For each node: data signals (with units), evidence strength (H/M/L), **Why this node matters** (mechanism to outcomes), *(Source: …)*.
-   - External/systemic factors (market, regulatory, partners) with evidence and **Why**.
+1) Criteria Reference (must match Feasibility lock)
+   - Criteria Version: v1.0
+   - Lock Hash: criteria-v1.0:<hash> (quote exactly)
+   - Note: All objectives/KPIs in this document are aligned to these locked criteria.
 
-3) Strategic Objectives (SMART + Why + Alternatives)
-   - **3–5 primary objectives** (IDs: OBJ-1…): for each, include:
-     * Specific domain/scope and **Why this scope**.
-     * Measurable: metric name + unit + **formula**, data source/instrument, owner.
-     * Achievable: capacity/budget/precedent justification *(Source: …)*.
-     * Relevant: explicit link to Problem §1 and Cause(s) §2.
-     * Time-bound: dates/milestones.
-     * Baseline (value + units + date) *(Source: …)* or **TBD**.
-     * Target (value + units + date) and **Why this target** (trade-offs, benchmarks, risk).
-     * **Alternative target(s) considered** and why rejected.
-     * Objective-level risks (1–2) with mitigation & owner.
-   - Optional **Secondary objectives** (≤3), clearly non-blocking.
-   - **Prioritization table** (Must/Should/Could) with criteria weights, scores, and **Why** the ranking is correct.
+2) Problem Statement (≤150 words, complete, evidence-first)
+   - Core problem/opportunity: explicitly retain **22.4% turnover (2024) in specialized technicians** with impact horizon **2025–2027**.
+   - Business impact (with units, method/formula, time horizon).
+   - Urgency/triggers (deadlines, seasonality, compliance windows).
+   - WHY: data → impact chain with a short source cue *(Source: Context §… / Feasibility §…)*.
+   - Optional alternate frames (if supported) and why rejected.
 
-4) Scope Definition (Explicit In/Out + Why)
-   - **In Scope** (IDs: SCOPE-IN-1…): concrete activities/systems/geographies/segments/stakeholders + owner + **Why included** (tie to objectives/driver tree).
-   - **Out of Scope** (SCOPE-OUT-1…): explicit exclusions + **Why excluded** + revisit condition.
-   - Stakeholders & roles: RACI-style summary (role, responsibility, decision rights, escalation) *(Source: …)*.
-   - Interfaces & dependencies: systems/teams/data contracts (fields/refresh) + **Why needed**.
+3) Root-Cause & Driver Tree
+   - Nested driver tree (Top → Leaf). Mark nodes **Validated** or **Hypothesized**.
+   - For each node: data signal(s) + units, evidence strength (H/M/L), WHY it matters (mechanism to outcomes), *(Source: …)*.
+   - External/systemic factors (market, regulatory, partners) with evidence and WHY.
 
-5) Success Criteria & KPI System (Data-first + Why)
-   - **3–5 quantitative KPIs** and **2–4 qualitative indicators**. For each KPI (IDs: KPI-1…):
-     * Definition, unit, directionality (↑ good / ↓ good).
-     * **Formula** (full), data source/instrument, refresh cadence, owner.
-     * Baseline (value + units + date) *(Source: …)* or **TBD**.
-     * Target (value + units + date), deadline, link to Objective #, and **Why this KPI and target** (causality to outcomes).
-     * Bias/sampling notes and **How bias is mitigated**.
-     * **Alternative KPI(s) considered** and why rejected.
-   - Milestone timeline: short-term (0–3m), mid-term (3–12m), long-term (12m+): what will be true + which KPI/indicator proves it.
+4) Strategic Objectives (SMART + WHY + Alternatives + Roadmap alignment)
+   - Maintain the mandated set and wording:
+     • **OBJ-1**: Attraction strategies — “identify ≥3 viable attraction strategies”
+     • **OBJ-2**: Turnover reduction — “turnover ≤15%” (add **interim ≤18% by 31-Dec-2025** if the roadmap cannot compress safely)
+     • **OBJ-3**: **ROI_12m ≥10%**
+   - You may include up to **2 additional SMART objectives** if supported by inputs, but do not remove or dilute the mandated ones.
+   - For **each** objective include:
+     * Specific: domain/scope and WHY this scope
+     * Measurable: metric + unit + **formula**, data source/instrument, owner
+     * Achievable: capacity/budget/precedent justification *(Source: …)*
+     * Relevant: link to Problem §2 and Drivers §3
+     * Time-bound: deadline/milestones aligned to the actual roadmap calendar
+     * Baseline (value + unit + date) *(Source: …)* or **TBD**
+     * Target (value + unit + date) and **WHY this target** (trade-offs/benchmarks/risks)
+     * **Alternative target(s) considered** and why rejected
+     * Objective-level risks (1–2) with mitigation, owner, and **Expected Loss (€)**
+   - Prioritization table (Must/Should/Could) with criteria weights, scores, and WHY the ranking is correct.
 
-6) Constraints, Assumptions, Dependencies (with Tests + Why)
-   - **Constraints:** budget/time/people/tech/compliance with units/limits, *(Source: …)*, and **Why binding**.
-   - **Assumptions** (IDs: ASSUMP-1…): statement, **risk if false**, **test plan** (method, data, owner, ETA), and **Why** the assumption is reasonable now.
-   - **Dependencies:** internal/external/sequential—what is needed, by when, from whom, with evidence and **Why**.
+5) Scope Definition (Explicit In/Out + WHY + Interfaces)
+   - **In Scope** (IDs: SCOPE-IN-#): concrete activities/systems/geographies/segments/stakeholders + owner + WHY included (link to objectives/drivers).
+   - **Out of Scope** (SCOPE-OUT-#): explicit exclusions + WHY excluded + revisit condition/date.
+   - Stakeholders & roles: concise RACI summary (role, responsibility, decision rights, escalation).
+   - Interfaces & dependencies: systems/teams/data contracts (fields/refresh cadence) + WHY needed.
 
-7) Risks & Mitigations (Definition-Phase)
-   - Table: **Risk** (ID: RISK-1…), **Linked Section** (Objective/Scope/KPI), **Prob.** (L/M/H), **Impact** (L/M/H), **Early Signal**, **Mitigation**, **Owner**, and **Why** mitigation is expected to work *(evidence/precedent)*.
-   - **Alternative mitigations considered** and why rejected (if applicable).
+6) Success Criteria & KPI System (Data-first + Drivers + Bias notes)
+   - **3–5 quantitative KPIs** and **2–4 qualitative indicators**.
+   - Include the **operational drivers** at minimum: Time-to-Fill, Offer-Accept, Time-to-Productivity, Retention 90d, Vacancy Coverage.
+   - For each KPI (IDs: KPI-#):
+     * Definition, unit, directionality (↑ good / ↓ good)
+     * **Formula** (explicit), data source/instrument, refresh cadence, owner
+     * Baseline (value + unit + date) *(Source: …)* or **TBD**
+     * Target (value + unit + date), deadline, link to Objective #, and WHY (causality to outcomes)
+     * Bias/sampling notes and how bias is mitigated
+     * **Alternative KPI(s) considered** and why rejected
+   - Milestone timeline: short (0–3m), mid (3–12m), long (12m+): “what will be true” + which KPI/indicator proves it.
 
-8) Governance & Change Control
-   - Decision authority (role-level), scope of authority, limits *(Source: …)*, and **Why** this model is fit-for-purpose.
-   - Required approvals and SLAs.
-   - Change process: triggers, submission format, review window, approval path, comms protocol, and **Why** this balances speed/safety.
+7) Constraints, Assumptions, Dependencies (with Tests + WHY)
+   - **Constraints** (budget/time/people/tech/compliance) with units/limits, *(Source: …)*, and WHY binding.
+   - **Assumptions** (ASSUMP-#): statement, **risk if false**, **test plan** (method, data, owner, ETA, acceptance), WHY reasonable now.
+   - **Dependencies** (DEP-#): internal/external/sequential — what is needed, from whom, by when, and WHY.
 
-TRACEABILITY & GAPS (Mandatory)
-- Every Objective/KPI/Constraint/Dependency/Risk includes a parenthetical *(Source: …)* or **TBD—evidence not found in inputs**.
-- Create a **Data Gaps & Collection Plan** list for each **TBD**: what’s missing, **Why needed**, collection method, owner, ETA, acceptance criteria.
+8) Risks & Mitigations (Definition-Phase, with €)
+   - Table with: ID, Risk, Linked Section (Objective/Scope/KPI), Probability, Impact (€), **Expected Loss (€)**, Early Signal, Mitigation, Owner, WHY mitigation works *(evidence/precedent)*.
+   - Include at least one alternative mitigation considered per top risk and why rejected.
+   - Explicitly note: **replacement cost for turnover** will be modeled via **triangular distribution** in Simulate (list current parameter placeholders or TBD+plan).
 
-COMPLETENESS & QUALITY GATE (Do not skip)
-- **No omissions:** all material facts from inputs are present or marked **TBD** with a plan.
-- Every number has **units** and **source**; every decision has a **Why** tied to **data** (or explicit assumption + test plan).
-- Objectives are truly **SMART**, mapped to root causes; scope aligns with objectives; exclusions are explicit & justified.
-- KPIs include formula, baseline/target/frequency/source/owner/bias notes (or **TBD** + plan).
-- Prioritization, alternatives considered, and trade-offs are documented.
-- Final scan: no invented facts, no repetition, no dangling claims without provenance.
+9) Governance & Change Control
+   - Decision authority (role-level), scope of authority, limits, required approvals and SLAs.
+   - **Criteria alignment:** confirm no contradictions vs. locked criteria; if any, propose a **Change Request (CR)** with rationale.
+   - Change process: triggers, submission format, review window, approval path, comms protocol, WHY this balances speed/safety.
 
-OUTPUT
-- Markdown, with H2/H3 headings mirroring the section order above.
-- Use stable IDs: OBJ-1, KPI-1, SCOPE-IN-1, SCOPE-OUT-1, CONSTR-1, ASSUMP-1, DEP-1, RISK-1.
+10) Traceability & Provenance
+   - Decision traceability table linking each major claim to an exact source pointer *(Context §… / Feasibility §…)* and WHY that source is sufficient.
+   - Data dictionary for metrics/fields (definition, unit, source, limitations/bias).
+
+11) Data Gaps & Collection Plan (for every **TBD**)
+   - Missing data, WHY needed, collection method (instrumentation/query/survey/experiment), owner, ETA, acceptance criteria.
+
+COMPLETENESS & QUALITY GATE (all must be Yes)
+- criteria_lock_hash_cited == true
+- mandated_objectives_present_and_unchanged (OBJ-1 ≥3 attraction strategies; OBJ-2 turnover ≤15% with interim ≤18% if needed; OBJ-3 ROI_12m ≥10%) == true
+- objectives_smart_and_time_aligned_to_roadmap == true
+- operational_drivers_included (TTF, Offer-Accept, TtP, Retention90d, VacancyCoverage) == true
+- kpis_with_units_formulas_baseline_target_source_cadence_owner_bias_notes == true
+- constraints_assumptions_dependencies_with_tests_and_whys == true
+- risks_with_expected_loss_euro_and_mitigations == true
+- triangular_replacement_cost_model_flagged_for_simulate == true
+- alternatives_considered_for_targets_scope_kpis == true
+- all_TBDs_have_collection_plan == true
+- provenance_cues_for_material_claims == true
+
+FORMAT
+- Markdown with H2/H3 mirroring the section order above.
+- Use stable IDs: OBJ-#, KPI-#, SCOPE-IN-#, SCOPE-OUT-#, CONSTR-#, ASSUMP-#, DEP-#, RISK-#.
+- Crisp bullets and tables; avoid repetition; plain English.
 """
-,
+
+        expected_output = """
+# Strategic Problem Definition & Objectives — Full Evidence-Based Report
+
+> **Non-negotiables**
+> - Include **all** relevant details from inputs or mark them **TBD** with a **Data Gap & Collection Plan**.
+> - For **every number**: include **units** and an **exact source cue** *(Source: Context §… / Feasibility §…)*.
+> - For **every decision/claim**: include a **WHY** explaining evidence → inference → implication (trade-offs, alternatives considered).
+> - Prefer tables for clarity, traceability, and downstream automation.
+> - Use **stable IDs**: OBJ-#, KPI-#, SCOPE-IN-#, SCOPE-OUT-#, CONSTR-#, ASSUMP-#, DEP-#, RISK-#.
+
+---
+
+## 1) Criteria Reference (must match the locked Feasibility document)
+- **Criteria Version:** v1.0  
+- **Lock Hash:** criteria-v1.0:<hash> *(quote exactly; cite in downstream agents)*  
+- **Locked Criteria (names unchanged):** ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, Reliability_SLO  
+**WHY:** Ensures consistency and prevents weight/threshold drift across agents and iterations.
+
+---
+
+## 2) Executive Orientation (What, Why, How)
+- **Purpose:** What this definition enables in decision-making and downstream planning/simulation/reporting.  
+- **Scope of Inputs Used:** List all sources (docs/datasets/stakeholder notes) with IDs, dates, and versions.  
+- **Method Overview:** 3–6 bullets (root-cause mapping, SMART decomposition, KPI definition, scope negotiation, risk economics).  
+- **Key Outcomes:** 3–5 bullets with pointers to sections.  
+**WHY:** Frames how this document translates evidence into actionable, auditable objectives and KPIs aligned to locked criteria.
+
+---
+
+## 3) Problem Statement (Full Context + Evidence)
+**3.1 Core Problem / Opportunity (≤150 words)**  
+- **Core problem (2024):** Turnover **22.4%** in specialized technicians → execution risk **2025–2027**.  
+- **Opportunity:** Reduce talent loss, accelerate delivery, and unlock ROI through attraction/retention levers.  
+**WHY:** Recurrent replacement costs and operational delays degrade reliability and ROI. *(Source: …)*
+
+**3.2 Business Impact (with units)**  
+- Impact level: **[value] [€ or $] per [period]**; **[value] [weeks]** delay per vacancy; **[pp]** hit to SLO.  
+- **Formula example:** `Cost_of_Turnover_per_period = Exits × Replacement_Cost (€) + Output_Delay_Cost (€)`  
+- **Baseline date:** [YYYY-MM-DD].  
+**Source & Provenance:** *(Source: …)*
+
+**3.3 Urgency & Timing**  
+- Triggers/deadlines: [seasonality / compliance / contract windows] with dates.  
+**WHY now:** Delaying increases expected loss and pushes risk across 2025–2027. *(Source: …)*
+
+**3.4 Alternative Frames (if supported)**  
+- Alt-Frame-1: [description] — **WHY rejected:** [reason], *(Source: …)*  
+- Alt-Frame-2: [description] — **WHY rejected:** [reason], *(Source: …)*
+
+---
+
+## 4) Root-Cause & Driver Tree (Data-based)
+**4.1 Driver Tree (Top → Leaf)**  
+- Nested bullets; mark each node **Validated** or **Hypothesized**.  
+For each node: **Signal(s)** (+ units) • **Evidence Strength** (H/M/L) • **WHY it matters** (mechanism to outcome) • *(Source: …)*
+
+**4.2 Primary Causes (3–6) — Evidence Packs**  
+For each cause: description & mechanism • quant signal (value + units + date) • qual signal (quote/theme) • counter-evidence/resolution • **WHY we believe it**.
+
+**4.3 External/Systemic Factors**  
+Market/regulatory/partner constraints with units/dates and **WHY**. *(Source: …)*
+
+---
+
+## 5) Strategic Objectives (SMART + WHY + Alternatives + Roadmap Alignment)
+> **Mandated (do not rename/remove):**  
+> **OBJ-1** Attraction strategies (≥3 viable) • **OBJ-2** Turnover ≤15% (with interim **≤18% by 31-Dec-2025** if roadmap cannot compress safely) • **OBJ-3** **ROI_12m ≥10%**.
+
+### 5.1 Objectives Table (Primary, 3–5 total)
+| ID    | Objective (verbatim)                           | Metric/Unit            | Baseline | Target                        | Deadline      | Owner    | Formula / Source | WHY | Alternatives Considered |
+|-------|------------------------------------------------|------------------------|----------|-------------------------------|---------------|----------|------------------|-----|-------------------------|
+| OBJ-1 | Identify attraction strategies (≥3 viable)     | # strategies           | 0        | ≥3                            | 2025-12-31    | HR Lead | — / *(Source: …)* | Diversify funnel & reach | [Alt target X] — rejected: [reason] |
+| OBJ-2 | Reduce turnover                                | %                      | 22.4     | ≤15.0 (**interim ≤18% 2025-12-31**) | 2025-12-31 / 2026-03-31 | HR Lead | `Turnover% = Exits / Avg Headcount × 100` / *(Source: …)* | Execution stability & cost | [Alt ≤16%] — rejected: [reason] |
+| OBJ-3 | Achieve ROI_12m                                | %                      | 0        | ≥10.0                         | 2025-12-31    | Finance | `ROI% = Net Benefit / Investment × 100` / *(Source: …)* | Sustainability | [Alt ≥8%] — rejected: [reason] |
+
+> You may add up to **2** additional SMART objectives if supported by inputs. Do not alter the mandated ones.
+
+**5.2 Objective-level Risks & Expected Loss**
+| ID | Linked OBJ | Probability | Impact (€) | Expected Loss (€) | Early Signal | Mitigation | Owner | WHY |
+|----|------------|------------:|-----------:|------------------:|--------------|------------|-------|-----|
+| RISK-O1 | OBJ-2 | 0.5 | 500,000 | 250,000 | offer acceptance ↓ | add channels/branding | HR | Largest sensitivity driver |
+
+**5.3 Prioritization (Must/Should/Could)**
+| Objective ID | Impact (0–5) | Effort (0–5) | Time (0–5) | Risk (0–5) | Weighted Score | Rank | WHY |
+|--------------|--------------:|--------------:|-----------:|-----------:|---------------:|-----:|-----|
+| OBJ-2 | 5 | 3 | 3 | 4 |  — | — | Largest ROI path; criteria alignment |
+
+---
+
+## 6) Scope Definition (Explicit In/Out + WHY + Interfaces)
+**6.1 In Scope**  
+| ID | Item | Owner/Role | Ties to Objective(s) | WHY Included | Source |
+|----|------|------------|----------------------|--------------|--------|
+| SCOPE-IN-1 | [activity/system/segment] | [role] | OBJ-2 | [mechanism] | *(Source: …)* |
+
+**6.2 Out of Scope**  
+| ID | Item | WHY Excluded | Revisit Condition | Source |
+|----|------|--------------|-------------------|--------|
+| SCOPE-OUT-1 | [item] | [lack of ROI / sequence] | [date/event] | *(Source: …)* |
+
+**6.3 Stakeholders & Roles (RACI-style)**  
+| Role/Group | Responsible | Accountable | Consulted | Informed | Decision Rights | Escalation Path | Source |
+|------------|-------------|-------------|-----------|---------|-----------------|-----------------|--------|
+
+**6.4 Interfaces & Dependencies**  
+| ID | System/Team | What’s Needed | Data Contract (fields/refresh) | By When | WHY Needed | Source |
+|----|-------------|---------------|---------------------------------|--------|------------|--------|
+
+---
+
+## 7) Success Criteria & KPI System (Data-first + Operational Drivers + Bias Notes)
+**7.1 Quantitative KPIs (3–5)**  
+For each KPI-#: Definition & unit; **Formula**; data source/instrument; refresh cadence; owner; Baseline (value + date) or **TBD**; Target (value + date) with deadline & linked OBJ-#; Bias/sampling notes; **WHY**; Alternatives considered/rejected.
+
+**7.2 Required Operational Drivers (include even if Baseline = TBD)**
+| Driver                 | Unit  | Baseline | Target | Cadence  | Owner    | Formula / Source                      | WHY |
+|------------------------|-------|---------:|-------:|----------|----------|----------------------------------------|-----|
+| Time-to-Fill           | days  |   TBD    | ≤45    | Weekly   | HR Ops   | `CloseDate − OpenDate` / ATS *(…)*     | Hiring latency driver |
+| Offer-Accept           | %     |   TBD    | ≥35    | Weekly   | HR Ops   | `Accepted / Offers × 100` *(…)*        | Funnel efficiency |
+| Time-to-Productivity   | days  |   TBD    | ≤60    | Monthly  | L&D      | `TTV milestone date − Start date`      | Speed to value |
+| Retention 90d          | %     |   TBD    | ≥80    | Monthly  | HR Lead  | `Active at 90d / Hires × 100`          | Early stickiness |
+| Vacancy Coverage       | %     |   TBD    | ≥90    | Weekly   | HR Ops   | `Filled FTE / Required FTE × 100`      | Delivery capacity |
+
+**7.3 Qualitative Indicators (2–4)**  
+Method (survey/interviews), sample, threshold, cadence, **WHY meaningful**, *(Source: …)*
+
+**7.4 Milestone Timeline**  
+| Horizon | What Will Be True | Evidence (KPI/Indicator) | Owner | Date |
+|---------|-------------------|---------------------------|-------|------|
+| 0–3m    |                   |                           |       |      |
+| 3–12m   |                   |                           |       |      |
+| 12m+    |                   |                           |       |      |
+
+---
+
+## 8) Constraints, Assumptions, Dependencies (with Tests + WHY)
+**8.1 Constraints**  
+| ID | Type     | Limit/Unit | WHY Binding | Source |
+|----|----------|------------|-------------|--------|
+| CONSTR-1 | Budget | [€ amount] | governance/contract/compliance | *(Source: …)* |
+| CONSTR-2 | Legal  | GDPR: Pass | gating (no trade-off)          | *(Source: …)* |
+
+**8.2 Assumptions (Testable)**  
+| ID | Statement | Risk if False | Test Plan (method/data/owner/ETA) | WHY Reasonable Now | Source |
+|----|-----------|---------------|-----------------------------------|--------------------|--------|
+| ASSUMP-1 | [text] | [impact] | [A/B, query, survey] / [owner] / [ETA] | [precedent/logic] | *(Source: …)* |
+
+**8.3 Dependencies**  
+| ID  | Type (Int/Ext/Seq) | What’s Needed | From Whom | By When | WHY | Source |
+|-----|---------------------|---------------|-----------|--------|-----|--------|
+| DEP-1 | Int               | [artifact]    | [team]    | [date] | [reason] | *(Source: …)* |
+
+---
+
+## 9) Risk & Mitigation (Definition-Phase, with €)
+| ID    | Risk                                | Linked Section | Prob. | Impact (€) | **Expected Loss (€)** | Early Signal           | Mitigation                  | Owner | WHY Mitigation Works | Source |
+|-------|-------------------------------------|----------------|------:|-----------:|----------------------:|------------------------|-----------------------------|------|----------------------|--------|
+| RISK-1| Talent scarcity in key roles        | OBJ-2          | 0.5   | 500,000    | 250,000               | offer acceptance ↓     | channel mix + EVP uplift    | HR   | precedent [ref]      | *(…)* |
+| RISK-2| GDPR non-compliance                 | CONSTR-2       | 0.2   | 300,000    | 60,000                | audit finding          | DPIA + controls             | Legal| regulatory evidence  | *(…)* |
+
+> **Simulation flag:** Replacement cost for turnover will be modeled with a **triangular distribution** *(min, mode, max TBD in Simulate)*.
+
+---
+
+## 10) Governance & Change Control
+- **Decision Authority (role-level):** scope, limits, approvals & SLAs.  
+- **Criteria alignment:** confirm no contradictions vs locked criteria; if any, propose a **Change Request (CR)** with rationale.  
+- **Change process:** triggers, submission format, review cycle, approval path, comms protocol.  
+**WHY:** Balances speed and safety; preserves traceability to the lock.
+
+---
+
+## 11) Traceability & Provenance (Inputs → Outputs)
+**11.1 Decision Traceability Table**  
+| Output Decision/Claim | Exact Source Snippet (quote/figure) | Section Referenced | WHY This Source is Sufficient |
+|---|---|---|---|
+| “[…]” | “[…]” | Context §… / Feasibility §… | [reasoning] |
+
+**11.2 Data Dictionary**  
+| Metric/Field | Definition | Unit | Source System | Known Limitations/Bias |
+|---|---|---|---|---|
+
+---
+
+## 12) Data Gaps & Collection Plan (for every **TBD**)
+| Missing Data | WHY Needed | Collection Method | Owner | ETA | Acceptance Criteria |
+|---|---|---|---|---|---|
+|  |  | instrumentation/query/survey/experiment |  |  |  |
+
+---
+
+## 13) Temporal Alignment & Roadmap Consistency
+- **Roadmap window:** [start date] → [end date] (weeks).  
+- **If infeasible to hit ≤15% by 31-Dec-2025:** insert **interim milestone ≤18% by 31-Dec-2025**, final **≤15% by 31-Mar-2026**; justify sequencing and capacity implications.  
+**WHY:** Maintains realism while preserving alignment to locked criteria and program gates.
+
+---
+
+## 14) Appendix (Calculations, Benchmarks, Sensitivities)
+- **Formulas & Derivations:** ROI, turnover, driver conversions (with units).  
+- **Benchmarks/Comparables:** sources, adjustments, and **WHY** applicable.  
+- **Sensitivity Notes:** How results shift under plausible ranges; **WHY** this informs risk/target setting.
+
+---
+
+## Final Quality Gate (Do-Not-Skip Checklist)
+- criteria_lock_hash_cited == **true**  
+- mandated_objectives_present_and_unchanged (OBJ-1 ≥3 strategies; OBJ-2 ≤15% with interim ≤18%; OBJ-3 ROI_12m ≥10%) == **true**  
+- objectives_smart_and_time_aligned_to_roadmap == **true**  
+- operational_drivers_included (TTF, Offer-Accept, TtP, Retention90d, VacancyCoverage) == **true**  
+- kpis_with_units_formulas_baseline_target_source_cadence_owner_bias_notes == **true**  
+- constraints_assumptions_dependencies_with_tests_and_whys == **true**  
+- risks_with_expected_loss_euro_and_mitigations == **true**  
+- triangular_replacement_cost_model_flagged_for_simulate == **true**  
+- alternatives_considered_for_targets_scope_kpis == **true**  
+- all_TBDs_have_collection_plan == **true**  
+- provenance_cues_for_material_claims == **true**
+"""
+
+        return Task(
+            description=description,
 
             expected_output = """
             

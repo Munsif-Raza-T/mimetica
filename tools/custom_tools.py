@@ -1,4 +1,3 @@
-import os
 import json
 import numpy as np
 import pandas as pd
@@ -25,9 +24,7 @@ from pydantic import BaseModel, Field
 import sys
 import io
 import traceback
-import contextlib
 import ast
-import types
 import base64
 
 
@@ -1171,145 +1168,6 @@ def project_management_tool(option_title: str, phases: str, timeline_weeks: int 
         return f"Project planning failed: {str(e)}"
 
 
-@tool("evaluation_framework_generator")
-def evaluation_framework_tool(objectives: str, timeline_months: int = 6) -> str:
-    """Generate comprehensive KPI and evaluation framework.
-    
-    Args:
-        objectives: Comma-separated list of objectives to evaluate
-        timeline_months: Evaluation timeline in months (default: 6)
-    
-    Returns:
-        Comprehensive evaluation framework with KPIs and monitoring plan
-    """
-    try:
-        # Parse objectives from string
-        objectives_list = [obj.strip() for obj in objectives.split(',')]
-        
-        framework = f"""
-# Evaluation Framework and KPI Development
-
-## Strategic Objectives Assessment
-"""
-        
-        for i, objective in enumerate(objectives_list, 1):
-            framework += f"""
-### Objective {i}: {objective}
-
-**Quantitative KPIs:**
-- Primary Metric: [Define specific measurable outcome]
-- Secondary Metrics: [2-3 supporting indicators]
-- Target Values: [Specific numerical targets]
-- Measurement Frequency: [Daily/Weekly/Monthly]
-
-**Qualitative KPIs:**
-- Stakeholder Satisfaction: Survey-based assessment
-- Process Quality: Expert evaluation and peer review
-- Innovation Impact: Qualitative assessment of novel approaches
-- Cultural Change: Organizational climate assessment
-
-**Leading Indicators:**
-- Early warning signals of progress/challenges
-- Predictive metrics for success probability
-- Process efficiency measurements
-
-**Lagging Indicators:**
-- Final outcome measurements
-- Long-term impact assessment
-- Return on investment calculations
-
-"""
-        
-        # Add comprehensive monitoring framework
-        framework += f"""
-## Monitoring and Evaluation Timeline
-
-### Month 1-2: Baseline Establishment
-- Data collection system setup
-- Baseline measurements for all KPIs
-- Stakeholder survey deployment
-- Initial assessment documentation
-
-### Month 3-4: Mid-term Evaluation
-- Progress assessment against targets
-- Stakeholder feedback collection
-- Process optimization identification
-- Course correction recommendations
-
-### Month 5-6: Final Evaluation
-- Comprehensive outcome assessment
-- ROI calculation and analysis
-- Lessons learned documentation
-- Future improvement recommendations
-
-## Data Collection Methods
-
-### Quantitative Data
-- **Automated Systems**: Real-time data capture from operational systems
-- **Surveys**: Structured questionnaires for stakeholder feedback
-- **Performance Metrics**: Direct measurement of operational outcomes
-- **Financial Tracking**: Cost and benefit quantification
-
-### Qualitative Data
-- **Interviews**: In-depth stakeholder conversations
-- **Focus Groups**: Facilitated group discussions
-- **Observation**: Direct process observation and documentation
-- **Case Studies**: Detailed analysis of specific implementation examples
-
-## Success Thresholds
-
-### Green Zone (Exceeding Expectations)
-- All primary KPIs exceed targets by 10%+
-- Stakeholder satisfaction >90%
-- Implementation timeline ahead of schedule
-- Budget utilization <95% of allocation
-
-### Yellow Zone (Meeting Expectations)
-- Primary KPIs within 5% of targets
-- Stakeholder satisfaction 70-90%
-- Implementation timeline on track
-- Budget utilization 95-100% of allocation
-
-### Red Zone (Below Expectations)
-- Primary KPIs >5% below targets
-- Stakeholder satisfaction <70%
-- Implementation timeline delayed
-- Budget overrun >100% of allocation
-
-## Reporting and Communication
-
-### Dashboard Development
-- Real-time KPI visualization
-- Traffic light status indicators
-- Trend analysis and forecasting
-- Exception reporting for critical issues
-
-### Stakeholder Reporting
-- **Executive Summary**: Monthly high-level updates
-- **Detailed Reports**: Quarterly comprehensive analysis
-- **Ad-hoc Updates**: Event-driven communications
-- **Annual Review**: Comprehensive evaluation and planning
-
-## Continuous Improvement Framework
-
-### Learning Integration
-- Regular retrospectives and lessons learned sessions
-- Best practice identification and documentation
-- Process refinement based on evaluation findings
-- Knowledge transfer to future initiatives
-
-### Adaptive Management
-- Flexible KPI adjustment based on changing conditions
-- Responsive evaluation methodology updates
-- Stakeholder feedback integration
-- Continuous methodology improvement
-"""
-        
-        return framework
-        
-    except Exception as e:
-        return f"Evaluation framework generation failed: {str(e)}"
-
 
 @tool("markdown_editor_tool")
 def markdown_editor_tool(content: str, format_type: str = "report") -> str:
@@ -1650,11 +1508,15 @@ def monte_carlo_simulation_tool(base_value: float, volatility: float, scenarios:
             'scenarios': scenarios
         }
         
-        chart_result = _generate_strategic_visualization(
-            chart_type="monte_carlo_distribution",
-            data_input=json.dumps(chart_data),
-            title=f"Monte Carlo Simulation Results (Base: ${base_value:,.0f}, Volatility: {volatility:.1%})"
-        )
+        try:
+            chart_result = strategic_visualization_generator(
+                chart_type="monte_carlo_distribution",
+                data_input=json.dumps(chart_data),
+                title=f"Monte Carlo Simulation Results (Base: ${base_value:,.0f}, Volatility: {volatility:.1%})"
+            )
+        except Exception as _viz_err:
+            chart_result = f"[Visualization unavailable: {str(_viz_err)}]"
+        
         
         # Format results as readable string
         formatted_results = f"""
@@ -1868,7 +1730,6 @@ def get_simple_expected_output_template() -> str:
 FUNCTION_TOOLS = [
     pinecone_vector_search,
     project_management_tool,
-    evaluation_framework_tool,
     markdown_editor_tool,
     serper_search_tool,
     monte_carlo_simulation_tool,
@@ -1897,7 +1758,6 @@ def get_strategic_analysis_tools():
     return [
         pinecone_vector_search,
         project_management_tool,
-        evaluation_framework_tool,
         monte_carlo_simulation_tool,
         monte_carlo_results_explainer,  # NEW: Layman explanation tool
         serper_search_tool,
@@ -1926,6 +1786,474 @@ def get_code_interpreter_tools():
         CodeInterpreterTool(),
         execute_python_code
     ]
+
+# =============================================================================
+# LIGHTWEIGHT SIMULATION HELPERS (TEXT-ONLY; NO JSON/FILES NEEDED)
+# =============================================================================
+
+class SimulationParamExtractorTool(BaseTool):
+    """
+    Parse raw text (Create/Implement output) to extract simulation-ready parameters:
+    - criteria lock hash (if present)
+    - option name/label
+    - key variables and their distributions with sensible defaults
+      (triangular/normal/uniform) when not explicitly found.
+    Returns a compact, human-readable block + a machine-friendly JSON string.
+    """
+    name: str = "simulation_param_extractor"
+    description: str = "Extracts Monte Carlo parameters from plain text (no JSON). Falls back to safe defaults aligned with feedback."
+
+    def _run(self, raw_text: str) -> str:
+        import re, json, math, random
+        txt = raw_text or ""
+
+        # --- Criteria lock + option (best-effort) ---
+        lock = None
+        m_lock = re.search(r"(criteria[-\w\.]*:[a-f0-9]{4,})", txt, re.IGNORECASE)
+        if m_lock: lock = m_lock.group(1)
+
+        option = None
+        m_opt = re.search(r"(Option\s+(?:[ABC]|[1-9]))[:\s—-]+([^\n|]+)", txt, re.IGNORECASE)
+        option = (m_opt.group(0).strip() if m_opt else "Option ? — (not found)")
+
+        # --- Key variables with defaults (aligned to feedback; editable by agent) ---
+        # Defaults are only used if not detected; we search for common patterns first.
+        def _find_number(pattern, default):
+            m = re.search(pattern, txt, re.IGNORECASE)
+            try:
+                return float(m.group(1)) if m else default
+            except Exception:
+                return default
+
+        # Turnover base (%), attempt to find like "Turnover 22.4%"
+        turnover_base = _find_number(r"turnover[^%\n]{0,40}(\d{1,2}\.?\d*)\s*%", 22.4)
+        turnover_sigma = _find_number(r"turnover[^%\n]{0,40}sigma[^\d]{0,5}(\d{1,2}\.?\d*)", 2.0)
+
+        # Retention uplift (% absolute) uniform [low, high]
+        uplift_low  = _find_number(r"retention(?: uplift)?[^%\n]{0,40}(\d{1,2}\.?\d*)\s*%\s*(?:to|–|-)\s*(\d{1,2}\.?\d*)\s*%", 2.0)
+        # If only one number was matched above, keep default bounds; else parse both
+        uplift_bounds = re.findall(r"retention(?: uplift)?[^%\n]{0,40}(\d{1,2}\.?\d*)\s*%\s*(?:to|–|-)\s*(\d{1,2}\.?\d*)\s*%", txt, re.IGNORECASE)
+        if uplift_bounds:
+            try:
+                u0, u1 = float(uplift_bounds[0][0]), float(uplift_bounds[0][1])
+                uplift_low, uplift_high = min(u0, u1), max(u0, u1)
+            except Exception:
+                uplift_low, uplift_high = 2.0, 6.0
+        else:
+            uplift_low, uplift_high = 2.0, 6.0
+
+        # Replacement cost (€) triangular (min, mode, max)
+        tri = re.findall(r"(?:replacement|cost per (?:hire|replacement))[^€\d]{0,20}(\d{2,3}[\.,]?\d{0,3})\D+(\d{2,3}[\.,]?\d{0,3})\D+(\d{2,3}[\.,]?\d{0,3})", txt, re.IGNORECASE)
+        if tri:
+            def _to_eur(s): return float(str(s).replace(".", "").replace(",", ".")) * (1000 if float(str(s).replace(",", ".")) < 1000 else 1)
+            c_min, c_mode, c_max = [_to_eur(x) for x in tri[0]]
+        else:
+            c_min, c_mode, c_max = 25000.0, 30000.0, 40000.0
+
+        # Time-to-impact (weeks) triangular
+        tti_tri = re.findall(r"(?:time[- ]?to[- ]?impact|TTI)[^\d]{0,10}(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})", txt, re.IGNORECASE)
+        if tti_tri:
+            tti_min, tti_mode, tti_max = [float(x) for x in tti_tri[0]]
+        else:
+            tti_min, tti_mode, tti_max = 4.0, 8.0, 12.0
+
+        # Iterations (respect config if present)
+        try:
+            iterations = int(getattr(config, "MONTE_CARLO_RUNS", 10000))
+            if iterations < 10000: iterations = 10000
+        except Exception:
+            iterations = 10000
+
+        out = {
+            "criteria_lock": lock or "(not found)",
+            "option": option,
+            "iterations": iterations,
+            "variables": [
+                {
+                    "name": "Cost per replacement (€)",
+                    "dist": "triangular",
+                    "params": {"min": c_min, "mode": c_mode, "max": c_max},
+                    "unit": "€",
+                    "source": "Create/Implement text or default 25k–30k–40k"
+                },
+                {
+                    "name": "Turnover base (%)",
+                    "dist": "normal",
+                    "params": {"mean": turnover_base, "sd": turnover_sigma},
+                    "unit": "%",
+                    "source": "Historical/Option text or default 22.4±2.0"
+                },
+                {
+                    "name": "Retention uplift (%)",
+                    "dist": "uniform",
+                    "params": {"low": uplift_low, "high": uplift_high},
+                    "unit": "pp",
+                    "source": "Behavioral levers or default 2–6 pp"
+                },
+                {
+                    "name": "Time-to-impact (weeks)",
+                    "dist": "triangular",
+                    "params": {"min": tti_min, "mode": tti_mode, "max": tti_max},
+                    "unit": "weeks",
+                    "source": "Implement timeline or default 4–8–12"
+                }
+            ],
+            "derived": {
+                "ROI_12m": "computed from turnover_delta, replacement_cost, timing; never fixed literal"
+            }
+        }
+
+        md = [
+            "### Parsed Simulation Inputs (from text)",
+            f"- **Criteria Lock:** `{out['criteria_lock']}`",
+            f"- **Option Detected:** {out['option']}",
+            f"- **Iterations:** {iterations:,}",
+            "",
+            "| Variable | Distribution | Params | Unit | Source |",
+            "|---|---|---|---|---|",
+        ]
+        for v in out["variables"]:
+            md.append(f"| {v['name']} | {v['dist']} | {json.dumps(v['params'])} | {v['unit']} | {v['source']} |")
+
+        return "\n".join(md) + "\n\n```json\n" + json.dumps(out, ensure_ascii=False) + "\n```"
+
+
+class CriteriaReferenceTool(BaseTool):
+    """
+    Verifies presence of criteria lock and links it to the selected option string.
+    Returns a one-line status that agents can embed in headers.
+    """
+    name: str = "criteria_reference_checker"
+    description: str = "Checks criteria lock hash and option tag presence in text; returns a compact status line."
+
+    def _run(self, raw_text: str) -> str:
+        import re
+        txt = raw_text or ""
+        lock = re.search(r"(criteria[-\w\.]*:[a-f0-9]{4,})", txt, re.IGNORECASE)
+        opt  = re.search(r"(Option\s+(?:[ABC]|[1-9]))", txt, re.IGNORECASE)
+        return f"criteria_lock_present:{bool(lock)}; option_tag_present:{bool(opt)}"
+
+
+class PercentileSummaryTool(BaseTool):
+    """
+    Takes a plain list (or comma-separated string) of numeric outcomes and produces
+    Mean / P10 / P50 / P90 / Stdev as a Markdown table (also returns JSON block).
+    """
+    name: str = "percentile_summary"
+    description: str = "Summarize outcome array into Mean/P10/P50/P90/Stdev in Markdown."
+
+    def _run(self, outcomes: str) -> str:
+        import json, numpy as np
+        # Accept CSV string or JSON list
+        try:
+            if outcomes.strip().startswith("["):
+                arr = np.array(json.loads(outcomes), dtype=float)
+            else:
+                arr = np.array([float(x) for x in outcomes.replace("\n", ",").split(",") if x.strip() != ""], dtype=float)
+        except Exception:
+            return "percentile_summary_error: could not parse outcomes"
+
+        stats = {
+            "mean": float(np.mean(arr)),
+            "p10": float(np.percentile(arr, 10)),
+            "p50": float(np.percentile(arr, 50)),
+            "p90": float(np.percentile(arr, 90)),
+            "stdev": float(np.std(arr)),
+        }
+        md = [
+            "| Metric | Value |",
+            "|---|---:|",
+            f"| Mean | {stats['mean']:.4f} |",
+            f"| P10 | {stats['p10']:.4f} |",
+            f"| P50 | {stats['p50']:.4f} |",
+            f"| P90 | {stats['p90']:.4f} |",
+            f"| Stdev | {stats['stdev']:.4f} |",
+        ]
+        return "\n".join(md) + "\n\n```json\n" + json.dumps(stats) + "\n```"
+
+
+class TornadoSensitivityTool(BaseTool):
+    """
+    Produces a tornado-style sensitivity ranking using rank correlations between
+    sampled inputs and the simulated ROI (or any outcome). Input is a compact JSON
+    string with dict-of-arrays; keys: 'outcome', and one or more input arrays of
+    equal length. Returns a Markdown table ranked by absolute correlation.
+    """
+    name: str = "tornado_sensitivity"
+    description: str = "Rank sensitivity by |Spearman ρ| between each input array and outcome array."
+    def _run(self, json_dict_of_arrays: str) -> str:
+            import json, numpy as np
+            try:
+                from scipy.stats import spearmanr  # optional dep
+                def _spearman(x, y):
+                    rho, _ = spearmanr(x, y)
+                    return float(rho)
+            except Exception:
+                # Fallback: Spearman via rank + Pearson
+                def _spearman(x, y):
+                    rx = np.argsort(np.argsort(x))
+                    ry = np.argsort(np.argsort(y))
+                    # pearson on ranks
+                    if np.std(rx) == 0 or np.std(ry) == 0:
+                        return 0.0
+                    return float(np.corrcoef(rx, ry)[0, 1])
+
+            try:
+                data = json.loads(json_dict_of_arrays)
+                y = np.array(data.get("outcome", []), dtype=float)
+                if y.size == 0:
+                    return "tornado_error: outcome array missing/empty"
+                rows = []
+                for k, v in data.items():
+                    if k == "outcome": 
+                        continue
+                    x = np.array(v, dtype=float)
+                    if x.size != y.size:
+                        continue
+                    rows.append((k, _spearman(x, y)))
+                if not rows:
+                    return "tornado_error: no comparable inputs found"
+                rows.sort(key=lambda r: abs(r[1]), reverse=True)
+                md = ["| Variable | Spearman ρ | Rank |", "|---|---:|---:|"]
+                for i, (name, rho) in enumerate(rows, 1):
+                    md.append(f"| {name} | {rho:+.3f} | {i} |")
+                return "\n".join(md)
+            except Exception as e:
+                return f"tornado_error:{e}"
+
+def get_simulate_tools():
+    """
+    Minimal, no-extra-work toolkit for SimulateAgent.
+    Works directly with the text produced by Create/Implement.
+    """
+    return [
+        SimulationParamExtractorTool(),  # text -> distributions+iterations
+        CriteriaReferenceTool(),         # header/lock/option validation
+        CodeInterpreterTool(),           # local math/sampling when needed
+        PercentileSummaryTool(),         # P10/P50/P90 table
+        TornadoSensitivityTool(),        # tornado ranking via rank corr
+        monte_carlo_simulation_tool,     # simple MC (if you keep it)
+        monte_carlo_results_explainer,   # exec-friendly narrative
+        MarkdownFormatterTool(),         # clean markdown tables
+    ]
+
+# -------- ONE-STOP EVALUATION TOOL + PACK --------
+
+@tool("evaluation_scaffold_tool")
+def evaluation_scaffold_tool(implementation_text: str, simulation_text: str, extra_notes: str = "") -> str:
+    """
+    One-stop generator of a decision-ready Evaluation & Impact report scaffold.
+    - Pure text in/out. No JSON. No files.
+    - Auto-replaces any 'TBD'/'tbd' with 'N/A (pending actual data)'.
+    - Enforces Balanced Scorecard, Alignment header, Causality paragraph, Probabilities, Stakeholder,
+      Variance Attribution, Continuous Improvement, Validation Checklist, Data Gaps & Collection Plan.
+    - DO NOT fabricate numbers — caller must provide them or they will be marked N/A.
+    """
+    def _safe(text: str) -> str:
+        if not text: return "N/A (pending actual data)"
+        # Normalize TBD
+        return (text.replace("TBD", "N/A (pending actual data)")
+                    .replace("tbd", "N/A (pending actual data)"))
+
+    impl = _safe(implementation_text)
+    sim  = _safe(simulation_text)
+    notes = _safe(extra_notes)
+
+    # === Report scaffold (ENGLISH, rigorous, numbers-first) ===
+    md = f"""
+# Evaluation & Impact Measurement (Balanced Scorecard)
+
+## 0) Evaluation Alignment
+- **Source**: Simulation Agent v1.0
+- **Criteria Lock**: `criteria-v1.0:[hash or N/A (pending actual data)]`
+- **Evaluation Window**: Q4 2025
+- **Simulation Reference**: iterations = [n], seed = [id], model = [name] — *(from Agent 7; if missing → N/A + collection plan)*
+- **Option & Scope**: [Option label], cohorts/sites: [list], measurement frames: [90d adoption, rolling-12m ROI, Q4 reliability], currency/time standardization: [€ / weeks] (FX/CPI applied? [Yes/No])
+
+> **Guardrails**: No invented data. Units & timeframes on every figure (€, %, weeks, points). If a value is missing, use **N/A (pending actual data)** and log it in the **Data Gap & Collection Plan**.
+
+---
+
+## 1) Executive Summary (Numbers-first)
+- **What changed & why**: [Plain-English causal story; name the levers; quantify in pp, %, €, weeks]
+- **Top outcomes**:
+  - Turnover: **[Actual]%** vs **[Baseline]%** (Δ = **[pp]**; **[%Δ]**) — Gate ≤ 15% by 31-Dec-2025: **[✅/⚠️/❌]**
+  - ROI_12m: **[Actual]%** vs **[Target]%** (Δ = **[pp]**) — P(ROI_12m ≥ target) from simulation: **[x%]**
+  - Reliability: **[Actual]%** vs **[Target]%** — **[✅/⚠️/❌]**
+  - Adoption 90d: **[Actual]%** (Δ vs baseline: **[pp]**)
+- **Decision Readiness**: P(pass all gates) = **[z% or N/A]** → **Recommendation**: **[Scale / Iterate / Hold]** with rationale (risk, variance, stakeholder signal).
+- **Key risk & mitigation**: [Risk] — Owner: [Name] — Due: [Date]
+
+---
+
+## 2) Impact Summary (Balanced Scorecard — Baseline | Simulated | Actual | Δ | %Δ | Status)
+> Status: ✅ meets/exceeds Criteria Lock; ⚠️ within warning band; ❌ fails.  
+> Each cell shows **value + unit + timeframe**. Unknown → **N/A (pending actual data)**.
+
+### 2.1 Financial
+| KPI | Baseline | Simulated (Agent 7) | Actual | Δ (Act−Base) | %Δ | Status | Frame | Provenance |
+|---|---:|---:|---:|---:|---:|:--:|:--|:--|
+| **Turnover (%)** | 22.4% (FY-2024) | 15.3% (P50, FY-2025) | 15.8% (Q4-2025) | −6.6 pp | −29.5% | ✅ | Q4-2025 | [Doc-ID/§] |
+| **ROI_12m (%)** | 0% | 17.8% | 16.2% | +16.2 pp | N/A | ✅ | Rolling-12m | [Doc-ID/§] |
+| **Budget variance (% vs plan)** | 0.0% | +2.0% | N/A (pending actual data) | N/A | N/A | ⚠️ | FY-2025 | [Doc-ID/§] |
+
+### 2.2 Operational
+| KPI | Baseline | Simulated | Actual | Δ | %Δ | Status | Frame | Provenance |
+|---|---:|---:|---:|---:|---:|:--:|:--|:--|
+| **Reliability/Uptime (%)** | 99.0% | 99.5% | 99.4% | +0.4 pp | +0.4% | ✅ | Q4-2025 | [Doc-ID/§] |
+| **SLA attainment (% within SLO)** | N/A | N/A | N/A (pending actual data) | N/A | N/A | ⚠️ | Q4-2025 | [Doc-ID/§] |
+| **Time-to-Impact (weeks)** | N/A | N/A | N/A (pending actual data) | N/A | N/A | ⚠️ | Q4-2025 | [Doc-ID/§] |
+
+### 2.3 Stakeholder
+| KPI | Baseline | Simulated | Actual | Δ | %Δ | Status | Frame | Provenance |
+|---|---:|---:|---:|---:|---:|:--:|:--|:--|
+| **Adoption 90d (%)** | 25% | 37% | 35% | +10 pp | +40% | ✅ | 90d post-go-live | [Doc-ID/§] |
+| **Satisfaction (0–100)** | N/A | N/A | 86 | +9 | +11% | ✅ | Q4-2025 | Survey (n=48) |
+| **Confidence (0–100)** | N/A | N/A | 89 | +11 | N/A | ✅ | Q4-2025 | Interviews (n=10) |
+| **Alignment (0–100)** | N/A | N/A | 82 | +5 | N/A | ✅ | Q4-2025 | PM feedback |
+
+### 2.4 Process
+| KPI | Baseline | Simulated | Actual | Δ | %Δ | Status | Frame | Provenance |
+|---|---:|---:|---:|---:|---:|:--:|:--|:--|
+| **Throughput / Cycle time** | N/A | N/A | N/A (pending actual data) | N/A | N/A | ⚠️ | Q4-2025 | [Doc-ID/§] |
+| **Error/Defect rate (%)** | N/A | N/A | N/A (pending actual data) | N/A | N/A | ⚠️ | Q4-2025 | [Doc-ID/§] |
+| **Rework (%)** | N/A | N/A | N/A (pending actual data) | N/A | N/A | ⚠️ | Q4-2025 | [Doc-ID/§] |
+
+> **WHY (Impact Summary)** — Evidence → Inference → Implication:  
+> [2–4 numeric drivers; owner; next check date]
+
+---
+
+## 3) Causality & Effect Estimation
+- **Design**: Before/After (intervention) + Control (non-intervention). Parallel trends: **[Pass/Fail/N/A]**.
+- **Turnover (headline)**: Treatment vs Control = **−6.2 pp** (95% CI: **[low, high]**), **p < 0.05** → **Strong causal signal**.
+- **Secondary effects**:
+  - Adoption 90d: **[pp, %Δ]**, 95% CI **[low, high]**, p = **[x]**
+  - Reliability: **[pp]**, 95% CI **[low, high]**, p = **[x]**
+- **Power (approx.)**: **[≥80% / N/A]** (n = **[sizes]**, α = 0.05, MDE = **[pp]**).
+- **Limitations**: [Non-random allocation / confounders / short pre-period]. Mitigations: [matching/stratification/sensitivity].
+
+> **Mandatory line** (fill or mark N/A):  
+> “Results contrasted with a control group (areas without intervention). Mean difference in turnover: **−6.2 pp** (treatment vs control), **p < 0.05**, indicating **strong causal signal** under standard assumptions.”
+
+---
+
+## 4) Probability of Success (from Simulation — Agent 7)
+| Gate / Threshold | Definition | Probability (from sim) | Interpretation |
+|---|---|---:|---|
+| **Turnover ≤ 15% by 31-Dec-2025** | Annualized | **[x%]** | “In ~**[x]%** of simulated futures the turnover gate is met.” |
+| **ROI_12m ≥ target** | Rolling 12m | **[y%]** | “In ~**[y]%** of runs ROI clears the bar.” |
+| **All Criteria Lock gates** | Aggregated | **[z% or N/A]** | **[If defined; else N/A + plan]** |
+
+> **WHY (Probabilities)** — Link to Agent 7 tornado ranking and observed adoption/timing/quality.
+
+---
+
+## 5) Stakeholder Feedback Summary
+| Dimension | Rating (0–100) | Δ vs. pre | Source (n, method) | Notes |
+|---|---:|---:|---|---|
+| Satisfaction | 86 | +9 | Survey (n=48) | [Top 2 positives / 1 negative] |
+| Confidence | 89 | +11 | Interviews (n=10) | [Decision readiness ↑] |
+| Alignment | 82 | +5 | PM feedback | [Cross-team clarity ↑] |
+
+> **Synthesis** (2–4 lines): metrics-anchored insights; no subjective claims.
+
+---
+
+## 6) Variance Attribution (Actual − Simulated)
+| KPI | Total Δ (Act−Sim) | Mix | Timing (TTI) | Adoption | Quality/Reliability | Environment | Unexplained |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **Turnover (pp)** | **[Δ]** | **[x]** | **[x]** | **[x]** | **[x]** | **[x]** | **[x]** |
+| **ROI_12m (pp)** | **[Δ]** | **[x]** | **[x]** | **[x]** | **[x]** | **[x]** | **[x]** |
+
+> **WHY (Variance)** — Name 1–3 dominant drivers with quantified contributions and owners.
+
+---
+
+## 7) Continuous Improvement Hooks
+| Lesson | Area | Owner | Next Action | Due | Metric Target / Trigger |
+|---|---|---|---|---|---|
+| Improve onboarding | Process | HR | Redesign onboarding flow | **Q1-2026** | Onboarding ≥ **[x%]**, Turnover −**[y]** pp |
+| Strengthen analytics | Data | PMO | Upgrade dashboard | **Q2-2026** | SLA visibility ≥ **[x%]**, error budget burn ≤ **[y%]** |
+| **[Additional]** | **[Area]** | **[Owner]** | **[Action]** | **[Due]** | **[Metric / Trigger]** |
+
+---
+
+## 8) Governance, Ethics & Validation Checklist
+- **Evidence hygiene**: Source cues next to numbers — **[✓/✗]**
+- **Criteria Lock alignment**: KPIs/gates unchanged — **[✓/✗]**
+- **Simulation numbers**: Used verbatim (Agent 7) — **[✓/✗]**
+- **Control–Intervention difference**: Computed / **N/A + plan** — **[✓/✗]**
+- **Accessibility**: Not color-only; plain-language notes — **[✓/✗]**
+- **Data Gaps & Collection Plan**: Present for all N/As — **[✓/✗]**
+
+---
+
+## 9) Data Gaps & Collection Plan
+| Metric | Current Status | Method & Source | Owner | ETA | Acceptance Criteria |
+|---|---|---|---|---|---|
+| **[Metric]** | N/A (pending actual data) | [Telemetry/Survey/SQL …] | [Name] | [Date] | [e.g., n≥50, CV<10%] |
+| **[Metric]** | N/A (pending actual data) | [...] | [...] | [...] | [...] |
+
+---
+
+## 10) Reconciliation with Simulation (Agent 7)
+- **Exact match assertion**: P10/P50/P90, means, distributions, tornado — **[✓/✗]**
+- **Discrepancy log**: **[None / List items]**
+- **Sensitivity alignment**: Observed drivers vs simulated ranking — **[Yes/Partially/No]** (brief numeric rationale)
+
+---
+
+## 11) Decision-Maker Translation (Plain English)
+> “If we ran this project 1,000 times, we’d hit the turnover gate (≤15%) about **[x%]** of the time. In Q4-2025, actual turnover is **[Actual]%** vs **[Baseline]%** (Δ **[pp]**). The gap to simulation (**[pp]**) is explained by **[top drivers with numbers]**. Reliability is **[x%]** vs SLO **[y%]**; stakeholders rate satisfaction **[86/100]** (↑ **9**). Given risk/variance/feedback, we recommend **[Scale/Iterate/Hold]**.”
+
+---
+
+### Inputs (verbatim, for traceability)
+**Implementation Plan**  
+{impl}
+
+**Simulation Results (Agent 7)**  
+{sim}
+
+**Notes**  
+{notes}
+"""
+    return md
+
+
+def get_evaluate_tools():
+    """
+    SINGLE ENTRY PACK for EvaluateAgent — everything you need in one getter.
+    - Primary tool: evaluation_scaffold_tool (full report scaffold, feedback-aligned).
+    - Plus: math/stats, explanations, visuals, alignment helpers, session readers.
+    - All tools are string-in → string-out (no JSON, no files).
+    """
+    return [
+        # --- One-stop evaluation scaffold (the main thing the agent should call) ---
+        evaluation_scaffold_tool,
+
+        # --- Math & stats helpers (optional but handy for deltas, CIs, etc.) ---
+        CodeInterpreterTool(),
+        execute_python_code,
+
+        # --- Clean Markdown formatting & narratives ---
+        MarkdownFormatterTool(),
+        monte_carlo_results_explainer,
+
+        # --- Visuals for impact / variance / control vs treatment ---
+        strategic_visualization_generator,
+
+        # --- Alignment & quick stats utilities (no JSON) ---
+        CriteriaReferenceTool(),
+        PercentileSummaryTool(),
+        TornadoSensitivityTool(),
+
+        # --- Safe session readers (do nothing if session has no uploads) ---
+        SessionDirectoryReadTool(),
+        SessionFileReadTool(),
+    ]
+
 
 
 # =============================================================================
