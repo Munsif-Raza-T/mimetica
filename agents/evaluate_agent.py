@@ -207,7 +207,7 @@ From Agent 7 distributions, compute and report:
 - P(ROI_12m ≥ target) = [y%]
 - P(meeting all gates in Criteria Lock) = [z%] (if multi-criteria aggregation is defined; else N/A + plan)
 
-Explain what each probability means in operational terms (e.g., “In ~{x}% of simulated futures, the 15% turnover gate is met or beaten”).
+Explain what each probability means in operational terms (e.g., “In ~(x)% of simulated futures, the 15% turnover gate is met or beaten”).
 
 # Stakeholder Feedback Summary
 Emit a table:

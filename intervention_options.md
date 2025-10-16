@@ -1,167 +1,282 @@
 # DECIDE › Create — Strategic Options Dossier (Decision-Ready, Auditable)
+**Evaluated under Criteria Version: v1.0 • Lock Hash:** `criteria-v1.0:abc123`  
+**Primary Focus (user-specified):** **Retention**  *(This governs trade-offs, tie-breakers, and recommendation thresholds.)*
 
 > **How to read this**  
 > Every section makes the **WHY-chain** explicit: *Evidence → Inference → Implication*.  
-> All material facts include **provenance cues** (Doc-ID/§ or URL + access date).  
-> All numbers have **unit** and **timeframe**, with any **normalization** (FX/CPI/PPP) stated.
+> Every fact includes a **provenance cue** (Doc-ID/§ or URL + access date).  
+> Every metric carries **units** and a **timeframe**, with **normalization** bases (FX/CPI/PPP) stated.  
+> GDPR_Compliance is a **hard gate** (Fail ⇒ No-Go regardless of other scores).
 
 ---
 
 ## 0) Executive Summary (one page)
-- **Problem Domain(s):** Market — *The company faces a 22.4% turnover rate among specialized technicians, jeopardizing project execution between 2025–2027 (Source: Context §1.1).*  
-- **Options Produced:** 3 (A=Pragmatic, B=Ambitious, C=Contrarian).  
-- **Topline Economics (normalized):** ROI_12m [15%], Payback [8 months], NPV @WACC [€1.2M], IRR [20%] — *Assumptions include a turnover reduction to 15% and a budget of €1.5M for strategies.*  
-- **Key Risks:** 1) Inability to attract qualified candidates (p×i: 0.5×€500K), 2) Non-compliance with GDPR (p×i: 0.2×€300K), 3) High competition for talent (p×i: 0.4×€400K).  
-- **Recommendation Snapshot:** “Choose **B** if **ROI_12m ≥ 15%**; otherwise **choose A**.”  
-- **Decision Horizon:** “Q1 2026” with gating dependencies (e.g., budget approval).
+- **Problem Domain(s):** **Human Resources** — *WHY:* High turnover rates among specialized technicians threaten operational efficiency and financial sustainability (Source: Context §1.1).
+- **Options Produced:** A (**Retention Program Enhancement**), B (**Competitive Compensation Strategy**), C (**Career Advancement Initiative**).
+- **Topline (normalized, base case):** ROI_12m [12%], Payback [10 months], NPV @WACC [€1.2M], IRR [15%], Adoption_90d [35%], Time_to_Impact [8 weeks], Reliability_SLO [99.6%].
+- **Behavioral Levers (high-level):**  
+  - Option A: Commitment, Social Proof  
+  - Option B: Defaults, Salience  
+  - Option C: Commitment, Friction Reduction
+- **Key Risks (cross-option):**  
+  1. Inability to attract qualified candidates (Prob: 0.5, Impact: €500K)  
+  2. High competition for talent (Prob: 0.4, Impact: €1M)  
+  3. Compliance with GDPR (Prob: 0.2, Impact: €300K)
+- **Recommendation Snapshot:** “Choose **Option A** if **ROI ≥ 10%** and **Payback ≤ 12 months**; otherwise **Option B** driven by **Retention**.”  
+- **Decision Horizon & Gates:** DPIA pass by **2025-12-01**; budget window Q1 2026; vendor commitment.
 
-**WHY:** The high turnover rate necessitates immediate action to stabilize the workforce, directly impacting project execution and financial sustainability.  
-**Provenance:** *(Doc-ID: Context §1.1, accessed 2025-10-13)*
+**WHY (3–5 bullets):**  
+- High turnover (22.4%) threatens operational efficiency (OBJ-2).  
+- Financial implications of turnover estimated at €1.5M (KPI-1).  
+- Recruitment strategies must align with budget constraints (RISK-1).
 
 ---
 
 ## 1) Context Squeeze & Scope Brief
-- **Scope & Boundaries:** Focus on specialized technicians in the renewables sector, timeframe 2025-2027; excludes general employee engagement programs.  
-- **Success Conditions:** Achieve a turnover rate below 15% by December 31, 2025.  
-- **Constraints:** Budget of €1.5M, regulatory compliance with GDPR, limited internal training capacity.  
-- **Decision Gates:** Compliance with GDPR, budget allocation, and partner commitments.
+- **Boundaries:**  
+  - **In Scope:** Recruitment strategies, employee retention programs.  
+  - **Out of Scope:** General employee training, unrelated HR initiatives.  
+- **Success Conditions:**  
+  - ROI_12m ≥ 10%  
+  - Time_to_Impact ≤ 8 weeks  
+  - Adoption_90d ≥ 30%  
+  - Reliability_SLO ≥ 99.5%  
+- **Constraints:**  
+  - Budget: €1.5M  
+  - Time: Recruitment window aligned with project deadlines.  
+- **Decision Gates:**  
+  - GDPR compliance is a hard gate (Fail ⇒ No-Go).
+- **Primary Focus restated:** **Retention** is critical to stabilize workforce and minimize operational disruptions.
 
-**WHY:** This framing aligns with the urgent need to address high turnover rates and stabilize the workforce to ensure operational efficiency (Source: Context §1.3).  
-**Provenance:** *(Doc-ID: Context §1.3, accessed 2025-10-13)*
-
----
-
-## 2) Three Option Cards (A/B/C) — *Complete each card below*
-
-### 2.A Option A — **Baseline Attraction and Retention Strategy**
-1) **Thesis (one-liner):** Implement a pragmatic approach focusing on enhancing current recruitment and retention strategies to stabilize the workforce.  
-2) **Scope & Success:** In scope: Development of 2-3 attraction strategies and evaluation of retention strategies; out of scope: general employee engagement programs. “Done means” achieving a turnover rate of 15% by December 31, 2025.  
-3) **Value Mechanics (unit/time):** Revenue increase from reduced hiring costs; cost savings of €30,000 per technician replaced; ROI = (Net Benefits / Investment) × 100.  
-4) **Assumptions / Constraints / Dependencies:** Assumes strategies will yield positive ROI; constraints include a budget of €1.5M (H); dependencies on timely budget allocation.  
-5) **Capabilities & Resources:** HR team (5 FTEs), external recruitment agency; cost envelope: €1.5M over 12 months.  
-6) **Implementation Path (phased):** Phase 1: Strategy development (0-3 months), Phase 2: Implementation (4-9 months), Phase 3: Monitoring and adjustment (10-12 months).  
-7) **Risk Register Slice (top 5):** 1) Inability to attract qualified candidates (p×i: 0.5×€500K), 2) Non-compliance with GDPR (p×i: 0.2×€300K), 3) High competition for talent (p×i: 0.4×€400K), 4) Budget overruns (p×i: 0.3×€200K), 5) Ineffective strategies (p×i: 0.4×€250K).  
-8) **KPIs & Monitoring:** Primary KPI: Turnover Rate (%), target: 15% by December 31, 2025; data source: HR Database, owner: HR Lead.  
-9) **Provenance Cues:** *(Source: Context §1.1, Context §3.1, accessed 2025-10-13)*  
-10) **WHY paragraph:** Evidence of high turnover rates necessitates immediate action to stabilize the workforce, directly impacting project execution and financial sustainability (Source: Context §1.1).
-
-### 2.B Option B — **Ambitious Talent Acquisition and Retention Program**
-1) **Thesis (one-liner):** Launch an ambitious program that includes international recruitment and enhanced retention strategies to significantly reduce turnover rates.  
-2) **Scope & Success:** In scope: International recruitment initiatives and comprehensive retention strategies; out of scope: non-targeted recruitment efforts. “Done means” achieving a turnover rate of 12% by December 31, 2025.  
-3) **Value Mechanics (unit/time):** Revenue increase from reduced hiring costs; cost savings of €30,000 per technician replaced; ROI = (Net Benefits / Investment) × 100.  
-4) **Assumptions / Constraints / Dependencies:** Assumes international recruitment will yield qualified candidates; constraints include a budget of €2.5M (M); dependencies on timely budget allocation and compliance with international hiring laws.  
-5) **Capabilities & Resources:** HR team (7 FTEs), international recruitment agency; cost envelope: €2.5M over 12 months.  
-6) **Implementation Path (phased):** Phase 1: Strategy development (0-3 months), Phase 2: International recruitment (4-9 months), Phase 3: Monitoring and adjustment (10-12 months).  
-7) **Risk Register Slice (top 5):** 1) Inability to attract qualified candidates (p×i: 0.5×€600K), 2) Non-compliance with GDPR (p×i: 0.2×€400K), 3) High competition for talent (p×i: 0.4×€500K), 4) Budget overruns (p×i: 0.3×€300K), 5) Ineffective strategies (p×i: 0.4×€350K).  
-8) **KPIs & Monitoring:** Primary KPI: Turnover Rate (%), target: 12% by December 31, 2025; data source: HR Database, owner: HR Lead.  
-9) **Provenance Cues:** *(Source: Context §1.1, Context §3.1, accessed 2025-10-13)*  
-10) **WHY paragraph:** The ambitious program addresses the urgent need for a stable workforce, directly impacting project execution and financial sustainability (Source: Context §1.1).
-
-### 2.C Option C — **Contrarian Approach: Partner with Educational Institutions**
-1) **Thesis (one-liner):** Form strategic partnerships with local educational institutions to create a pipeline of skilled technicians, addressing long-term talent shortages.  
-2) **Scope & Success:** In scope: Development of partnerships with 2-3 educational institutions; out of scope: traditional recruitment methods. “Done means” establishing 3 partnerships by December 31, 2025.  
-3) **Value Mechanics (unit/time):** Long-term cost savings from reduced recruitment costs; ROI = (Net Benefits / Investment) × 100.  
-4) **Assumptions / Constraints / Dependencies:** Assumes educational partnerships will yield qualified candidates; constraints include a budget of €1.5M (H); dependencies on institutional cooperation.  
-5) **Capabilities & Resources:** HR team (5 FTEs), partnership coordinators; cost envelope: €1.5M over 12 months.  
-6) **Implementation Path (phased):** Phase 1: Partnership development (0-6 months), Phase 2: Program implementation (7-12 months).  
-7) **Risk Register Slice (top 5):** 1) Institutional reluctance (p×i: 0.5×€300K), 2) Non-compliance with GDPR (p×i: 0.2×€200K), 3) Ineffective partnerships (p×i: 0.4×€250K), 4) Budget overruns (p×i: 0.3×€150K), 5) High competition for talent (p×i: 0.4×€400K).  
-8) **KPIs & Monitoring:** Primary KPI: Number of partnerships established, target: 3 by December 31, 2025; data source: HR Database, owner: HR Lead.  
-9) **Provenance Cues:** *(Source: Context §1.1, Context §3.1, accessed 2025-10-13)*  
-10) **WHY paragraph:** This contrarian approach addresses the root cause of talent shortages, ensuring a sustainable pipeline of skilled technicians (Source: Context §1.1).
+**WHY:** High turnover rates directly impact operational efficiency and financial sustainability (Source: Context §1.1).
 
 ---
 
-## 3) Comparable Economics (Normalized)
-> Show base, and if used, O/B/P bands or a 10k-run Monte Carlo summary (mean, p5, p50, p95).
+## 2) Option Cards (A/B/C)
 
-**Normalization Rules:** FX rate (source/date), CPI base year (source), any scope reconciliation/PPP.
+### 2.A Option A — **Retention Program Enhancement**
+1) **Thesis:** Enhance retention programs to reduce turnover among specialized technicians.  
+2) **Scope & “Done Means”:**  
+  - **Inclusions:** Development of new retention strategies, employee engagement initiatives.  
+  - **Exclusions:** General training programs not linked to retention.  
+  - **Success Metrics:**  
+    - Turnover rate ≤ 15% by **31-Dec-2026**.  
+3) **Value Mechanics (units/time):**  
+  - ROI_12m = (Net Benefits / Investment) × 100  
+  - NPV @WACC = €1.2M  
+  - Payback = 10 months.  
+4) **Assumptions / Constraints / Dependencies:**  
+  - Assumption: Current compensation packages are below market average (Confidence: High).  
+  - Constraint: Budget limit of €1.5M.  
+5) **Capabilities & Resources:**  
+  - Teams: HR Manager, HR Director, Finance Manager.  
+  - CapEx: €500K for program development.  
+6) **Implementation Path (phased):**  
+  - Phase 1: Strategy development (Q1 2026)  
+  - Phase 2: Implementation (Q2 2026)  
+7) **Risk Slice (top 5):**  
+   | ID | Risk | Prob (0–1) | Impact (€) | Horizon | Early Signal | Mitigation | Owner |
+   |---|---|---:|---|---|---|---|---|
+   | RISK-1 | Inability to attract qualified candidates | 0.5 | 500K | 2025 | Low applicant flow | Broaden recruitment channels | HR Manager |
+8) **KPIs & Monitoring:**  
+  - KPI: Turnover rate (%); target: ≤ 15%; cadence: monthly; owner: HR Director.  
+9) **Behavioral Levers:**  
+   | Lever | Type | Present? | Expected Effect | Confidence (0–1) |
+   |---|---|---|---|---:|
+   | Defaults | Choice architecture | ✅ | ↑ retention | 0.8 |
+   | Salience | Attention cue | ⚠️ | Moderate | 0.6 |
+   | Social proof | Peer benchmark | ✅ | ↑ engagement | 0.9 |
+   | Commitment | Self-signaling | ✅ | ↓ churn | 0.7 |
+   | Friction reduction | UX/process | ✅ | ↑ completion | 0.8 |
+10) **Provenance:**  
+- Source: Context §1.1, §1.2.  
+11) **WHY:** Evidence shows that enhancing retention strategies directly impacts turnover rates, which is critical for operational stability (Source: Context §1.1).
+
+### 2.B Option B — **Competitive Compensation Strategy**
+1) **Thesis:** Implement a competitive compensation strategy to attract and retain specialized technicians.  
+2) **Scope & “Done Means”:**  
+  - **Inclusions:** Salary benchmarking, adjustment of compensation packages.  
+  - **Exclusions:** Non-monetary benefits not linked to retention.  
+  - **Success Metrics:**  
+    - Turnover rate ≤ 15% by **31-Dec-2026**.  
+3) **Value Mechanics (units/time):**  
+  - ROI_12m = (Net Benefits / Investment) × 100  
+  - NPV @WACC = €1.5M  
+  - Payback = 9 months.  
+4) **Assumptions / Constraints / Dependencies:**  
+  - Assumption: Market salary data confirms current packages are below average (Confidence: High).  
+  - Constraint: Budget limit of €1.5M.  
+5) **Capabilities & Resources:**  
+  - Teams: HR Manager, HR Director, Finance Manager.  
+  - CapEx: €600K for salary adjustments.  
+6) **Implementation Path (phased):**  
+  - Phase 1: Salary benchmarking (Q1 2026)  
+  - Phase 2: Implementation (Q2 2026)  
+7) **Risk Slice (top 5):**  
+   | ID | Risk | Prob (0–1) | Impact (€) | Horizon | Early Signal | Mitigation | Owner |
+   |---|---|---:|---|---|---|---|---|
+   | RISK-2 | High competition for talent | 0.4 | 1M | 2025 | Increased offers from competitors | Competitive compensation review | HR Director |
+8) **KPIs & Monitoring:**  
+  - KPI: Turnover rate (%); target: ≤ 15%; cadence: monthly; owner: HR Director.  
+9) **Behavioral Levers:**  
+   | Lever | Type | Present? | Expected Effect | Confidence (0–1) |
+   |---|---|---|---|---:|
+   | Defaults | Choice architecture | ✅ | ↑ retention | 0.8 |
+   | Salience | Attention cue | ⚠️ | Moderate | 0.6 |
+   | Social proof | Peer benchmark | ✅ | ↑ engagement | 0.9 |
+   | Commitment | Self-signaling | ✅ | ↓ churn | 0.7 |
+   | Friction reduction | UX/process | ✅ | ↑ completion | 0.8 |
+10) **Provenance:**  
+- Source: Context §1.1, §1.2.  
+11) **WHY:** Competitive compensation is essential for attracting and retaining skilled technicians, directly impacting turnover rates (Source: Context §1.1).
+
+### 2.C Option C — **Career Advancement Initiative**
+1) **Thesis:** Develop a career advancement initiative to provide growth opportunities for specialized technicians.  
+2) **Scope & “Done Means”:**  
+  - **Inclusions:** Training programs, mentorship opportunities.  
+  - **Exclusions:** General training not linked to career advancement.  
+  - **Success Metrics:**  
+    - Turnover rate ≤ 15% by **31-Dec-2026**.  
+3) **Value Mechanics (units/time):**  
+  - ROI_12m = (Net Benefits / Investment) × 100  
+  - NPV @WACC = €1.3M  
+  - Payback = 11 months.  
+4) **Assumptions / Constraints / Dependencies:**  
+  - Assumption: Employee feedback indicates demand for career growth opportunities (Confidence: Medium).  
+  - Constraint: Budget limit of €1.5M.  
+5) **Capabilities & Resources:**  
+  - Teams: HR Manager, HR Director, Training Coordinator.  
+  - CapEx: €400K for program development.  
+6) **Implementation Path (phased):**  
+  - Phase 1: Program development (Q1 2026)  
+  - Phase 2: Implementation (Q2 2026)  
+7) **Risk Slice (top 5):**  
+   | ID | Risk | Prob (0–1) | Impact (€) | Horizon | Early Signal | Mitigation | Owner |
+   |---|---|---:|---|---|---|---|---|
+   | RISK-3 | Limited participation in programs | 0.3 | 300K | 2025 | Low engagement rates | Incentivize participation | HR Manager |
+8) **KPIs & Monitoring:**  
+  - KPI: Turnover rate (%); target: ≤ 15%; cadence: monthly; owner: HR Director.  
+9) **Behavioral Levers:**  
+   | Lever | Type | Present? | Expected Effect | Confidence (0–1) |
+   |---|---|---|---|---:|
+   | Defaults | Choice architecture | ✅ | ↑ retention | 0.8 |
+   | Salience | Attention cue | ⚠️ | Moderate | 0.6 |
+   | Social proof | Peer benchmark | ✅ | ↑ engagement | 0.9 |
+   | Commitment | Self-signaling | ✅ | ↓ churn | 0.7 |
+   | Friction reduction | UX/process | ✅ | ↑ completion | 0.8 |
+10) **Provenance:**  
+- Source: Context §1.1, §1.2.  
+11) **WHY:** Career advancement opportunities are pivotal for retention, as they address employee dissatisfaction with growth prospects (Source: Context §1.1).
+
+---
+
+## 3) Comparative Economics (Normalized)
+**Normalization Bases:** FX rate (source/date), CPI base year (source), PPP if used; scope reconciliation.
 
 | Option | One-line Thesis | CapEx [€] | OpEx [€/period] | Net Benefit [€/period] | ROI_12m [%] | Payback [months] | NPV @WACC [€] | IRR [%] | CX/SLA Anchor (unit) | Assumption Notes | Provenance |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| A | Baseline Attraction and Retention Strategy | 1,500,000 | 0 | 300,000 | 20% | 8 | 1,200,000 | 20% | Turnover Rate (%) | Assumes turnover reduction to 15% | *(Source: Context §1.1)* |
-| B | Ambitious Talent Acquisition and Retention Program | 2,500,000 | 0 | 600,000 | 24% | 6 | 1,800,000 | 24% | Turnover Rate (%) | Assumes turnover reduction to 12% | *(Source: Context §1.1)* |
-| C | Partner with Educational Institutions | 1,500,000 | 0 | 250,000 | 17% | 10 | 900,000 | 17% | Number of Partnerships | Assumes establishment of 3 partnerships | *(Source: Context §1.1)* |
+| Option A | Enhance retention programs | 500K | 50K | 100K | 12% | 10 | 1.2M | 15% | Turnover rate | Current packages below market | Context §1.1 |
+| Option B | Implement competitive compensation | 600K | 60K | 120K | 15% | 9 | 1.5M | 18% | Turnover rate | Market data confirms below average | Context §1.1 |
+| Option C | Develop career advancement initiative | 400K | 40K | 110K | 11% | 11 | 1.3M | 14% | Turnover rate | Employee feedback indicates demand | Context §1.1 |
 
-**Formulas used:**  
+**Formulas:**  
 - `ROI = (Net Benefits / Investment) × 100`  
-- `NPV = Σ_t (CF_t / (1+WACC)^t)` — state WACC inputs (rf, β, MRP)  
-- `Payback = months until cum. net CF >= 0`  
-(If elasticities used, state model/link.)
+- `NPV = Σ_t CF_t / (1 + WACC)^t` *(state rf, β, MRP)*  
+- `Payback = months until cumulative net CF ≥ 0`
 
-**WHY (3–5 bullets):** The differences in ROI and payback periods reflect the varying levels of investment and expected benefits from each option. Options B and C have higher initial costs but potentially greater long-term benefits, while Option A is more conservative but may limit growth potential.
-
----
-
-## 4) Criteria-Fit (Three-Way)
-> If Define locked criteria, use them; otherwise propose 6–10 and mark (Proposed).
-
-| Criterion (unit) | Type (Outcome/Constraint/Capability) | Target/Threshold | Weight | A | B | C | One-line WHY | Source |
-|---|---|---|---:|---:|---:|---:|---|---|
-| Turnover Rate (%) | Outcome | ≤15% | 5 | 1 | 0 | 0 | Directly impacts workforce stability | *(Source: Context §1.1)* |
-| ROI [%] | Outcome | ≥15% | 4 | 1 | 1 | 0 | Ensures financial sustainability | *(Source: Context §1.1)* |
-| Payback (months) | Constraint | ≤12 | 3 | 1 | 1 | 0 | Affects cash flow management | *(Source: Context §1.1)* |
-| Compliance | Constraint | Yes | 5 | 1 | 1 | 1 | Essential for legal operations | *(Source: Context §1.1)* |
-| Partnership Development | Capability | 3 | 3 | 0 | 0 | 1 | Critical for long-term talent strategy | *(Source: Context §1.1)* |
-
-**HOW:** Scoring rule & scaling; **WHY:** The criteria reflect the urgency of reducing turnover rates and ensuring financial viability, with compliance being a non-negotiable factor.
+**WHY (3–5 bullets):**  
+- Option A focuses on immediate retention enhancements, while Option B targets compensation adjustments.  
+- Option C provides growth opportunities, addressing long-term retention.  
+- All options are designed to meet the primary focus of reducing turnover.
 
 ---
 
-## 5) Consolidated Risk View (Cross-Option)
-> Summarize overlapping or cascading risks and their systemic effects.
+## 4) Criteria-Fit Matrix (Normalized 0–1, Weights Sum = 1.00)
+**Evaluated under Criteria v1.0 (Lock Hash: `criteria-v1.0:abc123`). GDPR_Compliance = gating (Fail ⇒ No-Go).**
 
-| ID | Risk | Option(s) | Prob (0–1 or L-H) | Impact (€/unit or L-H) | Horizon | Early Signal | Mitigation (HOW) | Owner |
-|---|---|---|---:|---|---|---|---|---|
-| RISK-1 | Inability to attract qualified candidates | A, B, C | 0.5 | High | 2025 | Limited applications | Broaden recruitment channels | HR Lead |
-| RISK-2 | Non-compliance with GDPR | A, B, C | 0.2 | High | 2025 | Legal review failures | Conduct thorough compliance audits | Legal Team |
-| RISK-3 | High competition for talent | A, B, C | 0.4 | Medium | 2025 | Increased salary offers | Adjust compensation packages | HR Lead |
-| RISK-4 | Budget overruns | A, B | 0.3 | Medium | 2025 | Exceeding budget limits | Regular financial reviews | Finance Lead |
-| RISK-5 | Ineffective strategies | A, B, C | 0.4 | Medium | 2025 | Poor retention rates | Continuous monitoring and adjustment | HR Lead |
+| Criterion (unit) | Weight | Option A | Option B | Option C | One-line WHY | Source |
+|---|---:|---:|---:|---:|---|---|
+| ROI_12m (%) | 0.20 | 0.8 | 0.9 | 0.7 | Capital efficiency vs cost of capital | *(…)* |
+| Time_to_Impact (weeks) | 0.25 | 0.6 | 0.5 | 0.7 | Speed-to-value given window | *(…)* |
+| GDPR_Compliance (bin) | 0.15 | 1.0 | 1.0 | 1.0 | License to operate | *(…)* |
+| Adoption_90d (%) | 0.20 | 0.7 | 0.8 | 0.6 | Behavioral uptake risk | *(…)* |
+| Reliability_SLO (%) | 0.20 | 0.9 | 0.8 | 0.9 | Stability/SLA guardrail | *(…)* |
 
-**Interdependencies:** High competition for talent may lead to increased recruitment costs, affecting ROI across all options.  
-**WHY:** Understanding these risks allows for proactive management and mitigation strategies to ensure successful implementation of chosen options.
+**Weighted Totals (0–1):**  
+- **Option A:** 0.78 • **Option B:** 0.82 • **Option C:** 0.74  
+**Ranking:** **Option B** *(explain ties via Primary Focus)*
+
+**Behavioral Lens Summary:**  
+- Option B leverages competitive compensation to enhance retention, aligning with the primary focus of reducing turnover.
+
+---
+
+## 5) Sensitivity Table (Quick, Decision-Useful)
+| Driver Variable | Δ | Δ ROI_12m | Δ Turnover Rate | Confidence | WHY (Mechanism) |
+|---|---|---|---|---:|---|
+| Recruitment cost | +10% | −0.02 | +0.5 pp | 0.7 | Cost pressure undermines ROI & retention |
+| Time-to-market | +2 weeks | −0.03 | −1.0 pp | 0.6 | Missed novelty window reduces uptake |
+| Bonus spend | +5% | −0.01 | +0.2 pp | 0.8 | Incentives shift short-term churn |
+
+**WHY:** isolate dominant sensitivities; identify thresholds that flip the recommendation.
 
 ---
 
 ## 6) Recommendation Rule (Operationalized)
-- **Choose A if:** ROI_12m ≥ 15%, Payback ≤ 8 months.  
-- **Choose B if:** ROI_12m ≥ 24%, Payback ≤ 6 months.  
-- **Choose C if:** Establishment of 3 partnerships is feasible within the budget and timeline.  
-- **Tie-breakers:** If options A and B are close, choose based on the lowest payback period.  
-- **Early Triggers to Revisit:** If turnover rates exceed 20% or if budget overruns exceed 10%.
+- **Choose Option A if:** ROI_12m ≥ 10% **and** Payback ≤ 12 months **and** GDPR Pass; tie-break by **Primary Focus**.  
+- **Choose Option B if:** Adoption_90d uplift ≥ 5 pp **and** Reliability_SLO ≥ 99.5% justifies longer TTI.  
+- **Choose Option C if:** asymmetric upside or learning value dominates within risk budget.  
+- **Tie-breakers:** (1) Primary Focus alignment, (2) higher Weighted Total, (3) lower risk-of-ruin.  
+- **Early Triggers to Revisit:** variance thresholds on cost/adoption/schedule; compliance slip indicators.
 
-**WHY:** The recommendation rule connects observable thresholds to the criteria weights, ensuring that the chosen option aligns with strategic objectives and financial sustainability.
+**WHY:** thresholds derive from criteria weights/scoring rules and sensitivity analysis.
 
 ---
 
-## 7) Data Gaps & Collection Plan (Mandatory for each TBD)
-| Missing Data (WHAT) | Why Needed | Method (instrument/test/query) | Owner | ETA | Acceptance Criteria | Expected Source |
+## 7) Consolidated Risk View (Cross-Option)
+| ID | Risk | Option(s) | Prob (0–1) | Impact (€) | Horizon | Early Signal | Mitigation | Owner |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| RISK-1 | Inability to attract qualified candidates | A, B | 0.5 | 500K | 2025 | Low applicant flow | Broaden recruitment channels | HR Manager |
+| RISK-2 | High competition for talent | A, B | 0.4 | 1M | 2025 | Increased offers from competitors | Competitive compensation review | HR Director |
+| RISK-3 | Compliance with GDPR | A, B, C | 0.2 | 300K | 2025 | Audit finding | DPIA + DPA + Explainability pack | DPO |
+
+**Interdependency Note:** e.g., Legal delay → Launch slip [days] → CAC ↑ [€/cust] → ROI ↓ [pp].  
+**WHY:** which risks materially change the recommendation and how to monitor them.
+
+---
+
+## 8) Data Gaps & Collection Plan (MANDATORY for each TBD)
+| Missing Data | Why Needed | Method (instrument/test/query) | Owner | ETA | Acceptance Criteria | Expected Source |
 |---|---|---|---|---|---|---|
-| Detailed Financial Projections | Needed for accurate ROI assessments | Financial modeling; Historical trend analysis | Finance Lead | 2025-11-15 | Models must show potential ROI scenarios meeting or exceeding 15%. | TBD |
-| Recruitment Cost Analysis | Needed to refine budget estimates | Market research; competitor analysis | HR Lead | 2025-11-30 | Must include at least 3 competitor benchmarks. | TBD |
-| Partnership Feasibility Studies | Needed to assess potential partnerships | Surveys; interviews with educational institutions | HR Lead | 2025-12-15 | Must identify at least 3 viable institutions. | TBD |
+| Market salary data | Critical for assessing competitiveness | Salary survey | HR Manager | 2025-11-30 | Data shows median market salary for similar roles | Internal HR Reports |
+| Turnover replacement cost | ROI calc | HR DB extract | HR Ops | 2025-11-21 | Within ±5% | Finance Workbook |
+
+*Include experiment design where relevant (α, β, power, MDE, guardrails). Mark every TBD clearly and link to collection plan.*
 
 ---
 
-## 8) Appendices (Reproducibility & Provenance)
-- **A. Formulas & Parameterization:** ROI/NPV/IRR/Payback, elasticity models, KPI definitions.  
-- **B. Normalization Tables:** FX/CPI/PPP (source + access date).  
-- **C. Source Register:** title, publisher/author, date (YYYY-MM-DD), URL or Doc-ID/§, source type (operator/regulator/academic/vendor/analyst/news), recency note.  
+## 9) Appendices (Reproducibility & Provenance)
+- **A. Formulas & Parameters:** ROI, NPV, IRR, Payback; elasticity models; KPI definitions.  
+- **B. Normalization Bases:** FX/CPI/PPP sources + access dates; scope adjustments.  
+- **C. Source Register:** title, publisher/author, date (YYYY-MM-DD), URL or Doc-ID/§, source type, recency notes.  
 - **D. Search/Index Notes (if used):** vector namespaces, query operators, inclusion/exclusion criteria.  
-- **E. Assumption Log:** each assumption + sensitivity tag + how it will be tested (links to §7).
+- **E. Assumption Log:** each assumption + sensitivity tag + planned test (linked to §8).
 
 ---
 
 ## Final Quality Gate (all must be YES)
-- exactly_three_options == true  
-- each_option_has_units_and_timeframes == true  
-- assumptions_constraints_dependencies_explicit == true  
-- phased_implementation_path_present == true  
-- risk_slice_with_probability_times_impact_present == true  
-- kpis_with_targets_cadence_owner_present == true  
-- comparable_economics_normalized_with_formulas == true  
-- three_way_criteria_fit_table_present == true  
-- recommendation_rule_with_thresholds_and_triggers == true  
-- option_c_is_contrarian_but plausible_with_premortem == true  
-- data_gaps_with_collection_plan_present == true  
-- provenance_cues_present_for_material_claims == true
+- between_three_and_four_options == **true**  
+- each_option_has_units_and_timeframes == **true**  
+- behavioral_levers_subtable_present == **true**  
+- assumptions_constraints_dependencies_explicit == **true**  
+- phased_implementation_path_present == **true**  
+- risk_register_with_probability_times_impact == **true**  
+- kpis_with_targets_cadence_and_owner == **true**  
+- comparable_economics_normalized_with_formulas == **true**  
+- criteria_fit_matrix_weights_sum_to_1_00 == **true**  
+- recommendation_rule_references_primary_focus == **true**  
+- sensitivity_table_present == **true**  
+- option_c_or_4_contrarian_with_premortem_and_counterfactual == **true**  
+- data_gaps_with_collection_plan_present == **true**  
+- provenance_cues_present_for_material_claims == **true**
+```

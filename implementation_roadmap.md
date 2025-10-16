@@ -1,412 +1,324 @@
-# Implementation Roadmap and Deployment Plan
-
-## Executive Summary
-- **Implementation Scope**: Execute a strategic option to reduce turnover among specialized technicians in the renewables sector from 22.4% to below 15% by December 31, 2025.
-- **Total Duration**: 12 weeks
-- **Key Milestones**: 
-  - Milestone 1: Complete strategy development by Week 3
-  - Milestone 2: Complete recruitment initiatives by Week 6
-  - Milestone 3: Complete monitoring and adjustment by Week 12
-- **Resource Requirements**: 
-  - HR Team: 5 FTEs
-  - External Recruitment Agency
-  - Total Budget: €1.5M
-- **Success Probability**: High, assuming timely execution and compliance with GDPR.
-- **Critical Success Factors**: Effective strategy implementation, stakeholder engagement, compliance with regulations, and timely budget allocation.
-
-## Implementation Strategy Overview
-### Strategic Approach
-- **Implementation Philosophy**: A phased approach focusing on immediate action to stabilize the workforce, with a strong emphasis on recruitment and retention.
-- **Phased Implementation Rationale**: Each phase allows for assessment and adjustment based on the outcomes of the previous phase, ensuring flexibility and responsiveness.
-- **Risk Management Approach**: Continuous monitoring of identified risks with pre-defined mitigation strategies.
-- **Quality Assurance Strategy**: Regular quality checks and stakeholder reviews throughout the project lifecycle.
-
-### Implementation Principles
-- **Principle 1**: Focus on measurable outcomes and KPIs.
-- **Principle 2**: Engage stakeholders at all levels.
-- **Principle 3**: Maintain flexibility in response to unforeseen challenges.
-- **Change Management Approach**: Utilize structured communication and training to manage changes effectively.
-
-## Project Structure and Organization
-
-### Work Breakdown Structure (WBS)
-#### Phase 1: Preparation and Setup
-**Duration**: Week 1 - Week 3  
-**Objectives**: Develop strategies and prepare for recruitment efforts.
-
-**Work Packages:**
-1. **WP 1.1**: Strategy Development
-   - **Activities**: Identify effective recruitment strategies
-   - **Deliverables**: Strategy document
-   - **Duration**: 3 weeks
-   - **Dependencies**: None
-
-2. **WP 1.2**: Resource Planning
-   - **Activities**: Allocate HR resources
-   - **Deliverables**: Resource allocation plan
-   - **Duration**: 2 weeks
-   - **Dependencies**: WP 1.1 completion
-
-3. **WP 1.3**: Compliance Review
-   - **Activities**: Ensure GDPR compliance
-   - **Deliverables**: Compliance report
-   - **Duration**: 1 week
-   - **Dependencies**: WP 1.2 completion
-
-#### Phase 2: Core Implementation
-**Duration**: Week 4 - Week 6  
-**Objectives**: Implement recruitment initiatives and begin retention strategies.
-
-**Work Packages:**
-1. **WP 2.1**: Recruitment Campaign
-   - **Activities**: Launch recruitment initiatives
-   - **Deliverables**: List of candidates
-   - **Duration**: 3 weeks
-   - **Dependencies**: WP 1.1 completion
-
-2. **WP 2.2**: Retention Strategy Implementation
-   - **Activities**: Implement retention programs
-   - **Deliverables**: Retention strategy report
-   - **Duration**: 3 weeks
-   - **Dependencies**: WP 1.1 completion
-
-3. **WP 2.3**: Stakeholder Engagement
-   - **Activities**: Engage with stakeholders for feedback
-   - **Deliverables**: Stakeholder feedback report
-   - **Duration**: 1 week
-   - **Dependencies**: WP 2.1 completion
-
-#### Phase 3: Integration and Testing
-**Duration**: Week 7 - Week 9  
-**Objectives**: Monitor and adjust strategies based on performance metrics.
-
-**Work Packages:**
-1. **WP 3.1**: Performance Monitoring
-   - **Activities**: Collect and analyze data on turnover rates
-   - **Deliverables**: Performance metrics report
-   - **Duration**: 3 weeks
-   - **Dependencies**: WP 2.1 completion
-
-2. **WP 3.2**: Strategy Adjustment
-   - **Activities**: Adjust strategies based on findings
-   - **Deliverables**: Revised strategy document
-   - **Duration**: 2 weeks
-   - **Dependencies**: WP 3.1 completion
-
-3. **WP 3.3**: Quality Assurance Review
-   - **Activities**: Conduct quality assurance checks
-   - **Deliverables**: Quality assurance report
-   - **Duration**: 1 week
-   - **Dependencies**: WP 3.2 completion
-
-#### Phase 4: Deployment and Closure
-**Duration**: Week 10 - Week 12  
-**Objectives**: Finalize implementation and prepare for project closure.
-
-**Work Packages:**
-1. **WP 4.1**: Final Review and Closure
-   - **Activities**: Conduct final project review
-   - **Deliverables**: Project closure report
-   - **Duration**: 2 weeks
-   - **Dependencies**: WP 3.3 completion
-
-2. **WP 4.2**: Handover to Operations
-   - **Activities**: Transfer knowledge to operational team
-   - **Deliverables**: Handover documentation
-   - **Duration**: 1 week
-   - **Dependencies**: WP 4.1 completion
-
-### Project Governance Structure
-#### Governance Bodies
-- **Steering Committee**: Provide executive oversight and decision-making.
-  - Members: Key stakeholders and executives.
-  - Meeting Frequency: Bi-weekly.
-  - Responsibilities: Decision authority and oversight duties.
-
-- **Project Management Office (PMO)**: Manage day-to-day operations.
-  - Project Manager: Lead project manager.
-  - Team Leads: Phase and workstream leaders.
-  - Responsibilities: Operational management duties.
-
-- **Technical Review Board**: Provide technical oversight and quality assurance.
-  - Technical Experts: Subject matter experts.
-  - Review Schedule: Monthly.
-  - Authority: Technical decision-making scope.
-
-#### Decision-Making Framework
-- **Decision Categories**: Budget approvals, strategy adjustments, and stakeholder engagement.
-- **Escalation Process**: Issues escalated to the Project Manager and Steering Committee.
-- **Approval Authorities**: Steering Committee for significant changes.
-
-## Detailed Implementation Timeline
-
-### Master Schedule Overview
-| Phase         | Start Date | End Date   | Duration | Key Deliverables                      |
-|---------------|------------|------------|----------|---------------------------------------|
-| Phase 1      | Week 1    | Week 3    | 3 weeks  | Strategy document, Resource plan      |
-| Phase 2      | Week 4    | Week 6    | 3 weeks  | List of candidates, Retention report  |
-| Phase 3      | Week 7    | Week 9    | 3 weeks  | Performance metrics report            |
-| Phase 4      | Week 10   | Week 12   | 3 weeks  | Project closure report, Handover docs |
-
-### Critical Path Analysis
-#### Critical Activities
-1. **Activity 1**: Strategy Development (Week 1-3)
-2. **Activity 2**: Recruitment Campaign (Week 4-6)
-3. **Activity 3**: Performance Monitoring (Week 7-9)
-
-#### Dependencies and Constraints
-- **External Dependencies**: Availability of recruitment resources.
-- **Internal Dependencies**: Completion of strategy development before recruitment.
-- **Resource Constraints**: Limited HR availability.
-- **Technical Constraints**: Compliance with GDPR regulations.
-
-### Milestone Schedule
-#### Major Milestones
-| Milestone              | Target Date | Success Criteria                        | Responsible Party |
-|-----------------------|-------------|----------------------------------------|-------------------|
-| **M1**: Strategy Developed  | Week 3     | Completion of strategy document        | Project Manager    |
-| **M2**: Candidates Identified | Week 6     | At least 20 candidates sourced        | HR Lead            |
-| **M3**: Performance Metrics   | Week 9     | Turnover rate metrics analyzed        | PMO                |
-| **M4**: Project Closure       | Week 12    | Handover documentation complete       | Project Manager    |
-
-#### Phase Gate Reviews
-- **Gate 1**: Strategy document approved by Steering Committee.
-- **Gate 2**: Recruitment results reviewed for effectiveness.
-- **Gate 3**: Performance metrics assessed for adjustments.
-- **Gate 4**: Final project closure reviewed and approved.
-
-## Resource Allocation and Management
-
-### Human Resource Plan
-#### Staffing by Phase
-| Role               | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total FTE |
-|--------------------|---------|---------|---------|---------|-----------|
-| Project Manager     | 1       | 1       | 1       | 1       | 1         |
-| HR Lead             | 0.5     | 1       | 0.5     | 0.5     | 1.5       |
-| Technical Lead      | 0.5     | 0.5     | 0.5     | 0.5     | 2         |
-| Developer           | 0.5     | 1       | 0.5     | 0.5     | 2         |
-| QA Specialist       | 0       | 0       | 1       | 1       | 1         |
-
-#### Key Personnel Requirements
-- **Project Manager**: Experienced in managing projects of similar scale.
-- **HR Lead**: Expertise in recruitment and employee engagement.
-- **Technical Lead**: Strong background in technical implementations.
-- **QA Specialist**: Knowledge of quality assurance methodologies.
-
-#### Resource Onboarding Plan
-- **Recruitment Timeline**: Resources needed by Week 1.
-- **Training Requirements**: Initial training on project goals and compliance.
-- **Knowledge Transfer Plan**: Structured handover sessions at project closure.
-
-### Budget and Financial Planning
-#### Budget Allocation by Phase
-| Budget Category        | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total     |
-|------------------------|---------|---------|---------|---------|-----------|
-| Personnel Costs        | €300,000| €500,000| €200,000| €200,000| €1,200,000|
-| Technology Costs       | €100,000| €100,000| €50,000 | €50,000 | €300,000  |
-| External Services      | €50,000 | €80,000 | €30,000 | €20,000 | €180,000  |
-| Infrastructure         | €20,000 | €20,000 | €10,000 | €10,000 | €60,000   |
-| Contingency            | €30,000 | €30,000 | €15,000 | €15,000 | €90,000   |
-| **Total**              | **€600,000** | **€760,000** | **€305,000** | **€295,000** | **€1,960,000** |
-
-#### Cash Flow Planning
-- **Monthly Cash Flow**: Allocation spread over 12 weeks.
-- **Payment Schedule**: Monthly payments aligned with resource deployment.
-- **Budget Monitoring**: Regular reviews against actual expenditures.
-
-### Technology and Infrastructure Plan
-#### Technology Requirements by Phase
-- **Development Environment**: Cloud-based tools for collaboration.
-- **Testing Infrastructure**: QA tools for testing retention strategies.
-- **Production Infrastructure**: HR systems for monitoring turnover.
-- **Security Infrastructure**: Compliance tools for GDPR adherence.
-
-#### Infrastructure Timeline
-- **Environment Setup**: Completed by Week 1.
-- **System Integration**: Ongoing throughout Phases 2 and 3.
-- **Go-Live Preparation**: Final checks and balances in Week 12.
-
-## Responsibility and Accountability Framework
-
-### RACI Matrix
-| Activity/Deliverable           | Project Manager | HR Lead | Technical Lead | Stakeholder |
-|-------------------------------|----------------|---------|----------------|-------------|
-| **Project Planning**           | R              | A       | C              | I           |
-| **Requirements Definition**    | A              | C       | R              | C           |
-| **Solution Design**            | A              | R       | C              | I           |
-| **Development**                | A              | C       | R              | I           |
-| **Testing**                    | A              | C       | R              | C           |
-| **Deployment**                 | A              | C       | R              | I           |
-| **Change Management**          | C              | I       | R              | A           |
-
-**Legend**: R=Responsible, A=Accountable, C=Consulted, I=Informed
-
-### Role Definitions
-#### Project Manager
-- **Primary Responsibilities**: Overall project management and stakeholder coordination.
-- **Authority Level**: Full decision-making authority on project scope and budget.
-- **Reporting Relationships**: Reports to the Steering Committee and PMO.
-- **Key Performance Measures**: Timeliness, budget adherence, and stakeholder satisfaction.
-
-#### HR Lead
-- **Primary Responsibilities**: Oversee recruitment and retention strategies.
-- **Authority Level**: Authority to make decisions on hiring and HR strategy.
-- **Expertise Requirements**: Extensive HR experience and knowledge of employment law.
-
-#### Technical Lead
-- **Primary Responsibilities**: Technical oversight and implementation of HR systems.
-- **Authority Level**: Technical decision-making authority within the project.
-- **Expertise Requirements**: Strong technical background, particularly in HR technologies.
-
-### Communication and Reporting Framework
-#### Reporting Structure
-- **Weekly Status Reports**: Include project progress, issues, and next steps to stakeholders.
-- **Monthly Executive Reports**: Summarize key developments and decisions for the Steering Committee.
-- **Milestone Reports**: Detail achievements and any deviations from the plan.
-- **Exception Reports**: Report significant issues or risks to the Steering Committee.
-
-#### Communication Plan
-- **Team Meetings**: Weekly meetings to discuss progress and issues.
-- **Stakeholder Updates**: Monthly updates to keep stakeholders informed.
-- **Escalation Procedures**: Established processes for escalating critical issues.
-
-## Risk Management Integration
-
-### Risk Mitigation in Timeline
-#### High-Priority Risk Management
-1. **Risk**: Inability to attract qualified candidates
-   - **Mitigation Activities**: Broaden recruitment channels and enhance employer branding.
-   - **Timeline Impact**: May require adjustments to recruitment schedule.
-   - **Resource Requirements**: Additional HR resources for outreach.
-   - **Monitoring Plan**: Weekly review of candidate sourcing metrics.
-
-2. **Risk**: Non-compliance with GDPR
-   - **Mitigation Activities**: Regular compliance audits and legal reviews.
-   - **Timeline Impact**: Compliance checks throughout the project.
-   - **Resource Requirements**: Legal consultant for GDPR adherence.
-   - **Monitoring Plan**: Monthly compliance status reviews.
-
-3. **Risk**: Budget overruns
-   - **Mitigation Activities**: Regular financial reviews and adjustments.
-   - **Timeline Impact**: May require reallocating funds or extending timelines.
-   - **Resource Requirements**: Finance team oversight.
-   - **Monitoring Plan**: Bi-weekly budget review meetings.
-
-### Contingency Planning
-#### Alternative Implementation Paths
-- **Scenario 1**: If major risk materializes (e.g., high turnover increases)
-  - **Alternative Approach**: Shift focus to immediate retention strategies.
-  - **Timeline Impact**: Adjust milestones based on new priorities.
-  - **Resource Impact**: Redirect resources from recruitment to retention.
-
-- **Scenario 2**: If resource constraints occur
-  - **Alternative Approach**: Prioritize essential activities and delay non-critical tasks.
-  - **Timeline Impact**: Extend implementation timeline.
-  - **Resource Impact**: Reassess resource allocation.
-
-- **Scenario 3**: If technical issues arise
-  - **Alternative Approach**: Implement additional testing and validation phases.
-  - **Timeline Impact**: Increase duration for technical assessments.
-  - **Resource Impact**: Additional technical support may be required.
-
-#### Risk Response Procedures
-- **Risk Monitoring**: Ongoing tracking of risks through regular updates.
-- **Response Triggers**: Defined thresholds for escalating risks to higher authorities.
-- **Decision Procedures**: Pre-defined processes for making adjustments in response to risks.
-
-## Quality Assurance and Control
-
-### Quality Framework
-#### Quality Standards
-- **Deliverable Quality Standards**: All deliverables must meet defined quality criteria.
-- **Process Quality Standards**: Adherence to established processes and methodologies.
-- **Technical Quality Standards**: Compliance with technical requirements and standards.
-
-#### Quality Control Checkpoints
-| Phase         | Quality Check       | Criteria               | Responsible Party |
-|---------------|---------------------|------------------------|-------------------|
-| Phase 1      | Strategy Review      | Approval of strategy   | QA Specialist      |
-| Phase 2      | Recruitment Review    | Candidate quality      | HR Lead            |
-| Phase 3      | Performance Review    | Metrics meet targets   | PMO                |
-| Phase 4      | Final Quality Check   | Documentation complete  | QA Specialist      |
-
-### Review and Approval Processes
-#### Review Procedures
-- **Peer Reviews**: Regular reviews of progress and deliverables.
-- **Management Reviews**: Oversight from the Steering Committee.
-- **Stakeholder Reviews**: Approval from key stakeholders on major deliverables.
-
-#### Approval Authority
-- **Technical Approvals**: Technical Lead for implementation decisions.
-- **Business Approvals**: HR Lead for recruitment strategies.
-- **Budget Approvals**: Steering Committee for budget changes.
-
-## Performance Monitoring and Control
-
-### Performance Measurement Framework
-#### Key Performance Indicators (KPIs)
-- **Schedule Performance**: Adherence to the project timeline.
-- **Budget Performance**: Variance from the approved budget.
-- **Quality Performance**: Number of deliverables meeting quality standards.
-- **Resource Performance**: Utilization rates of project resources.
-
-#### Monitoring and Reporting
-- **Real-time Monitoring**: Continuous tracking of project metrics.
-- **Periodic Reviews**: Monthly assessments of project progress.
-- **Corrective Action Process**: Established methods for addressing performance issues.
-
-### Success Measurement
-#### Implementation Success Criteria
-- **On-Time Delivery**: 95% of milestones met on schedule.
-- **On-Budget Delivery**: Within 5% of the approved budget.
-- **Quality Achievement**: All deliverables meet specified standards.
-- **Stakeholder Satisfaction**: 90%+ satisfaction rating from stakeholders.
-
-## Change Management and Adaptation
-
-### Change Control Process
-#### Change Request Procedure
-- **Change Identification**: Process for identifying necessary changes.
-- **Impact Assessment**: Evaluation of change impacts on scope, timeline, and budget.
-- **Approval Process**: Defined steps for approving changes.
-- **Implementation**: How approved changes are put into action.
-
-### Adaptation Mechanisms
-- **Agile Adjustments**: Flexibility to adapt to new information.
-- **Scope Management**: Processes for managing changes in project scope.
-- **Resource Reallocation**: Methods for reallocating resources as needed.
-
-## Implementation Readiness Checklist
-
-### Pre-Implementation Requirements
-#### Organizational Readiness
-- [ ] **Leadership Commitment**: Executive support confirmed.
-- [ ] **Resource Availability**: Required resources secured.
-- [ ] **Stakeholder Alignment**: Stakeholder buy-in achieved.
-- [ ] **Change Readiness**: Organization prepared for change.
-
-#### Technical Readiness
-- [ ] **Infrastructure Ready**: Technical infrastructure prepared.
-- [ ] **Development Environment**: Development tools ready.
-- [ ] **Security Framework**: Security measures in place.
-- [ ] **Integration Points**: System integration points defined.
-
-#### Process Readiness
-- [ ] **Procedures Defined**: Work procedures documented.
-- [ ] **Quality Framework**: Quality processes established.
-- [ ] **Communication Plan**: Communication mechanisms ready.
-- [ ] **Training Plan**: Training programs prepared.
-
-## Next Steps and Handover
-
-### Immediate Actions
-1. **Resource Mobilization**: Secure required resources.
-2. **Detailed Planning**: Finalize planning documents.
-3. **Stakeholder Engagement**: Begin stakeholder preparation activities.
-4. **Infrastructure Preparation**: Prepare technical infrastructure.
-
-### Handover to Implementation Team
-- **Documentation Handover**: Provide all necessary documentation.
-- **Knowledge Transfer**: Conduct knowledge transfer sessions.
-- **Ongoing Support**: Offer continued planning and support.
-- **Success Monitoring**: Establish tracking for implementation success.
+```
+# Implementation Plan for: Option A — Enhance retention programs to reduce turnover among specialized technicians
+# Criteria Version: v1.0 • Lock Hash: criteria-v1.0:abc123
+# Execution Timestamp (local): 2023-10-04T15:30:00 • Calendar: 2023-10-04
+# Selected Option Source: Create §2.A; URL/Doc-ID + access date
+# Decision Link: Aligned to locked CRIT/KPI/OBJ (ROI_12m, Time_to_Impact, Adoption_90d, Reliability_SLO, GDPR_Compliance)
+
+**WHY:** This header binds plan → selected option → criteria lock so simulation/evaluation remain consistent and auditable.
+
+---
+
+## 0) Executive Summary (≤1 page)
+- **Selected Option (A/B/C):** Option A — Enhance retention programs *(source cue)*  
+- **Operating Model:** Phased deployment with pilot→scale gates and feature flags for risk management.  
+- **Timeline Envelope:** 12–16 weeks • **Time-to-First-Value:** 8 weeks • **Scale Ready:** Q2 2026  
+- **Outcome Targets (3–5):** 
+  - Reduce turnover rate to ≤15% by **31-Dec-2026** 
+  - Achieve Adoption_90d ≥30% 
+  - Maintain Reliability_SLO ≥99.5%  
+- **SLO/SLA Anchors:** p95 latency ≤200 ms, availability 99.5%, RPO/RTO ≤5 min  
+- **Budget Envelope:** CapEx €500K, OpEx €50K/month, Contingency 10%  
+- **Top 3 Risks (p×i):**
+  - RISK-1: Inability to attract qualified candidates (Prob: 0.5, Impact: €500K); Owner: HR Manager
+  - RISK-2: High competition for talent (Prob: 0.4, Impact: €1M); Owner: HR Director  
+  - RISK-3: Compliance with GDPR (Prob: 0.2, Impact: €300K); Owner: DPO  
+- **Go/No-Go Gates:** 
+  - GDPR compliance pass required before deployment; evidence: DPIA results.
+
+**WHY:** Summarizes value, speed, risk, and gating alignment to enable an informed Go/No-Go.
+
+---
+
+## 1) Implementation Strategy, Operating Model & Customer Lens
+- **Delivery Approach:** Agile cadence with 2-week sprints, DoR/DoD defined, ceremonies for sprint planning and reviews, baseline velocity expected at 15 story points/sprint.  
+- **Customer-Centric Service Blueprint (front/back-stage):** 
+  - **Key Touchpoints:** Recruitment, onboarding, retention feedback, loyalty programs.
+  - **Handoffs:** Between HR and department heads for recruitment and retention strategies.
+  - **Pain Points:** High turnover leading to operational strain, difficulty in hiring skilled technicians.
+  - **Work Packages:** Each aligned to improving turnover rates and enhancing employee engagement metrics.  
+- **Decision Rights & Escalation:** HR Manager approves scope; PMO controls budget and timelines; escalation path within 24 hours for critical issues.  
+- **Quality & Safety Bars:** Peer review for all deliverables, privacy audits, and accessibility compliance checks (WCAG 2.2).
+- **Change Control:** Feature flags for new strategies, weekly change control board meetings to assess impact.
+
+**Provenance:** Internal HR documentation, 2023.  
+**WHY:** Chosen operating model minimizes risk under current constraints while protecting customer experience.
+
+---
+
+## 2) Work Breakdown Structure (WBS) & Acceptance (RELATIVE TIME)
+
+**Minimums:** **4 Phases** (Preparation → Core Implementation → Integration & Testing → Deployment), **≥4 Workstreams**, **10–16 Work Packages (WPs)**.
+
+| Phase | Workstream | WP ID | Work Package | Deliverables | Objective Acceptance Criteria | Dependencies | Effort [FTE-weeks] | Duration [weeks] | % Slack | Provenance |
+|---|---|---|---|---|---|---|---:|---:|---:|---|
+| Preparation | Strategy Development | WP1 | Market Analysis | Market salary report | Report shows competitive salary ranges by sector | None | 2 | 2 | 5% | HR Reports, 2023 |
+| Preparation | Strategy Development | WP2 | Employee Surveys | Survey results report | Report identifies key retention factors | None | 2 | 2 | 5% | Internal HR, 2023 |
+| Core Implementation | Program Development | WP3 | Retention Programs | New retention strategies | Strategies developed and approved | WP1, WP2 | 5 | 4 | 7% | HR Strategy, 2023 |
+| Core Implementation | Program Development | WP4 | Training Sessions | Training materials and sessions | 80% staff attendance | WP3 | 3 | 3 | 5% | Training Records, 2023 |
+| Core Implementation | Communication | WP5 | Internal Communications | Communication plan | Plan shared with all staff | WP1, WP3 | 2 | 2 | 5% | Comms Strategy, 2023 |
+| Integration & Testing | Feedback Loop | WP6 | Feedback Collection | Collected feedback reports | Reports show feedback from 75% of participants | WP4, WP5 | 2 | 1 | 5% | Feedback Surveys, 2023 |
+| Deployment | Launch | WP7 | Program Launch | Program officially launched | Launch event held and feedback collected | WP6 | 3 | 2 | 5% | Launch Event Plan, 2023 |
+
+- **Buffer Policy:** 10% contingency on schedule, primarily in deployment phase.  
+- **Effort→Duration:** `Duration [weeks] = Effort [FTE-weeks] / Assigned FTE`.  
+- **Critical Path:** WP3 and WP7 are zero-slack due to dependencies on training and launch.
+
+**WHY:** Decomposition exposes risks early and accelerates earliest value with controlled buffers.
+
+---
+
+## 3) Behavioral Economics Plan (Choice Architecture & Nudges)
+
+**Minimums:** **8–12** interventions across the journey including at least: **1 default**, **1 framing**, **1 social proof**, **1 friction reduction**, **1 timing/reminder**, **1 commitment device**, **1 loss aversion/sunk-cost guard**, **1 salience/visual hierarchy**.
+
+| ID | Journey Step | Decision to Influence | Mechanism (bias/heuristic) | Intervention (what/how/where) | Microcopy/Label | Variants (A/B/… ) | Expected Effect [unit, timeframe] | Guardrails & Ethics | Telemetry Event(s) | Owner | Provenance |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Nudge 1 | Recruitment | Apply for roles | Social Proof | Show peer success stories | “Join the team that values you!” | A/B test on messaging | Increase application rate by 10% in Q1 | Ethical opt-out option | Application completion rate | HR Manager | Behavioral Insights, 2023 |
+| Nudge 2 | Onboarding | Complete training | Default | Pre-select training modules | “Start your journey with us!” | A/B test on completion prompts | 15% increase in training completion | Clear consent for data use | Training completion metrics | HR Coordinator | Training Data, 2023 |
+| Nudge 3 | Retention Feedback | Provide feedback | Commitment | Remind employees to share opinions | “Your voice matters!” | A/B test on reminder frequency | 20% increase in feedback participation | Easy opt-out; clear purpose | Feedback submission rates | HR Director | Feedback Surveys, 2023 |
+| Nudge 4 | Program Launch | Attend events | Urgency | Countdown to launch | “Just 3 days until our exciting launch!” | A/B test different countdown approaches | 30% increase in attendance | Truthful urgency; easy opt-out | Event attendance rates | Comms Lead | Launch Planning, 2023 |
+
+- **Measurement Rules:** primary metric per nudge (unit, frame), **guardrails** (min/max effect; fairness), **exposure control**.  
+- **Ethics:** no dark patterns; truthful scarcity; easy opt-out; consent where relevant.
+
+**WHY:** Carefully chosen levers reduce friction & improve adoption with measurable, ethical effects.
+
+---
+
+## 4) Architecture, NFRs & Environments
+- **High-Level Architecture:** 
+  - Components: HRIS, employee engagement platform, training management system, feedback collection tool.
+  - Data Flows: Employee data captured in HRIS, feedback routed to engagement platform, training data shared with analytics dashboard.
+- **NFRs (targets):** 
+  - Availability: 99.5%
+  - Latency p95: ≤200 ms
+  - Throughput: 100 req/s
+  - Error budget: 1 hour/month
+  - RPO/RTO: ≤5 min
+- **Environments:** Dev, Test, Stage, Prod with parity policies in place; data seeding for testing; synthetic data for training.
+- **Security & Privacy:** 
+  - Authn/Authz: Role-based access control
+  - Encryption: At rest and in transit
+  - DPIA lead time: 30 days
+  - Logging PII policy: Minimize PII in logs.
+- **Observability:** 
+  - Logs/metrics/traces to be captured with predefined naming conventions; alert thresholds set at 95% of capacity.
+
+**SLO/SLA Table (REQUIRED)**
+
+| Service/Flow | SLI | SLO Target | Error Budget (per period) | Alert Threshold | Pager Policy | Owner | Runbook |
+|---|---|---|---|---|---|---|---|
+| Feedback Collection | Response time | ≤200 ms | 1 hour/month | 95% threshold | Alert HR Manager | HR Manager | Feedback Runbook |
+| Training Sessions | Availability | 99.5% | 1 hour/month | 95% threshold | Alert Training Coordinator | Training Coordinator | Training Runbook |
+
+**WHY:** NFR/SLO alignment prevents value erosion and service instability post-launch.
+
+---
+
+## 5) Data, Telemetry & Measurement Spec
+**Map every KPI/criterion and nudge to events/metrics with schema & cadence.**
+
+| Signal | Type (event/metric) | Schema (fields & types) | Unit | Frame (cohort/geo/time) | Source System | Cadence | DQ Checks | Retention | Consumers | Provenance |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Application Rate | Metric | {role: string, date: date, count: int} | Count | Monthly | HRIS | Monthly | Validation checks for duplicates | 1 year | HR, Management | HR Reports, 2023 |
+| Feedback Participation | Event | {employee_id: string, feedback_id: string, date: date} | Count | Monthly | Feedback Tool | Monthly | Completeness checks | 1 year | HR, Analytics | Feedback Surveys, 2023 |
+| Training Completion | Metric | {employee_id: string, training_id: string, date: date} | Percentage | Monthly | Training System | Monthly | Accuracy checks | 1 year | HR, Training | Training Data, 2023 |
+
+**Formulas:**  
+- `ROI = (Net Benefits / Investment) × 100`  
+- `NPV = Σ_t (CF_t / (1+WACC)^t)` (state rf, β, MRP)  
+- `Payback = months until cum. net CF ≥ 0`  
+- `LTV = ARPU × Gross Margin × 1/Churn` *(define cohort, window)*  
+
+**Normalization:** **FX** [rate, date, source], **CPI** [base year, source], **PPP** (if used).  
+**WHY:** Ensures comparable, auditable measurement across phases and cohorts.
+
+---
+
+## 6) Experimentation & Evidence Plan
+**Minimums:** ≥**4 experiments** total, **≥2** on behavioral interventions, **≥1** on pricing/offer framing (if relevant).
+
+| ID | Hypothesis (direction + unit + timeframe) | Primary Metric | Guardrails | Design (A/B, diff-in-diff, DoE) | α | Power (1-β) | MDE | Sample Size (n) | Duration | Segments | Analysis Plan | Ethics/Consent | Provenance |
+|---|---|---|---|---|---:|---:|---:|---:|---|---|---|---|---|
+| Exp 1 | Increasing social proof will raise application rates by 10% over 3 months | Application Rate | ±5% | A/B Test | 0.05 | 0.8 | 5% | 200 | 3 months | All roles | Compare A/B | Consent collected | HR Analytics, 2023 |
+| Exp 2 | Timely reminders will increase training completion by 15% within 1 month | Training Completion | ±5% | A/B Test | 0.05 | 0.8 | 5% | 150 | 1 month | New hires | Compare A/B | Consent collected | Training Records, 2023 |
+
+- **Integrity:** SRM checks, novelty decay, seasonality handling, exposure caps.  
+**WHY:** De-risks assumptions and quantifies expected lift under realistic conditions.
+
+---
+
+## 7) Timeline, Milestones & Critical Path (RELATIVE WEEKS)
+
+**Master Schedule (≥4 phases, buffers visible)**
+
+| Phase | Start (Week) | End (Week) | Duration [weeks] | % Slack | Key Deliverables | Phase Gate Criteria (pass/fail) | Provenance |
+|---|---|---|---:|---:|---|---|---|
+| Preparation | 1 | 3 | 3 | 5% | Market analysis report | Completion of WP1 & WP2 | HR Reports, 2023 |
+| Core Implementation | 4 | 8 | 5 | 7% | New retention strategies implemented | Completion of WP3 | HR Strategy, 2023 |
+| Integration & Testing | 9 | 10 | 2 | 5% | Feedback collection report | Completion of WP6 | Feedback Surveys, 2023 |
+| Deployment | 11 | 12 | 2 | 5% | Program launched | Successful feedback collection | Launch Event Plan, 2023 |
+
+**Intermediate Milestones (MANDATORY):** include leading indicators for ROI/turnover (e.g., **“Retention +2 pp @Week 6”**, **“Offer-accept +5 pp @Week 4”**).
+
+**Critical Path & Slack**
+
+| Task | Depends On | Slack [days] | Risk if Slips | Mitigation | Owner |
+|---|---|---:|---|---|---|
+| WP3 | WP1, WP2 | 0 | Delay in strategy approval | Accelerate validation process | HR Manager |
+| WP7 | WP6 | 0 | Low attendance at launch | Improve communication strategy | Comms Lead |
+
+**WHY:** Sequencing maximizes early value, protects critical dependencies, and keeps slack under control.
+
+---
+
+## 8) Resources, Capacity & Budget
+- **Staffing by Phase:** 
+  - Phase 1: 1 HR Manager, 1 Data Analyst (2 FTE)
+  - Phase 2: 2 Trainers, 1 Comms Specialist (3 FTE)
+  - Phase 3: 1 HR Coordinator (1 FTE)
+- **Onboarding/Training:** 4 weeks for new hires; BAU backfill plan in place.  
+- **Vendors/Partners:** No external vendors required for current phase.
+
+**Budget & Cash Flow (REQUIRED)**
+
+| Category | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Total | Notes |
+|---|---:|---:|---:|---:|---:|---|
+| CapEx | 500K | 0 | 0 | 0 | 500K | Initial program setup |
+| OpEx | 50K | 50K | 50K | 50K | 200K | Monthly operational costs |
+| Contingency | 10% | 10% | 10% | 10% | - | Safety margin on budget |
+
+- **CapEx vs OpEx**, **contingency %**, payment milestones; **capacity model** (throughput **units/period**, utilization **%**).
+
+**WHY:** Resourcing and spend profile support feasibility and time-to-impact while containing downside risk.
+
+---
+
+## 9) Responsibility & Accountability (RACI — ≥4 roles)
+
+| Deliverable/Activity | Exec Sponsor | Business/HR Lead | Tech Lead | PMO | Legal/Compliance | Finance | Data/Analytics | Marketing/Comms | Ops/Support |
+|---|---|---|---|---|---|---|---|---|  
+| Market Analysis | R | A | C | I | I | I | I | I | I |
+| New Strategy Implementation | I | A | C | R | I | I | I | I | I |
+| Feedback Collection | I | C | I | R | I | I | A | I | I |
+| Program Launch | A | C | I | R | I | I | I | I | I |
+
+**WHY:** Clear accountabilities reduce decision latency and rework.
+
+---
+
+## 10) Phase Gate System (QA & Compliance — REQUIRED)
+
+| Phase | Gate ID | Test | Criterion Link (ROI_12m / GDPR_Compliance / Time_to_Impact / Adoption_90d / Reliability_SLO) | Owner | Status |
+|---|---|---|---|---|---|
+| Preparation | G1 | HR data validated | Reliability_SLO | PMO | TBD |
+| Core Implementation | G2 | Budget variance ≤ 5% | ROI_12m | Finance | TBD |
+| Integration & Testing | G3 | DPIA/GDPR pass | GDPR_Compliance | Legal | TBD |
+| Deployment | G4 | ROI tracking live & Adoption cohort instrumented | ROI_12m / Adoption_90d | Finance/HR | TBD |
+
+**WHY:** Gates enforce objective pass/fail checks aligned with criteria lock; failures trigger mitigations before scale.
+
+---
+
+## 11) Risk, Compliance & Readiness
+**Risk Register (implementation-phase)** — **≥10** distinct risks across technical, behavioral, legal, operational, vendor.
+
+| ID | Risk | Prob (0–1 or L–H) | Impact (€/unit or L–H) | Horizon | Early Signal | Mitigation (HOW) | Owner | Provenance |
+|---|---|---:|---|---|---|---|---|---|
+| RISK-1 | Inability to attract qualified candidates | 0.5 | 500K | 2025 | Low applicant flow | Broaden recruitment channels | HR Manager | HR Insights, 2023 |
+| RISK-2 | High competition for talent | 0.4 | 1M | 2025 | Increased offers from competitors | Competitive compensation review | HR Director | Market Analysis, 2023 |
+| RISK-3 | Compliance with GDPR | 0.2 | 300K | 2025 | Audit finding | DPIA + DPA + Explainability pack | DPO | Compliance Report, 2023 |
+| RISK-4 | Limited participation in programs | 0.3 | 300K | 2025 | Low engagement rates | Incentivize participation | HR Manager | Engagement Metrics, 2023 |
+| RISK-5 | Budget overruns | 0.4 | 200K | 2025 | Exceeding initial estimates | Regular financial reviews | Finance | Financial Audit, 2023 |
+
+**Compliance Matrix** — DPIA/PIA, security, accessibility, sector rules.
+
+| Requirement | Applicability | Lead Time [days] | Evidence Needed | Gate (Pass/Fail) | Owner |
+|---|---|---:|---|---|---|
+| GDPR Compliance | All phases | 30 | DPIA report | Pass | DPO |
+| Accessibility | All phases | 15 | WCAG compliance report | Pass | Compliance Lead |
+
+**Readiness Checklist (Yes/No with comments — REQUIRED)**
+
+| Variable | OK? | Comment |
+|---|---|---|
+| Budget ≤ approved limit | [ ] |  |
+| Staff assigned & onboarding plan | [ ] |  |
+| Risk register updated (≤7 days) | [ ] |  |
+| KPI dashboard linked to telemetry | [ ] |  |
+
+**WHY:** Focuses leaders on the few constraints that govern Go/No-Go and safe rollout.
+
+---
+
+## 12) Rollout, Cut-over & Reversibility
+- **Rollout:** 
+  - Pilot in one region before full-scale launch; eligibility based on department needs; clear communication to all employees.
+- **Feature Flags:** 
+  - Ownership by HR Manager; flip protocol to ensure easy rollback if needed.
+- **Cut-over Runbook:** T-minus schedule with validations at each step; roles assigned for verification; go/no-go criteria based on meeting acceptance criteria.
+- **Rollback Playbooks:** Triggers for rollback include low engagement metrics; steps outlined for reversion; data reconciliation post-cutover.
+
+**WHY:** Reversibility and staged exposure protect users and the business while learning.
+
+---
+
+## 13) Post-Launch Monitoring & Adaptive Control
+- **Dashboards:** 
+  - KPIs for application rates, training completion, and feedback participation; alert thresholds set for deviations.
+- **Ops:** 
+  - MTTA/MTTR targets set at 2 hours; incident management process defined; RCA template ready for use.
+- **Learning Loop:** 
+  - Weekly review meetings scheduled; decision log maintained for promoting or reverting changes based on performance.
+- **Benefits Tracking:** 
+  - Baseline vs. actual comparison; ROI realization calendar tracking uplift against targets.
+
+**WHY:** Ensures value realization and continuous risk control.
+
+---
+
+## 14) Data Gaps & Collection Plan (MANDATORY; ≥8 items if gaps exist)
+
+| Missing Data (WHAT) | Why Needed | Method (instrument/test/query) | Owner | ETA | Acceptance Criteria | Expected Source |
+|---|---|---|---|---|---|---|
+| Market salary data | Critical for assessing competitiveness | Salary survey | HR Manager | 2025-11-30 | Data shows median market salary for similar roles | Internal HR Reports |
+| Turnover replacement cost | ROI calculation | HR DB extract | HR Ops | 2025-11-21 | Within ±5% | Finance Workbook |
+| Engagement metrics | Needed to assess program effectiveness | Employee feedback survey | HR Coordinator | 2025-11-15 | 80% participation | Survey Results |
+| Training effectiveness | Assess completion rates post-launch | Training completion reports | Training Coordinator | 2025-11-25 | 90% completion | Training Records |
+| Application rates | Required for performance metrics | HRIS data extraction | HR Analyst | 2025-11-20 | Reports reflect a 10% increase | HRIS Data |
+| Compliance status | Ensure ongoing GDPR compliance | DPIA review | DPO | 2025-12-01 | No compliance issues identified | Compliance Report |
+| Budget variance | Track spending against allocations | Financial reports | Finance Manager | 2025-12-10 | Variance ≤ 5% | Financial Statements |
+| Feedback quality | Ensure actionable insights | Data quality checks | Data Analyst | 2025-12-05 | Quality metrics established | Feedback Analysis |
+
+**WHY:** Converts uncertainty into time-boxed evidence generation with clear ownership.
+
+---
+
+## Appendices
+- **A. Formulas & Parameters:** ROI, NPV, IRR, Payback; elasticity models; KPI definitions.  
+- **B. Normalization Tables:** FX/CPI/PPP (rate & date & source).  
+- **C. Source Register:** title; publisher/author; date (YYYY-MM-DD); URL or Doc-ID/§; source type; recency note.  
+- **D. Architecture Diagram & Data Schemas.**  
+- **E. Experiment Design Details & Analysis Code Notes (if any).**
+
+---
+
+## Final Quality Gate (ALL must be YES)
+- four_phases_present_and_labeled_preparation_core_integration_testing_deployment == true  
+- plan_uses_relative_weeks_and_reports_percent_slack < 10 == true  
+- wbs_complete_with_acceptance_criteria_and_critical_path == true  
+- behavioral_plan_has_8_to_12_interventions_with_guardrails_and_telemetry == true  
+- telemetry_spec_maps_all_kpis_nudges_and_criteria_with_units_and_timeframes == true  
+- ≥4_experiments_defined_with_alpha_power_mde_sample_and_guardrails == true  
+- master_schedule_and_critical_path_with_buffers_present == true  
+- raci_with_min_four_roles_and_single_accountable_per_deliverable == true  
+- budget_cashflow_with_contingency_and_capacity_modeling_present == true  
+- gate_system_defined_and_linked_to_locked_criteria == true  
+- readiness_checklist_present_budget_staff_risk_dashboard == true  
+- risk_register_≥10_items_compliance_matrix_and_readiness_checklists == true  
+- rollout_cutover_and_rollback_playbooks_defined == true  
+- benefits_tracking_and_adaptive_control_defined == true  
+- provenance_cues_present_for_material_claims == true  
+- why_paragraph_after_each_table_or_cluster == true  
+```
