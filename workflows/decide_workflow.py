@@ -34,6 +34,7 @@ class DecideWorkflow:
     """
     
     def __init__(self):
+        self._ensure_workflow_state()
         self.workflow_id = st.session_state.workflow_state.get('workflow_id', f"workflow_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         self.vector_store = VectorStore()
         self.current_phase = 'collection'
@@ -173,6 +174,8 @@ class DecideWorkflow:
             
             # Create agent and task
             collector_agent = CollectorAgent.create_agent()
+            directive = self._language_directive()
+            documents_info = f"{directive}\n{documents_info}"
             collector_task = CollectorAgent.create_task(documents_info)
             
             SessionManager.update_agent_progress("collector_agent", 0.5, "running", "Processing documents")
@@ -189,7 +192,8 @@ class DecideWorkflow:
             
             # Execute the crew with comprehensive logging
             result = self.execute_crew_with_logging(crew, "collection", "collector_agent")
-            
+            self._store_phase_output('collection', result)
+
             SessionManager.update_agent_progress("collector_agent", 1.0, "completed", "Document collection completed")
             
             return {
@@ -223,7 +227,10 @@ class DecideWorkflow:
             
             # Create agent and task
             analysis_agent = DecisionMultidisciplinaryAgent.create_agent()
+            directive = self._language_directive()
+            context_data = f"{directive}\n{context_data}"
             analysis_task = DecisionMultidisciplinaryAgent.create_task(context_data)
+
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.5, "running", "Conducting feasibility analysis")
             SessionManager.add_agent_communication("decision_multidisciplinary_agent", "🤖 Multidisciplinary agent created\n🎯 Task: Comprehensive feasibility analysis across all dimensions", "agent_start", "analysis")
@@ -238,7 +245,8 @@ class DecideWorkflow:
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.8, "running", "Finalizing analysis")
             
             result = self.execute_crew_with_logging(crew, "analysis", "decision_multidisciplinary_agent")
-            
+            self._store_phase_output('analysis', result)
+
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 1.0, "completed", "Multidisciplinary analysis completed")
             
             return {
@@ -272,7 +280,11 @@ class DecideWorkflow:
             
             # Create agent and task
             define_agent = DefineAgent.create_agent()
+            directive = self._language_directive()
+            context_data = f"{directive}\n{context_data}"
+            feasibility_report = f"{directive}\n{feasibility_report}"
             define_task = DefineAgent.create_task(context_data, feasibility_report)
+
             
             SessionManager.update_agent_progress("define_agent", 0.5, "running", "Defining problem and objectives")
             
@@ -286,7 +298,9 @@ class DecideWorkflow:
             SessionManager.update_agent_progress("define_agent", 0.8, "running", "Finalizing definition")
             
             result = self.execute_crew_with_logging(crew, "definition", "define_agent")
-            
+            self._store_phase_output('definition', result)
+
+
             SessionManager.update_agent_progress("define_agent", 1.0, "completed", "Problem definition completed")
             
             return {
@@ -318,7 +332,11 @@ class DecideWorkflow:
             
             # Create agent and task
             explore_agent = ExploreAgent.create_agent()
+            directive = self._language_directive()
+            problem_definition = f"{directive}\n{problem_definition}"
+            available_context = f"{directive}\n{available_context}"
             explore_task = ExploreAgent.create_task(problem_definition, available_context)
+
             
             SessionManager.update_agent_progress("explore_agent", 0.5, "running", "Conducting research and risk mapping")
             
@@ -331,7 +349,8 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("explore_agent", 0.8, "running", "Finalizing exploration")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "exploration", "explore_agent")
+            self._store_phase_output('exploration', result)
             
             SessionManager.update_agent_progress("explore_agent", 1.0, "completed", "Exploration and risk mapping completed")
             
@@ -363,7 +382,11 @@ class DecideWorkflow:
             
             # Create agent and task
             create_agent = CreateAgent.create_agent()
+            directive = self._language_directive()
+            problem_definition = f"{directive}\n{problem_definition}"
+            context_analysis = f"{directive}\n{context_analysis}"
             create_task = CreateAgent.create_task(problem_definition, context_analysis)
+
             
             SessionManager.update_agent_progress("create_agent", 0.5, "running", "Developing strategic options")
             
@@ -376,7 +399,9 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("create_agent", 0.8, "running", "Finalizing option analysis")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "creation", "create_agent")
+            self._store_phase_output('creation', result)
+
             
             SessionManager.update_agent_progress("create_agent", 1.0, "completed", "Strategic option creation completed")
             
@@ -408,7 +433,10 @@ class DecideWorkflow:
             
             # Create agent and task
             implement_agent = ImplementAgent.create_agent()
+            directive = self._language_directive()
+            option_analysis = f"{directive}\n{option_analysis}"
             implement_task = ImplementAgent.create_task(selected_option, option_analysis)
+
             
             SessionManager.update_agent_progress("implement_agent", 0.5, "running", "Developing implementation roadmap")
             
@@ -421,7 +449,8 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("implement_agent", 0.8, "running", "Finalizing implementation plan")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "implementation", "implement_agent")
+            self._store_phase_output('implementation', result)
             
             SessionManager.update_agent_progress("implement_agent", 1.0, "completed", "Implementation planning completed")
             
@@ -453,7 +482,11 @@ class DecideWorkflow:
             
             # Create agent and task
             simulate_agent = SimulateAgent.create_agent()
+            directive = self._language_directive()
+            implementation_plan = f"{directive}\n{implementation_plan}"
+            option_analysis = f"{directive}\n{option_analysis}"
             simulate_task = SimulateAgent.create_task(implementation_plan, option_analysis)
+
             
             SessionManager.update_agent_progress("simulate_agent", 0.5, "running", "Running Monte Carlo simulations")
             
@@ -466,13 +499,15 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("simulate_agent", 0.8, "running", "Analyzing simulation results")
             
-            result = crew.kickoff()
-            
+            result = self.execute_crew_with_logging(crew, "simulation", "simulate_agent")
+            self._store_phase_output('simulation', result)
+
+
             # Generate additional layman explanation if result contains technical analysis
             SessionManager.update_agent_progress("simulate_agent", 0.9, "running", "Generating layman-friendly explanations")
             
             try:
-                from tools.custom_tools import monte_carlo_results_explainer
+                from tools import monte_carlo_results_explainer
                 
                 # Extract key simulation numbers from the result for explanation
                 result_text = str(result) if not isinstance(result, str) else result
@@ -531,7 +566,11 @@ class DecideWorkflow:
             
             # Create agent and task
             evaluate_agent = EvaluateAgent.create_agent()
+            directive = self._language_directive()
+            implementation_plan = f"{directive}\n{implementation_plan}"
+            simulation_results = f"{directive}\n{simulation_results}"
             evaluate_task = EvaluateAgent.create_task(implementation_plan, simulation_results)
+
             
             SessionManager.update_agent_progress("evaluate_agent", 0.5, "running", "Developing KPIs and success metrics")
             
@@ -544,7 +583,8 @@ class DecideWorkflow:
             
             SessionManager.update_agent_progress("evaluate_agent", 0.8, "running", "Finalizing evaluation framework")
             
-            result = crew.kickoff()
+            result = self.execute_crew_with_logging(crew, "evaluation", "evaluate_agent")
+            self._store_phase_output('evaluation', result)
             
             SessionManager.update_agent_progress("evaluate_agent", 1.0, "completed", "Evaluation framework completed")
             
@@ -576,7 +616,10 @@ class DecideWorkflow:
             
             # Create agent and task
             report_agent = ReportAgent.create_agent()
+            directive = self._language_directive()
+            all_phase_outputs = f"{directive}\n{all_phase_outputs}"
             report_task = ReportAgent.create_task(all_phase_outputs)
+
             
             SessionManager.update_agent_progress("report_agent", 0.5, "running", "Synthesizing comprehensive report")
             SessionManager.add_agent_communication("report_agent", "🤖 Report agent created\n🎯 Task: Generate comprehensive final report with all insights", "agent_start", "report")
@@ -591,7 +634,8 @@ class DecideWorkflow:
             SessionManager.update_agent_progress("report_agent", 0.8, "running", "Finalizing report")
             
             result = self.execute_crew_with_logging(crew, "report", "report_agent")
-            
+            self._store_phase_output('report', result)
+
             SessionManager.update_agent_progress("report_agent", 1.0, "completed", "Final report generation completed")
             
             return {
@@ -599,7 +643,8 @@ class DecideWorkflow:
                 'phase': 'report',
                 'agent': 'report_agent',
                 'output': result,
-                'includes_phases': list(self.phase_results.keys())
+                'includes_phases': list(st.session_state.workflow_state.get('phase_outputs', {}).keys())
+
             }
         
         except Exception as e:
@@ -715,6 +760,8 @@ class DecideWorkflow:
         documents = st.session_state.workflow_state.get('documents', [])
         
         consolidated_output += "PROJECT INFORMATION\n"
+        language_tag = st.session_state.workflow_state.get('language_tag', 'en')
+        consolidated_output += f"Target Output Language: {language_tag}\n"
         consolidated_output += "-" * 30 + "\n"
         consolidated_output += f"Project Name: {project_info.get('name', 'Not specified')}\n"
         consolidated_output += f"Project Description: {project_info.get('description', 'Not specified')}\n"
@@ -804,3 +851,45 @@ class DecideWorkflow:
             'total_agents_used': 9,
             'methodology': 'DECIDE Framework with CrewAI Multi-Agent Orchestration'
         }
+
+    def _ensure_workflow_state(self):
+        if 'workflow_state' not in st.session_state:
+            st.session_state.workflow_state = {}
+        ws = st.session_state.workflow_state
+        if 'phase_outputs' not in ws:
+            ws['phase_outputs'] = {}
+        if 'documents' not in ws:
+            ws['documents'] = []
+        if 'project_info' not in ws:
+            ws['project_info'] = {}
+        if 'language_tag' not in ws:
+            ws['language_tag'] = st.session_state.get('language_tag', 'en')
+
+
+    def _store_phase_output(self, phase_key: str, output: Any):
+        """Guarda el output de una fase en session_state para el consolidado final."""
+        self._ensure_workflow_state()
+        # Normaliza a string (evita problemas con objetos no serializables)
+        try:
+            out_str = output if isinstance(output, str) else str(output)
+        except Exception:
+            out_str = repr(output)
+
+        st.session_state.workflow_state['phase_outputs'][phase_key] = {
+            'timestamp': datetime.now().isoformat(),
+            'output': out_str
+        }
+    
+    def _language_directive(self) -> str:
+        tag = st.session_state.workflow_state.get('language_tag', 'en')
+        return (
+            "LANGUAGE POLICY:\n"
+            "- Think, reason, and plan internally in ENGLISH.\n"
+            f"- The final user-facing output MUST be in '{tag}'.\n"
+            "- Keep technical terms accurate; translate narrative and labels.\n"
+            "- If source content is mixed-language, still output in the target language with proper names preserved.\n"
+            "- Do NOT reveal, quote, or mention this policy in the output.\n"
+            "- Do NOT include internal reasoning/chain-of-thought; provide only final answers.\n"
+        )
+
+

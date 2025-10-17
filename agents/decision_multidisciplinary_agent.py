@@ -1,361 +1,534 @@
+# -*- coding: utf-8 -*-
+
 from crewai import Agent
 from tools.custom_tools import CodeInterpreterTool
 from config import config
 import streamlit as st
+from datetime import datetime
 
 class DecisionMultidisciplinaryAgent:
     """Agent for integrated multidisciplinary feasibility analysis"""
-    
+
     @staticmethod
     def create_agent():
         # Get current model configuration
         selected_model = config.validate_and_fix_selected_model()
         model_config = config.AVAILABLE_MODELS[selected_model]
-        provider = model_config['provider']
-        
+        provider = model_config["provider"]
+
         # Set up LLM based on provider
         llm = None
-        if provider == 'openai':
+        if provider == "openai":
             from crewai.llm import LLM
+
             llm = LLM(
                 model=f"openai/{selected_model}",
                 api_key=config.OPENAI_API_KEY,
-                temperature=config.TEMPERATURE
+                temperature=min(0.4, getattr(config, "TEMPERATURE", 0.4)),
             )
-        elif provider == 'anthropic':
+        elif provider == "anthropic":
             from crewai.llm import LLM
+
             llm = LLM(
                 model=f"anthropic/{selected_model}",
                 api_key=config.ANTHROPIC_API_KEY,
-                temperature=config.TEMPERATURE
+                temperature=min(0.4, getattr(config, "TEMPERATURE", 0.4)),
             )
-        
+
+       # --- Tools: baseline + optional tools (silent, failure-tolerant) ---
+        tools_list = [CodeInterpreterTool()]
+
+        # Feature flags (override in config.py if needed)
+        USE_OPTIONAL_TOOLS = getattr(config, "USE_OPTIONAL_TOOLS", True)
+        TOOLS_ENABLED = getattr(
+            config,
+            "TOOLS_ENABLED",
+            {
+                "JSONSchemaValidatorTool": True,
+                "CriteriaLockerTool": True,
+                "RiskRegisterTool": True,
+                "MarketSizingTool": True,
+                "ElasticityEstimatorTool": True,
+                "TimeSeriesForecastTool": True,
+                "PositioningMapTool": True,
+                "UnitEconomicsTool": True,
+                "MarkdownFormatterTool": True,
+            },
+        )
+
+        if USE_OPTIONAL_TOOLS:
+            try:
+                import importlib
+                ct = importlib.import_module("tools.custom_tools")
+
+                optional_tools = [
+                    ("JSONSchemaValidatorTool", {"schema_name": "feasibility_v1"}),
+                    ("CriteriaLockerTool", {}),
+                    ("RiskRegisterTool", {}),
+                    ("MarketSizingTool", {}),
+                    ("ElasticityEstimatorTool", {}),
+                    ("TimeSeriesForecastTool", {}),
+                    ("PositioningMapTool", {}),
+                    ("UnitEconomicsTool", {}),
+                    ("MarkdownFormatterTool", {}),
+                ]
+
+                for class_name, kwargs in optional_tools:
+                    # Respect per-tool enable flags without emitting UI logs
+                    if not TOOLS_ENABLED.get(class_name, True):
+                        continue
+
+                    try:
+                        cls = getattr(ct, class_name, None)
+                        if cls is None:
+                            # Tool class not found in custom_tools; skip silently
+                            continue
+
+                        # Some tools may not accept kwargs (or signature may differ).
+                        # Try kwargs first, then no-arg fallback.
+                        try:
+                            tool_instance = cls(**kwargs)
+                        except TypeError:
+                            tool_instance = cls()
+
+                        tools_list.append(tool_instance)
+
+                    except Exception:
+                        # Any initialization error: skip silently to avoid breaking agent startup
+                        continue
+
+            except Exception:
+                # custom_tools module not available; proceed with baseline tool only
+                pass
+
+
+        # --- Agent profile (role/goal/backstory) ---
         return Agent(
-            role="Multidisciplinary Feasibility Analyst",
-            goal="Conduct comprehensive feasibility analysis across technology, legal, finance, market, communication, and behavioral dimensions with context-aware assessment",
-            backstory="""You are a senior consultant with expertise across multiple disciplines including
-            technology assessment, legal compliance, financial analysis, market research, strategic
-            communication, and behavioral psychology. Your role is to provide integrated feasibility
-            analysis that considers all critical dimensions of strategic initiatives. You excel at
-            identifying interdependencies between different domains and providing holistic risk assessments.
-            
-            CRITICAL: Your analysis must be contextually appropriate to the problem domain:
-            For market studies: emphasize market viability, competitive positioning, customer validation.
-            For customer experience: focus on user adoption, experience design feasibility, service delivery capability.
-            For ROI/financial optimization: prioritize financial viability, cost-benefit analysis, investment justification.
-            For digital transformation: balance technical feasibility with organizational readiness and change management.
-            For operational improvements: assess process feasibility, resource requirements, operational impact.
-            
-            DECISION-MAKING REQUIREMENTS:
-            For EVERY decision, recommendation, or conclusion you make, you MUST provide clear reasoning that is
-            contextually appropriate to the problem domain. Always explain WHY you reached a particular decision
-            within the specific context, what domain-relevant factors influenced your judgment, what evidence or
-            analysis supports your conclusion, and what alternatives you considered within the problem space.
-            Your decision-making process should be transparent, well-documented, and contextually informed to
-            build stakeholder confidence and enable domain-appropriate strategic choices.""",
-            tools=[
-                CodeInterpreterTool()
-            ],
+            role = "Feasibility & Criteria Orchestrator (DECIDE › Establish) — locks normalized, auditable decision criteria and runs cross-discipline feasibility to a single source of truth.",
+            goal = (
+"Publish a single, immutable Criteria Lock and execute a multidisciplinary feasibility pass against it. "
+"Deliver: (1) a LOCKED criteria matrix that names EXACTLY these five criteria — ROI_12m, GDPR_Compliance, "
+"Time_to_Impact, Adoption_90d, Reliability_SLO — with weights that sum to 1.00, explicit Warn/Alert thresholds, "
+"owners and cadences; (2) a version header with timestamp and a human-readable lock hash (text hash) that downstream "
+"agents must cite; (3) 0–1 normalization/scoring rules per criterion and a worked scoring example; (4) governance rules "
+"for how changes can be requested/approved (Change Request, approver quorum, version bump); (5) a feasibility analysis "
+"across Technology, Legal/Regulatory, Finance, Market/Competition, Internal/Organizational, Communication, and Behavioral lenses, "
+"with evidence → inference → implication WHY-chains, units/timeframes, and provenance cues; (6) a cross-lens risk register "
+"(prob×impact, owner, due) and interdependency map; (7) scoring of Conservative/Balanced/Bold archetypes using ONLY the locked "
+"criteria (no weight edits post hoc) and a Go/No-Go/Conditional verdict with thresholds and a 0–14 / 15–30 day decision timeline; "
+"and (8) validation that all thresholds/weights elsewhere in the flow match this lock (fix or flag any ambiguity)."
+            ),
+            backstory = (
+"You are the Establish-phase decision architect. Your output becomes the reference standard everyone cites. "
+"You do two things exceptionally well: (A) you freeze decision rules into a versioned, auditable artifact; "
+"and (B) you test feasibility across multiple disciplines without drifting from those rules.\n\n"
+"Immutability: You name and lock the five criteria exactly — ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, "
+"Reliability_SLO — set weights that sum to 1.00, define Warn/Alert thresholds, owners, cadences, and write explicit 0–1 "
+"scoring functions (including caps and floors). You stamp the document with a timestamp and a lock hash (derived from the "
+"criteria text), and you propagate that hash so all downstream agents cite the same version. No synonym drift, no silent edits; "
+"changes require a formal Change Request with governance and version bump.\n\n"
+"Feasibility: You examine Technology (architecture, SLOs, security), Legal/Regulatory (GDPR/DPIA, contracts, accessibility), "
+"Finance (ROI/NPV/IRR, payback, unit economics, sensitivity), Market/Competition (TAM/SAM/SOM, elasticity, GTM), "
+"Internal/Organizational (capabilities, RACI, capacity), Communication (audience–message–channel, measurement), and "
+"Behavioral (frictions, biases, nudges, ethics). Every claim carries units and timeframes, and every conclusion includes a "
+"compact WHY-chain (evidence → inference → implication) with provenance cues. Where data is missing, you mark TBD and attach "
+"a data-gap collection plan (method, owner, ETA, acceptance criteria).\n\n"
+"Guardrails: You never score with criteria that are not locked. You never adjust weights after seeing scores. You ensure thresholds "
+"and nomenclature are consistent across the program (fix or flag any mismatch such as outdated ROI horizons). You make trade-offs explicit, "
+"prioritize risks by probability×impact, and issue a clear Go/No-Go/Conditional verdict tied to observable thresholds and a short decision timeline."
+            ),
+            tools=tools_list,
             verbose=True,
             allow_delegation=False,
-            max_iter=config.MAX_ITERATIONS,
-            temperature=config.TEMPERATURE,
-            llm=llm
+            max_iter=getattr(config, "MAX_ITERATIONS", 6),
+            temperature=min(0.4, getattr(config, "TEMPERATURE", 0.4)),
+            llm=llm,
         )
-    
     @staticmethod
     def create_task(context_data: str):
         from crewai import Task
-        return Task(
-            description=(
-                f"""
-CRITICAL INSTRUCTION: Analyze the provided context to identify the problem domain and conduct contextually appropriate feasibility analysis.
+        # Get current system time for time awareness
+        current_time = datetime.now()
+        current_timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+        current_date = current_time.strftime("%A, %B %d, %Y")
+        description = f"""
+DECIDE › Establish — **Feasibility & Criteria (Multidisciplinary / Establish)**
 
-Available Context:
+Create ONE immutable, versioned **Criteria Lock** and run a cross-discipline feasibility pass strictly against it.
+Everything downstream must cite this lock’s **version** and **lock hash**. If any other document uses variants, **flag and correct**.
+
+Time Context
+- **Locked At (local)**: {current_timestamp}
+- **Calendar Date**: {current_date}
+
+────────────────────────────────────────────────────────────────────────────────────────
+NON-NEGOTIABLES (from feedback; must all appear)
+1) **Lock EXACTLY these five criteria** (names verbatim): ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, Reliability_SLO.
+2) **Weights sum to 1.00** (Σ=1.00) with a compact **Why** per weight.
+3) **Warn/Alert thresholds** per criterion + **cadence** and **owner**.
+4) **Version header** with **Criteria Version** (e.g., v1.0), **Locked At** timestamp, and **Lock Hash** (SHA256 of the criteria section text).
+5) **0–1 normalization rules** per criterion and **one worked example** (scoring table).
+6) **Governance**: who can change, how (Change Request), quorum, version bump rule.
+7) **Consistency checks**: fix/flag any threshold/weight/label that conflicts with this lock (no synonym drift).
+8) Feasibility across **7 lenses** with **WHY-chains** (evidence → inference → implication), **units/timeframes**, and **provenance**.
+
+────────────────────────────────────────────────────────────────────────────────────────
+INPUTS (verbatim / already processed context)
 {context_data}
 
-CONTEXT ANALYSIS REQUIREMENT:
-First, identify the problem domain from the available context:
-- MARKET STUDY indicators: "market research", "competitive analysis", "market positioning", "customer segments"
-- CUSTOMER EXPERIENCE indicators: "customer journey", "user experience", "customer satisfaction", "service quality"
-- FINANCIAL/ROI indicators: "ROI", "cost reduction", "revenue optimization", "profitability", "financial performance"
-- DIGITAL TRANSFORMATION indicators: "digital adoption", "technology implementation", "automation", "digital capabilities"
-- OPERATIONAL indicators: "process improvement", "efficiency", "workflow", "operational excellence", "productivity"
+Use only the evidence present above. If something is missing, mark **TBD** and add a **Data Gap & Collection Plan** (method, owner, ETA, acceptance criteria).
+Do **not** invent facts. Every computed number shows **unit**, **timeframe**, and **formula**.
 
-DOMAIN-SPECIFIC FEASIBILITY ANALYSIS:
-Based on the identified domain, conduct feasibility analysis with appropriate emphasis:
+────────────────────────────────────────────────────────────────────────────────────────
+A) CRITERIA — VERSION & LOCK (Paste this header verbatim with your filled values)
 
-FOR MARKET STUDIES - Emphasize:
-1. **Market Viability Assessment**: Market size, growth potential, competitive landscape, customer demand validation
-2. **Competitive Positioning Feasibility**: Differentiation potential, competitive advantages, market entry barriers
-3. **Customer Validation**: Target segment validation, value proposition testing, customer acquisition feasibility
-4. **Go-to-Market Feasibility**: Channel viability, marketing approach effectiveness, sales process feasibility
+Criteria — Version & Lock
+- **Criteria Version:** v1.0
+- **Locked At:** {current_timestamp}
+- **Lock Hash (SHA256 text):** criteria-v1.0:<short-hash>  ← *Downstream agents must cite this exact string*
 
-FOR CUSTOMER EXPERIENCE - Focus on:
-1. **Experience Design Feasibility**: Journey mapping viability, touchpoint optimization potential, service design capability
-2. **User Adoption Assessment**: Adoption barriers, user readiness, experience change management
-3. **Service Delivery Capability**: Operational capacity, service quality standards, delivery channel effectiveness
-4. **Experience Measurement**: Customer feedback systems, experience metrics, continuous improvement capability
+Locked Decision Criteria (Σ pesos = 1.00)
+| ID     | Criterion         | Group       | Weight | Metric            | Unit | Source/System | Cadence   | Threshold (Warn/Alert) | Owner        | Why |
+|--------|-------------------|-------------|-------:|-------------------|------|---------------|-----------|------------------------|--------------|-----|
+| CRIT-1 | ROI_12m           | Outcome     | 0.20   | ROI               |  %   | Finance DW    | Monthly   | 10 / 5                 | Finance Lead | Capital efficiency gate |
+| CRIT-2 | GDPR_Compliance   | Constraint  | 0.15   | Pass/Fail         | bin  | Legal         | Milestone | Pass / Fail            | Legal        | Legal gating criterion |
+| CRIT-3 | Time_to_Impact    | Outcome     | 0.25   | TTI               | weeks| PMO           | Bi-weekly | 8 / 12                 | PMO          | Urgency window |
+| CRIT-4 | Adoption_90d      | Outcome     | 0.25   | % active users    |  %   | Analytics     | Weekly    | 30 / 20                | Product      | Revenue predictor |
+| CRIT-5 | Reliability_SLO   | Outcome     | 0.15   | Availability      |  %   | SRE           | Daily     | 99.5 / 99.0            | SRE          | SLA/churn risk |
 
-FOR FINANCIAL/ROI - Prioritize:
-1. **Financial Viability**: Cost-benefit analysis, ROI projections, payback period, financial risk assessment
-2. **Investment Justification**: Capital requirements, funding sources, financial sustainability, value creation
-3. **Cost Management**: Cost structure optimization, expense control, efficiency improvements
-4. **Revenue Enhancement**: Revenue model viability, pricing strategy, monetization opportunities
+**Weights Sum:** 1.00  • **Validation:** use CodeInterpreterTool or JSONSchemaValidatorTool if available.
+**Normalization (0–1) Rules (must state floors/caps):**
+- ROI_12m (%): score=0 at 0%; 0.5 at 10% (warn); 1 at ≥20% (cap).
+- Time_to_Impact (weeks): score=1 at ≤4; 0.5 at 8 (warn); 0 at ≥12 (alert).
+- Adoption_90d (%): score=0 at 0; 0.5 at 30 (warn); 1 at ≥50.
+- Reliability_SLO (%): score=0 at ≤99.0 (alert); 0.5 at 99.5 (warn); 1 at ≥99.9.
+- GDPR_Compliance (bin): Pass=1; Fail=0 (gating: Fail ⇒ overall score=0 and **No-Go** regardless of others).
 
-FOR DIGITAL TRANSFORMATION - Balance:
-1. **Technical Feasibility**: Technology capability, infrastructure readiness, integration complexity, scalability
-2. **Organizational Readiness**: Digital maturity, change capacity, skill gaps, cultural alignment
-3. **Implementation Feasibility**: Rollout strategy, training requirements, adoption timeline, success factors
-4. **Value Realization**: Digital ROI, capability enhancement, competitive advantage, performance improvement
+**Worked Example (Scoring)**
+| Criterion       | Measured Value | Unit | Normalized (0–1) | Weight | Contribution (=Norm×W) | Why |
+|-----------------|----------------|------|------------------:|-------:|-----------------------:|-----|
+| ROI_12m         | 12             |  %   | 0.60              | 0.20   | 0.12                   | Above warn, below cap |
+| Time_to_Impact  | 6              | weeks| 0.75              | 0.25   | 0.19                   | Early impact vs window |
+| Adoption_90d    | 35             |  %   | 0.58              | 0.25   | 0.15                   | Near warn→acceptable  |
+| Reliability_SLO | 99.6           |  %   | 0.60              | 0.15   | 0.09                   | Above warn            |
+| GDPR_Compliance | Pass           | bin  | 1.00              | 0.15   | 0.15                   | Gating passed         |
+| **Total**       | —              | —    | —                 | **1.00**| **0.70**              | **Go if ≥ threshold** |
 
-FOR OPERATIONAL IMPROVEMENTS - Assess:
-1. **Process Feasibility**: Process redesign potential, workflow optimization, automation opportunities
-2. **Resource Capability**: Capacity requirements, skill availability, infrastructure needs, investment requirements
-3. **Operational Impact**: Performance improvement potential, efficiency gains, quality enhancement
-4. **Change Management**: Implementation readiness, stakeholder buy-in, transition planning, risk mitigation
+**Governance (changes)**
+- Change Request required, approver: Steering Committee, quorum: **2/3**, action: **version bump** (e.g., v1.1) and new lock hash.
+- Any thresholds/weights elsewhere must match this lock or be corrected/flagged in “Corrections & Consistency” below.
 
-DECISION-MAKING REQUIREMENTS:
-- For EVERY decision, recommendation, assessment, or conclusion, provide explicit reasoning that is contextually appropriate
-- Explain WHY you reached each decision within the specific problem domain
-- Document what domain-relevant evidence or analysis supports your conclusions
-- Mention what alternatives you considered within the problem context and why you chose the recommended path
-- Make your decision-making process transparent, traceable, and contextually informed
+────────────────────────────────────────────────────────────────────────────────────────
+B) CORRECTIONS & CONSISTENCY
+List and fix any mismatches found across inputs/agents (examples: “ROI 20%/18m” variants). This document is the single source of truth.
 
-Analysis Dimensions (Adapted to Context):
-1. **Technology Feasibility** (Context-Adapted)
-   - Technical requirements and capabilities relevant to the domain
-   - Infrastructure needs and constraints specific to the context
-   - Technology risks and mitigation strategies appropriate to the domain
-   - DECISION REASONING: Explain why you assess the technology as feasible/not feasible within this specific context
+| Item Found | Where | Conflict | Resolution (align to this Lock) | Owner | Due |
+|------------|-------|----------|----------------------------------|-------|-----|
 
-2. **Legal and Regulatory Analysis** (Domain-Specific)
-   - Compliance requirements and regulations relevant to the problem domain
-   - Legal risks and liability considerations specific to the context
-   - Regulatory approval processes applicable to the domain
-   - DECISION REASONING: Justify your legal risk assessments with domain-specific compliance considerations
+────────────────────────────────────────────────────────────────────────────────────────
+C) MULTIDISCIPLINARY FEASIBILITY — **Seven Lenses with WHY-chains**
 
-3. **Financial Feasibility** (Context-Appropriate)
-   - Cost-benefit analysis framework suitable for the domain
-   - Resource requirements and budget implications specific to the context
-   - ROI projections and financial risks relevant to the problem type
-   - DECISION REASONING: Explain your financial viability conclusions with domain-appropriate investment reasoning
+Instruction for all lenses:
+- Every metric shows **unit** and **frame** (per month/quarter, cohort/geo, baseline date).
+- Every finding includes a **WHY** line: **evidence → inference → implication** with a short provenance cue *(Doc-ID/§ or URL+date)*.
+- If missing, mark **TBD** and add to **Data Gap & Collection Plan** (method, owner, ETA, acceptance).
 
-4. **Market Analysis** (Domain-Focused)
-   - Market conditions and competitive landscape specific to the context
-   - Target audience and stakeholder analysis relevant to the domain
-   - Market entry barriers and opportunities within the problem space
-   - DECISION REASONING: Justify your market opportunity assessments with context-specific strategic reasoning
+1) Technology (Architecture • Data • Reliability • Security • Cost)
+- Deliver: **Tech Assessment Matrix**, **Interface/Data Contracts**, **Security & Privacy Map**, **Acceptance Gates** (SLOs, error budget, cost-to-serve).
+- Quantify: latency p95/p99 [ms], throughput [req/s], availability [%], error budget [h/period], RPO/RTO [min], unit costs [€/1k req], data freshness [min].
 
-5. **Communication Strategy** (Context-Sensitive)
-   - Stakeholder communication requirements specific to the domain
-   - Change management considerations appropriate to the context
-   - Internal and external messaging needs relevant to the problem type
-   - DECISION REASONING: Explain your communication strategy choices with domain-appropriate rationale
+2) Legal & Regulatory (GDPR/DPIA • IP/Contracts • Approvals • Accessibility)
+- Deliver: **Compliance Register**, **Data Transfer & Residency**, **IP/Contractual Terms**, **Acceptance Gates** (lawful basis, DPIA, DPAs/SCCs, WCAG).
+- Quantify: risk (prob×impact), approval lead times [days], accessibility defect rates.
 
-6. **Behavioral and Cultural Factors** (Domain-Relevant)
-   - User adoption challenges specific to the context
-   - Organizational culture impact relevant to the domain
-   - Behavioral change requirements appropriate to the problem type
-   - DECISION REASONING: Justify your behavioral assessments with context-specific adoption considerations
+3) Finance (Model • Scenarios O/B/P • Sensitivity • Unit Economics • Guardrails)
+- Deliver: **Scenario Summary**, **Unit Economics**, **Sensitivity (tornado)**, **Guardrails & Triggers**.
+- Formulas: ROI, NPV (state WACC inputs), IRR, Payback, LTV, CAC; normalization rules (FX/CPI/PPP) + sources & dates.
 
-Provide integrated analysis with cross-dimensional risk assessment and recommendations, ensuring every decision includes clear justification that is contextually appropriate to the identified problem domain.
+4) Market & Competition (TAM/SAM/SOM • Segmentation/JTBD • Demand/Elasticity • Supply • GTM)
+- Deliver: **TAM–SAM–SOM** (top-down & bottom-up), **Segmentation & JTBD**, **Demand & Pricing**, **Supply Constraints**, **Competition & Positioning**, **GTM & Channels**.
+- Quantify: CAGR, forecast horizon, O/B/P bands, elasticity ε, capacity [units/period], lead times [days], CAC/LTV/payback.
+
+5) Communication (Stakeholders • Message House • Channels • Change-Comms • Measurement)
+- Deliver: **Audience–Message–Channel Matrix**, **Change-Comms Milestones** with KPIs (open %, CTR %, conversion %, sentiment).
+
+6) Behavioral (Frictions • Biases • Nudges • Experiments • Ethics)
+- Deliver: **Barrier → Lever Mapping**, **Experiment Plan** (α, power, MDE, n, duration, guardrails, analysis).
+- Include: defaults, framing, social proof, scarcity/urgency (truthful), commitment/consistency, friction reduction, salience; ethics & consent.
+
+7) Internal/Organizational (Capabilities • Governance • RACI • Capacity • Change Impact)
+- Deliver: **Capability & Gap Analysis**, **RACI (draft)**, **Capacity & Hiring** with time-to-fill [days] and buffers.
+
+**Cross-Lens Consistency Check (Mandatory)**
+- No contradictions across tech/legal/finance/market/comms/behavioral/org. Note any interdependencies affecting criteria or risk.
+
+────────────────────────────────────────────────────────────────────────────────────────
+D) CROSS-LENS RISK & INTERDEPENDENCY
+- Integrated **Risk Register**: probability [0–1 or L/M/H] × impact [€/unit or L/M/H], interactions, mitigations, owners, due.
+- **Dependency Map** and **critical path** across lenses; note impacts on Time_to_Impact and Reliability_SLO.
+
+────────────────────────────────────────────────────────────────────────────────────────
+E) DECISION FRAMES & SCORING (ONLY the **LOCKED** criteria)
+- Evaluate **≥2 frames** (e.g., Value-at-Risk vs Speed-to-Learn; Share-Grab vs Profit-First) — explain **WHY** each fits.
+- Score **Conservative / Balanced / Bold** archetypes using the normalization rules above; show per-criterion contributions.
+- **No** weight changes post hoc.
+
+────────────────────────────────────────────────────────────────────────────────────────
+F) VERDICT & TIMELINE
+- **Go / No-Go / Conditional** with explicit **thresholds** (units/timeframes) aligned to the Lock.
+- **Decision Horizon:** 0–14 days / 15–30 days, named owners, effort (hrs/person) and budget (€).
+- **WHY**: 3 bullets (evidence → inference → recommendation) across key lenses.
+
+────────────────────────────────────────────────────────────────────────────────────────
+G) DATA GAPS & COLLECTION PLAN (MANDATORY for each TBD)
+| Gap | Why It Matters | Method (instrument/test/query) | Owner | ETA | Acceptance Criteria | Expected Source |
+|-----|----------------|---------------------------------|-------|-----|---------------------|-----------------|
+
+────────────────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CHECKLIST (ALL MUST BE YES)
+- five_criteria_present_verbatim == true
+- weights_sum_to_1_00 == true
+- warn_alert_defined_per_criterion == true
+- owners_and_cadences_present == true
+- version_and_lock_hash_present == true
+- normalization_rules_and_worked_example_present == true
+- governance_change_request_and_quorum_defined == true
+- corrections_consistency_section_completed == true
+- seven_feasibility_lenses_with_units_and_provenance == true
+- cross_lens_risk_and_dependency_map_present == true
+- ≥2_decision_frames_and_three_archetypes_scored == true
+- verdict_with_explicit_thresholds_and_timeline == true
+- data_gaps_collection_plan_present == true
+- why_chain_for_every_major_claim_present == true
+
+TOOLS (if available; fail gracefully)
+- CriteriaLockerTool, JSONSchemaValidatorTool, RiskRegisterTool, MarketSizingTool, ElasticityEstimatorTool,
+  TimeSeriesForecastTool, PositioningMapTool, UnitEconomicsTool, MarkdownFormatterTool, CodeInterpreterTool.
+If a tool fails, proceed manually and note the fallback in the WHY of the affected section.
 """
-            ),
-            expected_output=(
-                """
-A comprehensive multidisciplinary feasibility report in PDF/Markdown format containing:
+        expected_output = """
+# Multidisciplinary Feasibility & Criteria — Locked, Auditable Report
 
-# Multidisciplinary Feasibility Analysis
+> Non-negotiables:
+> • Every claim includes a **WHY** (evidence → inference → implication).  
+> • Every metric carries a **unit** and a **time frame** (cohort/geo/period).  
+> • Compact **provenance** cues (Doc-ID/§ or URL + access date) for material facts.  
+> • Tables use stable IDs (CRIT-#, TECH-#, LEG-#, FIN-#, MKT-#, ORG-#, COMMS-#, BEH-#, RISK-#).  
 
-## Executive Summary
-- **Problem Domain Identified**: [Market Study/Customer Experience/Financial-ROI/Digital Transformation/Operational]
-- **Feasibility Assessment Approach**: [How analysis was tailored to the domain context]
-- **Overall Feasibility Rating**: [Feasible/Conditionally Feasible/Not Feasible with domain-specific reasoning]
-- **Critical Success Factors**: [Domain-appropriate factors for success]
-- **Key Risks**: [Highest priority risks specific to the context]
-- **Recommended Action**: [Go/No-Go/Conditional with contextual justification]
-- **Decision Rationale Summary**: [High-level reasoning for all key recommendations]
+---
 
-## Problem Context and Domain Analysis
-### Domain Identification
-- **Primary Domain**: [Identified problem domain with supporting evidence]
-- **Context Characteristics**: [Key features that define this problem space]
-- **Domain-Specific Requirements**: [Unique considerations for this context]
-- **Success Criteria**: [Domain-appropriate metrics and outcomes]
+## 0) Criteria — Version & Lock
 
-### Feasibility Framework Adaptation
-- **Analysis Approach**: [How feasibility assessment was tailored to the domain]
-- **Evaluation Criteria**: [Domain-specific criteria used for assessment]
-- **Risk Framework**: [Context-appropriate risk assessment methodology]
-- **Decision Framework**: [Domain-relevant decision-making criteria]
+**Criteria Version:** v1.0  
+**Locked At:** {current_timestamp}  
+**Lock Hash (SHA256 of criteria text):** criteria-v1.0:<computed-lock-hash>  
+*(Cite this hash in ALL downstream agents.)*
 
-## Technology Feasibility Assessment (Context-Adapted)
+### Locked Decision Criteria (Σ weights = **1.00**, EXACT names)
+| ID     | Criterion          | Group       | Weight | Metric           | Unit | Source        | Cadence   | Threshold (Warn / Alert) | Owner    | WHY |
+|--------|--------------------|-------------|-------:|------------------|------|---------------|-----------|---------------------------|----------|-----|
+| CRIT-1 | ROI_12m            | Outcome     | 0.20   | ROI              | %    | Finance DW    | Monthly   | 10 / 5                    | Finance  | Capital allocation gate; links value to cost of capital |
+| CRIT-2 | GDPR_Compliance    | Constraint  | 0.15   | Pass/Fail        | bin  | Legal         | Milestone | Pass / Fail               | Legal    | Legal gating condition to operate |
+| CRIT-3 | Time_to_Impact     | Outcome     | 0.25   | TTI              | weeks| PMO           | Bi-weekly | 8 / 12                    | PMO      | Urgency window; when value appears |
+| CRIT-4 | Adoption_90d       | Outcome     | 0.25   | % active users   | %    | Analytics     | Weekly    | 30 / 20                   | Product  | Leading indicator for retention & revenue |
+| CRIT-5 | Reliability_SLO    | Outcome     | 0.15   | Availability     | %    | SRE           | Daily     | 99.5 / 99.0               | SRE      | SLA/churn risk; platform stability |
 
-FOR MARKET STUDIES:
-### Market Research Technology Capability
-- **Data Collection Technology**: [Feasibility of research tools and platforms]
-- **Analytics Capability**: [Market analysis and competitive intelligence tools]
-- **Integration Requirements**: [Technology integration with existing market research systems]
-- **DECISION REASONING**: [Why market research technology is assessed as feasible/not feasible for this specific market context]
+**Weights (sum):** **1.00**  
+**WHY (criteria & weights):** Reflect executive priorities and enabling risks (legal/operational) evidenced in inputs.
 
-FOR CUSTOMER EXPERIENCE:
-### Experience Technology Platform
-- **Customer Journey Technology**: [Journey mapping and analytics platforms]
-- **Experience Measurement Tools**: [Customer feedback and satisfaction measurement systems]
-- **Service Delivery Technology**: [Digital touchpoint and service channel capabilities]
-- **DECISION REASONING**: [Why experience technology is viable/not viable for this specific customer context]
+#### Scoring Rules (0–1 normalization; monotonic, capped)
+- **ROI_12m (%)**: 0 at 0%; 0.5 at 10% (warn); 1.0 at ≥20% (cap).  
+- **Time_to_Impact (weeks)**: 1.0 at ≤4; 0.5 at 8 (warn); 0 at ≥12 (alert). *(lower is better)*  
+- **Adoption_90d (%)**: 0 at 0; 0.5 at 30 (warn); 1.0 at ≥50.  
+- **Reliability_SLO (%)**: 0 at ≤99.0 (alert); 0.5 at 99.5 (warn); 1.0 at ≥99.9.  
+- **GDPR_Compliance**: Pass=1, Fail=0 (gating; if 0, total score is **blocked**).
 
-FOR FINANCIAL/ROI:
-### Financial Technology Infrastructure
-- **Financial Analytics Platform**: [Cost analysis and ROI measurement capabilities]
-- **Performance Monitoring Tools**: [Financial tracking and reporting systems]
-- **Integration Capability**: [Financial system integration requirements]
-- **DECISION REASONING**: [Why financial technology approach is feasible/not feasible for this ROI context]
+*Normalization note:* document the mapping function (linear/piecewise), bounds, and historical references if available.
 
-FOR DIGITAL TRANSFORMATION:
-### Digital Platform Capability
-- **Technology Infrastructure**: [Digital platform and integration capabilities]
-- **Scalability Assessment**: [System performance and growth capacity]
-- **Security and Compliance**: [Data protection and regulatory compliance capability]
-- **DECISION REASONING**: [Why digital technology is ready/not ready for this transformation context]
+#### Governance (changes)
+- This section is **immutable** once locked.  
+- Any change requires a **Change Request**, approved by the **Steering Committee** (2/3 rule), and creates a **new version** (v1.1, v2.0) with a **new lock hash**.  
+- Any duplicated/ambiguous thresholds outside this document are **void** and must be corrected to match this lock.
 
-FOR OPERATIONAL IMPROVEMENTS:
-### Operational Technology Assessment
-- **Process Technology**: [Workflow and process management capabilities]
-- **Automation Potential**: [Process automation and efficiency technology]
-- **Integration Requirements**: [Operational system integration needs]
-- **DECISION REASONING**: [Why operational technology supports/doesn't support this improvement context]
+---
 
-## Legal and Regulatory Analysis (Domain-Specific)
+## 1) Executive Summary (≤1 page)
+- **Core Problem (symptom → likely cause → opportunity):** _TBD_  
+- **Feasibility outlook (high/medium/low)** with 3 quantified reasons (unit/frame) + provenance.  
+- **Verdict:** **Go / No-Go / Conditional** with **measurable conditions** (threshold + date + evidence).  
+- **Decision timeline:** 0–14 days / 15–30 days (owners, effort, €).  
+**WHY:** tie locked criteria to key drivers (finance, tech, legal, adoption, reliability).
 
-### Context-Relevant Compliance Requirements
-- **Domain-Specific Regulations**: [Laws and standards applicable to this problem context]
-- **Compliance Complexity**: [Regulatory burden specific to the domain]
-- **Legal Risk Assessment**: [Legal exposure relevant to the context]
-- **DECISION REASONING**: [Why legal approach is compliant/non-compliant for this specific domain]
+---
 
-### Regulatory Strategy (Context-Appropriate)
-- **Compliance Approach**: [Domain-specific regulatory strategy]
-- **Risk Mitigation**: [Legal risk management for this context]
-- **Ongoing Compliance**: [Regulatory monitoring needs for this domain]
-- **DECISION REASONING**: [Why this compliance strategy is optimal for this specific context]
+## 2) Problem Definition (Define)
+### 2.1 Symptom → Likely Cause → Opportunity
+- **Symptom (unit/frame):** _TBD_  
+- **Likely Cause(s):** _TBD_  
+- **Opportunity:** _TBD_  
+**WHY:** evidence → inference → implication with source and dates.
 
-## Financial Feasibility (Domain-Focused)
+### 2.2 Assumptions & Hard Constraints
+| ID | Type (Legal/Tech/Time/Budget/Quality) | Statement | Unit/Limit | Source/Date | WHY binding |
+|----|---------------------------------------|-----------|------------|-------------|-------------|
+| CONSTR-1 | Time | Launch window | YYYY-MM-DD | _TBD_ | Seasonality/lead time |
 
-### Investment Analysis (Context-Specific)
-- **Domain-Appropriate Investment**: [Investment requirements specific to the problem context]
-- **Cost Structure**: [Cost patterns typical for this domain]
-- **Funding Strategy**: [Financing approach suitable for this context]
-- **DECISION REASONING**: [Why investment is justified/not justified for this specific domain context]
+### 2.3 Knowledge Gaps & Validation Plan
+| Gap | Why It Matters | Method | Sample/Power | Owner | ETA | Acceptance |
+|-----|-----------------|--------|--------------|-------|-----|-----------|
+| Price elasticity | Drives ROI/Payback | Price A/B | n=TBD | _TBD_ | _TBD_ | |ε|∈[0.6,1.2], p<0.05 |
 
-### Financial Projections (Context-Relevant)
-- **Domain-Specific ROI**: [Return expectations appropriate to the problem context]
-- **Financial Metrics**: [Performance indicators relevant to the domain]
-- **Risk Assessment**: [Financial risks specific to the context]
-- **DECISION REASONING**: [Why financial projections are realistic/unrealistic for this domain]
+---
 
-### Financial Strategy (Domain-Appropriate)
-- **Resource Allocation**: [Financial resource strategy for this context]
-- **Performance Monitoring**: [Financial tracking approach for this domain]
-- **Contingency Planning**: [Financial risk management for this context]
-- **DECISION REASONING**: [Why financial strategy is sound/unsound for this specific situation]
+## 3) Seven-Lens Feasibility (deep, evidence-first)
 
-## Market Analysis (Context-Focused)
+### 3.1 Technology (Architecture • Data • SRE • Security • Cost)
+**Tech Assessment Matrix**  
+| Capability/Topic | Current | Target/SLO (unit) | Fit/Gap | Effort (S/M/L) | Key Risk | Mitigation | Owner | Due | Source | WHY |
+|---|---|---|---|---|---|---|---|---|---|---|
 
-### Market Viability (Domain-Specific)
-- **Market Context Assessment**: [Market conditions relevant to the specific domain]
-- **Competitive Landscape**: [Competition analysis specific to the problem context]
-- **Market Opportunity**: [Opportunities within the relevant domain]
-- **DECISION REASONING**: [Why market opportunity is viable/not viable for this specific context]
+**Interfaces & Data Contracts**  
+| System | API/Data | Fields | SLA (unit) | Volume (unit/period) | Latency (ms) | Errors (%) | Dependencies | Source | WHY |
 
-### Stakeholder Analysis (Context-Relevant)
-- **Domain-Specific Stakeholders**: [Key stakeholders relevant to this problem context]
-- **Stakeholder Dynamics**: [Influence patterns specific to the domain]
-- **Engagement Strategy**: [Stakeholder management approach for this context]
-- **DECISION REASONING**: [Why stakeholder strategy is effective/ineffective for this domain]
+**Security & Privacy**  
+| Asset | Data Class | Control | STRIDE Threat | Residual Risk | Mitigation | Owner | Source | WHY |
 
-### Market Strategy (Domain-Appropriate)
-- **Go-to-Market Approach**: [Market entry strategy suitable for this context]
-- **Positioning Strategy**: [Market positioning relevant to the domain]
-- **Competitive Strategy**: [Competitive approach appropriate to the context]
-- **DECISION REASONING**: [Why market strategy is suitable/unsuitable for this specific domain]
+**Acceptance gates:** SLOs defined, error budget computed, data contracts documented, cost-to-serve quantified (€/1k req, €/GB/month).
 
-## Communication Strategy (Context-Sensitive)
+### 3.2 Legal & Regulatory
+**Compliance Register**  
+| Requirement | Applicability | Gap | Risk (p×i) | Mitigation | Owner | Deadline | Evidence | WHY |
 
-### Domain-Appropriate Communication
-- **Communication Framework**: [Communication approach tailored to the problem context]
-- **Stakeholder Messaging**: [Messages relevant to the specific domain]
-- **Channel Strategy**: [Communication channels appropriate to the context]
-- **DECISION REASONING**: [Why communication approach is effective/ineffective for this domain]
+**Data Transfer/Residency & IP/Contracts**  
+Tables for mechanisms (DPA/SCC), risks, and key clauses (IP/indemnity/LoL).  
+**Acceptance gates:** Lawful basis / DPIA as required; WCAG plan; retention/deletion SLAs.
 
-### Change Management (Context-Specific)
-- **Change Strategy**: [Change management approach for this specific context]
-- **Resistance Management**: [Resistance handling specific to the domain]
-- **Adoption Strategy**: [Adoption approach relevant to the problem context]
-- **DECISION REASONING**: [Why change approach is suitable/unsuitable for this specific situation]
+### 3.3 Financial
+**Scenario Summary (O/B/P)**  
+| KPI | Formula | Inputs (unit) | Base | O | P | Source | WHY |
+|-----|---------|----------------|-----:|---:|---:|-------|-----|
+Include ROI [%], NPV [€ @ WACC], IRR [%], Payback [months]; **sensitivities** (tornado) for price/volume/churn/COGS/CAC/FX.
 
-## Behavioral and Cultural Factors (Domain-Relevant)
+**Unit Economics**  
+| Segment | ARPU (€/period) | COGS (€/unit) | GM % | CAC (€/cust) | Payback (months) | LTV (€/cust) | LTV:CAC | Source | WHY |
 
-### Adoption Feasibility (Context-Specific)
-- **User Adoption**: [Adoption patterns relevant to this domain]
-- **Behavioral Change**: [Change requirements specific to the context]
-- **Cultural Alignment**: [Cultural factors affecting this domain]
-- **DECISION REASONING**: [Why adoption is likely/unlikely in this specific context]
+### 3.4 Market & Competition
+**TAM–SAM–SOM (top-down & bottom-up)** with reconciliation.  
+**Forecast & Elasticity** (method, horizon, O/B/P; own/cross ε).  
+**Competition & Positioning** (table + map).  
+**GTM/Channels** (CAC/LTV/payback; funnel).  
+**Supply Constraints** (capacity [units/period], lead time [days], SLAs).
 
-### Organizational Impact (Domain-Focused)
-- **Cultural Readiness**: [Organizational preparedness for this domain]
-- **Capability Requirements**: [Skills and capabilities needed for this context]
-- **Change Capacity**: [Organizational change capability for this domain]
-- **DECISION REASONING**: [Why organizational impact is manageable/unmanageable for this context]
+### 3.5 Communication Strategy
+**Audience–Message–Channel Matrix** with KPIs (open/CTR/conv/sentiment) and cadences.
 
-## Integrated Risk Assessment (Context-Informed)
+### 3.6 Behavioral & Cultural Factors
+**Barrier → Lever Mapping** with nudges (defaults, framing, social proof, salience, commitment, timing), **expected lift** (pp) and **primary metric**.  
+**Experiment Plan** (α, power, MDE, n, duration, guardrails, ethics).
 
-### Domain-Specific Risk Analysis
-- **Context-Relevant Risks**: [Risks specific to the identified domain]
-- **Risk Interactions**: [How risks compound within this context]
-- **Mitigation Strategies**: [Risk management approaches for this domain]
-- **DECISION REASONING**: [Why risk profile is acceptable/unacceptable for this context]
+### 3.7 Internal / Organizational
+**Capability & Gap Analysis**, **RACI (draft)**, **Capacity & Hiring** (FTE, time-to-fill), governance/escalations.
 
-### Risk Prioritization (Domain-Appropriate)
-| Risk Category | Domain Relevance | Probability | Impact | Priority | Mitigation Strategy |
-|---------------|-----------------|-------------|---------|----------|-------------------|
-| [Context Risk 1] | [High/Med/Low] | [H/M/L] | [H/M/L] | [1-10] | [Domain-specific approach] |
-| [Context Risk 2] | [High/Med/Low] | [H/M/L] | [H/M/L] | [1-10] | [Domain-specific approach] |
+---
 
-## Strategic Recommendations (Context-Informed)
+## 4) Cross-Lens Risks & Interdependencies
+**Integrated Risk Register**  
+| ID | Description | Lens | Prob (0–1) | Impact (€/k or 0–1) | Score | Interactions | Mitigation | Owner | Due | WHY |
+|----|-------------|------|-----------:|---------------------:|------:|-------------|-----------|-------|-----|-----|
 
-### Feasibility Conclusion (Domain-Specific)
-- **Overall Assessment**: [Feasible/Conditionally Feasible/Not Feasible for this specific domain]
-- **CRITICAL DECISION REASONING**: [Comprehensive justification for the feasibility recommendation within this domain context, explaining all domain-specific factors considered, alternatives evaluated within the context, and why this conclusion is most appropriate for this specific problem space]
+**Dependency Map (Critical Path)** with predecessors→successors and coupling points.
 
-### Context-Appropriate Success Factors
-- **Domain-Specific Success Elements**: [Critical factors for success within this context]
-- **Context-Relevant KPIs**: [Performance indicators appropriate to the domain]
-- **Success Measurement**: [Measurement framework suitable for this context]
-- **DECISION REASONING**: [Why these success factors are critical for this specific domain]
+---
 
-### Domain-Informed Next Steps
-- **Immediate Actions**: [Next steps appropriate to the problem context]
-- **Preparation Requirements**: [Preparation needs specific to the domain]
-- **Decision Timeline**: [Timeline recommendations suitable for this context]
-- **DECISION REASONING**: [Why these actions and timeline are appropriate for this specific domain]
+## 5) Decision Frames & Multi-Criteria Scoring
 
-## Decision Audit Trail (Context-Specific)
+### 5.1 Frames Considered (≥2)
+- **Value-at-Risk vs Speed-to-Learn** (and/or **Share-Grab vs Profit-First**) — summarize implications.
 
-### Key Domain-Informed Decisions
-- [List all major decisions made with domain context noted]
+### 5.2 Scoring (ONLY the **Locked Criteria**)
+**Example (archetypes: Conservative / Balanced / Bold)**  
+| Solution Type | Total (0–1) | ROI_12m | GDPR | TTI | Adoption_90d | Reliability_SLO | WHY |
+|---------------|------------:|--------:|-----:|----:|-------------:|-----------------:|-----|
+| Conservative  | 0.68        | 0.22    | 0.15 |0.08| 0.12         | 0.11            | Strong compliance & reliability; slower upside |
+| Balanced      | 0.74        | 0.24    | 0.15 |0.10| 0.15         | 0.10            | Best trade-off across adoption and TTI |
+| Bold          | 0.69        | 0.26    | 0.15 |0.06| 0.17         | 0.05            | Higher adoption upside; more TTI/SLO exposure |
 
-### Context-Appropriate Decision Rationale
-- [For each decision, explain reasoning within the specific domain context]
+**Diversity check:** alternatives are not >75% similar (apply diversity penalty if they are).  
+**Note:** **Do NOT** change weights after seeing scores.
 
-### Domain-Relevant Alternative Considerations
-- [Document alternatives considered within the problem context]
+---
 
-### Context-Specific Supporting Evidence
-- [Reference evidence and analysis supporting decisions within the domain]
+## 6) Strategic Verdict, Conditions & Timeline
+**Verdict:** **Go / No-Go / Conditional**  
+**Conditions (if Conditional):** measurable thresholds (e.g., ROI_12m ≥ X%, Payback ≤ Y months, Adoption_90d ≥ Z%, Reliability_SLO ≥ W%, DPIA=Pass by YYYY-MM-DD).  
+**Rationale (3× WHY):**  
+- **Finance:** evidence → inference → implication  
+- **Technology:** evidence → inference → implication  
+- **Market/Behavior:** evidence → inference → implication  
+
+**Decision Timeline**  
+- **0–14 days:** tasks, owners, hours, € (measurable)  
+- **15–30 days:** tasks, owners, hours, € (measurable)
+
+---
+
+## 7) Example Scoring Table (0–1 rules shown)
+> Include at least **one** fully worked example per criterion with formula, inputs, and result.
+
+| Criterion        | Raw Value (unit) | Rule (to 0–1)                        | Score | WHY |
+|------------------|------------------|--------------------------------------|------:|-----|
+| ROI_12m (%)      | 14               | 0 at 0; 0.5 at 10; 1 at ≥20 (cap)    | 0.60  | Above warn, below cap; acceptable if other gates pass |
+| Time_to_Impact   | 9 weeks          | 1 at ≤4; 0.5 at 8; 0 at ≥12          | 0.40  | Near alert; mitigable with pilot phasing |
+| Adoption_90d (%) | 32               | 0 at 0; 0.5 at 30; 1 at ≥50          | 0.53  | Slightly above warn; depends on behavioral levers |
+| Reliability_SLO  | 99.6             | 0 at ≤99.0; 0.5 at 99.5; 1 at ≥99.9  | 0.67  | Above warn; some headroom |
+| GDPR             | Pass             | Pass=1; Fail=0 (gating)              | 1.00  | Gate satisfied |
+
+---
+
+## 8) Acceptance Checklist (YES/NO)
+- weights_sum_to_1 == **true**  
+- warn_and_alert_thresholds_defined_per_criterion == **true**  
+- owners_and_cadences_assigned == **true**  
+- criteria_locked_and_lock_hash_present == **true**  
+- technology_table_present == **true**  
+- legal_compliance_map_present == **true**  
+- finance_scenarios_and_sensitivity_present == **true**  
+- market_tam_sam_som_present == **true**  
+- segmentation_with_jtbd == **true**  
+- demand_forecast_with_obp == **true**  
+- elasticity_estimated_or_flagged == **true**  
+- supply_constraints_and_sla == **true**  
+- competition_profiles_and_positioning_map == **true**  
+- gtm_channels_with_cac_ltv_payback == **true**  
+- pricing_with_range_and_rationale == **true**  
+- unit_economics_reported == **true**  
+- comms_audience_channel_table_present == **true**  
+- behavioral_levers_table_present == **true**  
+- internal_capability_gap_table_present == **true**  
+- cross_lens_risk_matrix_and_dependencies_present == **true**  
+- go_nogo_or_conditional_with_thresholds_and_timeline == **true**
+
+---
+
+## 9) Traceability & Provenance
+- **Sources (Doc IDs/Systems + dates):** _TBD_  
+- **Tools Used:** CriteriaLockerTool, JSONSchemaValidatorTool, RiskRegisterTool, MarketSizingTool, ElasticityEstimatorTool, TimeSeriesForecastTool, PositioningMapTool, UnitEconomicsTool, MarkdownFormatterTool, CodeInterpreterTool.  
+- **Assumptions (explicit):** _TBD_  
+- **Reproducibility Notes:** normalization rules, data snapshots, seeds, versions.
+
+## Appendices
+- **A. Formulas & Definitions:** ROI, NPV, IRR, Payback, LTV, CAC, GRR/NRR, elasticity (own/cross).  
+- **B. Sensitivity (tornado):** driver deltas → KPI deltas.  
+- **C. Full RACI & Governance.**  
+- **D. Compliance Evidence** (DPIA, DPA, ISO/SOC, WCAG).  
+- **E. Experiment Designs** (pricing/adoption/comms).
+
 """
-            ),
+
+
+        return Task(
+            description=description,
+            expected_output=expected_output,
             agent=DecisionMultidisciplinaryAgent.create_agent(),
             markdown=True,
             output_file="feasibility_report.md"
