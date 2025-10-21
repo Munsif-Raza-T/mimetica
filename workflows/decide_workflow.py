@@ -24,8 +24,85 @@ from agents import (
 # Import utilities
 from utils import SessionManager, VectorStore
 from utils.enhanced_workflow_manager import EnhancedWorkflowManager
-from utils.agent_communication_logger import agent_comm_logger
+#from utils.agent_communication_logger import agent_comm_logger
 from config import config
+
+# -------------------------------------------
+# Context builders
+# -------------------------------------------
+def _phase_output_text(phase_key):
+    po = st.session_state.workflow_state.get('phase_outputs', {}).get(phase_key, {})
+    out = po.get('output')
+    if isinstance(out, dict):
+        return "\n".join(f"### {k}\n{v}" for k, v in out.items())
+    return str(out or "")
+
+def build_running_context(include_phases=None):
+    include_phases = include_phases or []
+    ctx = []
+    # 1) Collector Manifest 
+    ctx.append("## Dataset Manifest (collector)\n" + _phase_output_text('collection'))
+    # 2) Previews phases
+    for ph in include_phases:
+        if ph != 'collection':
+            ctx.append(f"## {ph.title()} Output\n{_phase_output_text(ph)}")
+    # 3) Runtime Data
+    ns = st.session_state.get('vector_namespace', 'mimetica/mixed')
+    lang = st.session_state.get('language_tag', 'en')
+    model = config.validate_and_fix_selected_model()
+    ctx.append(
+        f"\n\n### Runtime Context\n"
+        f"- namespace: {ns}\n- language: {lang}\n- model: {model}\n"
+    )
+    return "\n\n".join([c for c in ctx if c and c.strip()])
+# -------------------------------------------
+
+
+# 🔁 Reemplaza 'list[str]' por 'List[str]' para compatibilidad
+def _get_accumulated_context(phases: List[str]) -> str:
+    """
+    Build a unified context text combining project info, document summary, 
+    vector store metadata, and outputs from previous phases.
+    """
+    from utils import SessionManager
+    import streamlit as st
+
+    context_blocks = []
+
+    # Base project info
+    ws = st.session_state.workflow_state
+    project = ws.get("project_info", {})
+    documents = ws.get("documents", [])
+    lang = ws.get("language_tag", "en")
+
+    base_info = f"### 🧭 Contexto del Proyecto\n"
+    base_info += f"- Idioma objetivo: {lang}\n"
+    base_info += f"- Nombre: {project.get('name', 'No especificado')}\n"
+    base_info += f"- Descripción: {project.get('description', 'No especificada')}\n"
+    base_info += f"- Foco de análisis: {project.get('focus', 'No especificado')}\n"
+    base_info += f"- Documentos procesados: {len(documents)}\n"
+
+    # Add vectorization details if available
+    vector_info = ws.get("vector_store_status") or SessionManager.get_phase_output("collection")
+    if vector_info and isinstance(vector_info, dict):
+        base_info += f"- Vectorización: {vector_info.get('vector_status', 'Desconocida')}\n"
+        base_info += f"- Colección: {vector_info.get('collection', 'N/A')}\n"
+
+    context_blocks.append(base_info)
+
+    # Include outputs of previous phases (latest only, from session)
+    for phase in phases:
+        data = SessionManager.get_phase_output(phase)
+        if not data:
+            continue
+        text = data.get("output") if isinstance(data, dict) else str(data)
+        if text:
+            snippet = text[:1500] + "..." if len(text) > 1500 else text
+            context_blocks.append(f"### Output previo — {phase.upper()}\n{snippet}\n")
+
+    return "\n\n".join(context_blocks)
+
+
 
 class DecideWorkflow:
     """
@@ -131,9 +208,54 @@ class DecideWorkflow:
     
     def run_complete_workflow(self) -> Dict[str, Any]:
         """Run the complete DECIDE workflow using enhanced workflow manager"""
+        self._ensure_workflow_state()
         try:
+            if self.comm_logger:
+                self.comm_logger.clear_communications()
             SessionManager.add_log("INFO", "Starting enhanced DECIDE workflow execution")
             
+            # === Initialize base project context ===
+            project_info = st.session_state.workflow_state.get('project_info', {})
+            documents = st.session_state.workflow_state.get('documents', [])
+            language_tag = st.session_state.workflow_state.get('language_tag', 'en')
+            
+            # Retrieve current vector store status (for cross-phase traceability)
+            try:
+                vector_status = self.get_vector_store_status()
+            except Exception:
+                vector_status = "Unavailable"
+            
+            # Build unified base context
+            base_context = {
+                "project_name": project_info.get("name", ""),
+                "project_description": project_info.get("description", ""),
+                "focus": project_info.get("focus", ""),  # 👈 includes your 'focus' variable
+                "language_tag": language_tag,
+                "documents_count": len(documents),
+                "document_names": [d.get("name") or d.get("filename") for d in documents],
+                "vector_status": vector_status,
+                "created_at": project_info.get("created_at", datetime.now().isoformat())
+            }
+
+            # Save base context in SessionManager and workflow_state
+            SessionManager.save_phase_output("context_base", base_context)
+            st.session_state.workflow_state["vector_store_status"] = vector_status
+
+             # --- Persist also as Markdown for consistent chaining ---
+            try:
+                base_md = self._format_base_context_as_markdown(base_context)
+                # Store it under a synthetic phase key 'context'
+                self._store_phase_output("context", base_md)
+                SessionManager.add_log(
+                "INFO",
+                f"Persisted initial context bundle to "
+                f"{os.path.join('outputs', self.workflow_id, 'latest', 'context.md')}"
+                )
+            except Exception as e:
+                SessionManager.add_log("WARNING", f"Failed to persist context bundle as Markdown: {str(e)}")
+
+
+
             # Create enhanced workflow manager
             enhanced_manager = EnhancedWorkflowManager(self)
             
@@ -158,7 +280,6 @@ class DecideWorkflow:
             
             # Get processed documents from session state
             documents = st.session_state.workflow_state.get('documents', [])
-            
             if not documents:
                 return {
                     'success': False,
@@ -170,22 +291,39 @@ class DecideWorkflow:
             documents_info = self.format_documents_info(documents)
             
             SessionManager.update_agent_progress("collector_agent", 0.3, "running", "Creating collection agent")
-            SessionManager.add_agent_communication("collector_agent", f"📋 Starting document collection phase\n📊 Processing {len(documents)} documents", "phase_start", "collection")
+            SessionManager.add_agent_communication(
+                "collector_agent",
+                f"📋 Starting document collection phase\n📊 Processing {len(documents)} documents",
+                "phase_start",
+                "collection"
+            )
             
             # Create agent and task
             collector_agent = CollectorAgent.create_agent()
             directive = self._language_directive()
             documents_info = f"{directive}\n{documents_info}"
-            collector_task = CollectorAgent.create_task(documents_info)
-            
+            collector_task = CollectorAgent.create_task(documents_info, agent=collector_agent)
+
+            # Persist active vector namespace for downstream runtime headers
+            ns = st.session_state.get('vector_namespace') or 'mimetica/mixed'
+            st.session_state['vector_namespace'] = ns
+
+
             SessionManager.update_agent_progress("collector_agent", 0.5, "running", "Processing documents")
-            SessionManager.add_agent_communication("collector_agent", f"🤖 Agent created\n🎯 Task: Analyze and process {len(documents)} documents", "agent_start", "collection")
+            SessionManager.add_agent_communication(
+                "collector_agent",
+                f"🤖 Agent created\n🎯 Task: Analyze and process {len(documents)} documents",
+                "agent_start",
+                "collection"
+            )
             
             # Create and execute crew with logging
             crew = Crew(
                 agents=[collector_agent],
                 tasks=[collector_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("collector_agent", 0.8, "running", "Executing analysis")
@@ -193,6 +331,8 @@ class DecideWorkflow:
             # Execute the crew with comprehensive logging
             result = self.execute_crew_with_logging(crew, "collection", "collector_agent")
             self._store_phase_output('collection', result)
+
+        
 
             SessionManager.update_agent_progress("collector_agent", 1.0, "completed", "Document collection completed")
             
@@ -207,30 +347,44 @@ class DecideWorkflow:
         
         except Exception as e:
             SessionManager.update_agent_progress("collector_agent", 0.0, "failed", f"Error: {str(e)}")
-            SessionManager.add_agent_communication("collector_agent", f"❌ Collection phase failed\n🔍 Error: {str(e)}", "error", "collection")
+            SessionManager.add_agent_communication(
+                "collector_agent",
+                f"❌ Collection phase failed\n🔍 Error: {str(e)}",
+                "error",
+                "collection"
+            )
             return {
                 'success': False,
                 'error': str(e),
                 'phase': 'collection'
             }
-    
+
     def run_multidisciplinary_analysis_phase(self) -> Dict[str, Any]:
         """Run the multidisciplinary feasibility analysis phase"""
         try:
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.1, "starting", "Initializing multidisciplinary analysis")
             
             # Get context from previous phase and documents
-            context_data = self.get_context_for_analysis()
-            
+            directive = self._language_directive()
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.3, "running", "Creating analysis agent")
             SessionManager.add_agent_communication("decision_multidisciplinary_agent", "🔬 Starting multidisciplinary feasibility analysis\n📊 Analyzing across 6 dimensions: Technology, Legal, Financial, Market, Communication, Behavioral", "phase_start", "analysis")
             
             # Create agent and task
             analysis_agent = DecisionMultidisciplinaryAgent.create_agent()
-            directive = self._language_directive()
-            context_data = f"{directive}\n{context_data}"
-            analysis_task = DecisionMultidisciplinaryAgent.create_task(context_data)
+           
+            context_md = build_running_context(include_phases=['collection'])
+            context_md = f"{directive}\n\n{context_md}"
 
+            analysis_task = DecisionMultidisciplinaryAgent.create_task(context_md, agent=analysis_agent)
+
+            namespace = st.session_state.get('vector_namespace', 'mimetica/mixed')
+            analysis_task.description = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {namespace}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+                + analysis_task.description
+            )
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.5, "running", "Conducting feasibility analysis")
             SessionManager.add_agent_communication("decision_multidisciplinary_agent", "🤖 Multidisciplinary agent created\n🎯 Task: Comprehensive feasibility analysis across all dimensions", "agent_start", "analysis")
@@ -239,7 +393,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[analysis_agent],
                 tasks=[analysis_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("decision_multidisciplinary_agent", 0.8, "running", "Finalizing analysis")
@@ -270,21 +426,36 @@ class DecideWorkflow:
         """Run the problem definition phase"""
         try:
             SessionManager.update_agent_progress("define_agent", 0.1, "starting", "Initializing problem definition")
-            
+            directive = self._language_directive()
+            #running_ctx = build_running_context(include_phases=["collection", "analysis"])
+
             # Get context and feasibility report
-            context_data = self.get_context_for_analysis()
+            available_context = build_running_context(include_phases=["collection", "analysis"])
             feasibility_report = self.get_previous_phase_output('analysis')
-            
+            if not feasibility_report:
+                feasibility_report = (
+                    "⚠️ No feasibility report found for 'analysis' phase. "
+                    "Proceeding with available context only (TBD items will be flagged)."
+                )
             SessionManager.update_agent_progress("define_agent", 0.3, "running", "Creating definition agent")
             SessionManager.add_agent_communication("define_agent", "🎯 Starting problem definition phase\n📋 Analyzing feasibility report and context to define clear objectives", "phase_start", "definition")
             
             # Create agent and task
             define_agent = DefineAgent.create_agent()
-            directive = self._language_directive()
-            context_data = f"{directive}\n{context_data}"
+            available_context = f"{directive}\n{available_context}"
             feasibility_report = f"{directive}\n{feasibility_report}"
-            define_task = DefineAgent.create_task(context_data, feasibility_report)
+            define_task = DefineAgent.create_task(available_context, feasibility_report, agent=define_agent)
+            accumulated_context = self._get_accumulated_context(["collection", "analysis"])
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+                "## ACCUMULATED CONTEXT\n"
+                f"{accumulated_context}\n\n"
+            )
 
+            define_task.description = runtime_header + define_task.description
             
             SessionManager.update_agent_progress("define_agent", 0.5, "running", "Defining problem and objectives")
             
@@ -292,7 +463,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[define_agent],
                 tasks=[define_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("define_agent", 0.8, "running", "Finalizing definition")
@@ -325,17 +498,41 @@ class DecideWorkflow:
             SessionManager.update_agent_progress("explore_agent", 0.1, "starting", "Initializing contextual exploration")
             
             # Get problem definition and context
-            problem_definition = self.get_previous_phase_output('definition')
-            available_context = self.get_context_for_analysis()
+            directive = self._language_directive()
+            #running_ctx = build_running_context(include_phases=["collection", "analysis", "definition"])
+
+
+            problem_definition = self.get_previous_phase_output("definition") or ""
+            available_context = build_running_context(include_phases=["collection", "analysis", "definition"])
+            
+            if not problem_definition:
+                problem_definition = (
+                    "⚠️ No problem definition found for 'definition' phase. "
+                    "Proceeding with available context only; TBD items will be flagged."
+                    )
             
             SessionManager.update_agent_progress("explore_agent", 0.3, "running", "Creating exploration agent")
             
-            # Create agent and task
             explore_agent = ExploreAgent.create_agent()
-            directive = self._language_directive()
+
+            # Create agent and task
             problem_definition = f"{directive}\n{problem_definition}"
             available_context = f"{directive}\n{available_context}"
-            explore_task = ExploreAgent.create_task(problem_definition, available_context)
+
+            explore_task = ExploreAgent.create_task(problem_definition, available_context, agent=explore_agent)
+
+            
+            accumulated_context = self._get_accumulated_context(["collection", "analysis", "definition"])
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+                "## ACCUMULATED CONTEXT\n"
+                f"{accumulated_context}\n\n"
+            )
+
+            explore_task.description = runtime_header + explore_task.description
 
             
             SessionManager.update_agent_progress("explore_agent", 0.5, "running", "Conducting research and risk mapping")
@@ -344,7 +541,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[explore_agent],
                 tasks=[explore_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("explore_agent", 0.8, "running", "Finalizing exploration")
@@ -373,19 +572,45 @@ class DecideWorkflow:
         """Run the strategic option creation phase"""
         try:
             SessionManager.update_agent_progress("create_agent", 0.1, "starting", "Initializing option creation")
-            
+
             # Get problem definition and context analysis
-            problem_definition = self.get_previous_phase_output('definition')
-            context_analysis = self.get_previous_phase_output('exploration')
-            
+            directive = self._language_directive()
+            #running_ctx = build_running_context(include_phases=["collection", "analysis", "definition", "exploration"])
+
+
+            problem_definition = self.get_previous_phase_output("definition") or ""
+            context_analysis = self.get_previous_phase_output("exploration") or ""
+
+            if not problem_definition:
+                problem_definition = (
+                    "⚠️ No problem definition found from 'definition' phase. "
+                    "Proceeding with accumulated context; mark unknowns as TBD."
+                )
+            if not context_analysis:
+                context_analysis = (
+                    "⚠️ No exploration output found from 'exploration' phase. "
+                    "Proceeding with available data; risks/assumptions must be flagged."
+                )
+
             SessionManager.update_agent_progress("create_agent", 0.3, "running", "Creating option development agent")
             
-            # Create agent and task
             create_agent = CreateAgent.create_agent()
-            directive = self._language_directive()
+            # Create agent and task
             problem_definition = f"{directive}\n{problem_definition}"
             context_analysis = f"{directive}\n{context_analysis}"
-            create_task = CreateAgent.create_task(problem_definition, context_analysis)
+
+            create_task = CreateAgent.create_task(problem_definition, context_analysis, agent=create_agent)
+
+            accumulated_context = self._get_accumulated_context(["collection", "analysis", "definition", "exploration"])
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+                "## ACCUMULATED CONTEXT\n"
+                f"{accumulated_context}\n\n")
+
+            create_task.description = runtime_header + create_task.description
 
             
             SessionManager.update_agent_progress("create_agent", 0.5, "running", "Developing strategic options")
@@ -394,7 +619,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[create_agent],
                 tasks=[create_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("create_agent", 0.8, "running", "Finalizing option analysis")
@@ -426,16 +653,50 @@ class DecideWorkflow:
             SessionManager.update_agent_progress("implement_agent", 0.1, "starting", "Initializing implementation planning")
             
             # Get selected option and details (for now, use the first/recommended option)
-            option_analysis = self.get_previous_phase_output('creation')
-            selected_option = "Recommended Strategic Option"  # This would be selected by user in practice
+            directive = self._language_directive()
+            #running_ctx = build_running_context(include_phases=["collection", "analysis", "definition", "exploration", "creation"])
+
             
+            option_analysis = self.get_previous_phase_output("creation") or ""
+            if not option_analysis:
+                option_analysis = (
+                    "⚠️ No 'creation' output found. Proceeding with accumulated context only. "
+                    "Implementation plan must mark unknowns as TBD and add a validation step up-front."
+                )
+
+            selected_option = "Recommended Strategic Option"
+            try:
+                import re
+                candidates = re.findall(r"(?im)^(?:recommended|recomendada|seleccionada)\s*[:\-]\s*(.+)$", str(option_analysis))
+                if candidates:
+                    selected_option = candidates[0].strip()[:160]
+                else:
+                    m = re.search(r"(?i)\*\*recommended\*\*[:\-]?\s*(.+)", str(option_analysis))
+                    if m:
+                        selected_option = m.group(1).strip()[:160]
+            except Exception:
+                pass
+
             SessionManager.update_agent_progress("implement_agent", 0.3, "running", "Creating implementation agent")
             
             # Create agent and task
             implement_agent = ImplementAgent.create_agent()
-            directive = self._language_directive()
             option_analysis = f"{directive}\n{option_analysis}"
-            implement_task = ImplementAgent.create_task(selected_option, option_analysis)
+            implement_task = ImplementAgent.create_task(selected_option, option_analysis, agent=implement_agent)
+            accumulated_context = self._get_accumulated_context(
+                ["collection", "analysis", "definition", "exploration", "creation"]
+            )
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+                "## ACCUMULATED CONTEXT\n"
+                f"{accumulated_context}\n\n"
+            )
+
+            implement_task.description = runtime_header + implement_task.description
+
 
             
             SessionManager.update_agent_progress("implement_agent", 0.5, "running", "Developing implementation roadmap")
@@ -444,7 +705,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[implement_agent],
                 tasks=[implement_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("implement_agent", 0.8, "running", "Finalizing implementation plan")
@@ -476,8 +739,17 @@ class DecideWorkflow:
             
             # Get implementation plan and option analysis
             implementation_plan = self.get_previous_phase_output('implementation')
+            if not implementation_plan:
+                implementation_plan = (
+                    "⚠️ No 'implementation' output found. Proceeding with accumulated context only. "
+                    "Simulation must mark unknowns as TBD and add a validation step up-front."
+                )
             option_analysis = self.get_previous_phase_output('creation')
-            
+            if not option_analysis:
+                option_analysis = (
+                    "⚠️ No 'creation' output found. Proceeding with accumulated context only. "
+                    "Implementation plan must mark unknowns as TBD and add a validation step up-front."
+                )
             SessionManager.update_agent_progress("simulate_agent", 0.3, "running", "Creating simulation agent")
             
             # Create agent and task
@@ -485,7 +757,33 @@ class DecideWorkflow:
             directive = self._language_directive()
             implementation_plan = f"{directive}\n{implementation_plan}"
             option_analysis = f"{directive}\n{option_analysis}"
-            simulate_task = SimulateAgent.create_task(implementation_plan, option_analysis)
+            simulate_task = SimulateAgent.create_task(implementation_plan, option_analysis, agent=simulate_agent)
+            # === Inject accumulated context before running Crew ===
+            accumulated_context = self._get_accumulated_context([
+                "collection",
+                "analysis",
+                "definition",
+                "exploration",
+                "creation",
+                "implementation"
+            ])
+
+
+
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+            )
+
+            simulate_task.description = (
+                runtime_header
+                + "## ACCUMULATED CONTEXT\n"
+                + accumulated_context
+                + "\n\n"
+                + simulate_task.description
+            )
 
             
             SessionManager.update_agent_progress("simulate_agent", 0.5, "running", "Running Monte Carlo simulations")
@@ -494,7 +792,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[simulate_agent],
                 tasks=[simulate_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("simulate_agent", 0.8, "running", "Analyzing simulation results")
@@ -559,17 +859,68 @@ class DecideWorkflow:
             SessionManager.update_agent_progress("evaluate_agent", 0.1, "starting", "Initializing evaluation framework")
             
             # Get implementation plan and simulation results
+            option_analysis = self.get_previous_phase_output("creation") or ""
+            if not option_analysis:
+                option_analysis = (
+                    "⚠️ No 'creation' output found. Proceeding with accumulated context only. "
+                    "Implementation plan must mark unknowns as TBD and add a validation step up-front."
+            )
+            
             implementation_plan = self.get_previous_phase_output('implementation')
+            if not implementation_plan:
+                implementation_plan = (
+                    "⚠️ No 'implementation' output found. Proceeding with accumulated context only. "
+                    "Evaluation must mark unknowns as TBD and add a validation step up-front."
+                )
+
             simulation_results = self.get_previous_phase_output('simulation')
+            if not simulation_results:
+                simulation_results = (
+                    "⚠️ No 'simulation' output found. Proceeding with accumulated context only. "
+                    "Evaluation must mark unknowns as TBD and add a validation step up-front."
+                )
+
             
             SessionManager.update_agent_progress("evaluate_agent", 0.3, "running", "Creating evaluation agent")
-            
+            SessionManager.add_agent_communication(
+                "evaluate_agent",
+                "📏 Starting evaluation phase\n📊 Building KPI framework & success metrics from latest plan + simulation",
+                "phase_start",
+                "evaluation"
+            )
             # Create agent and task
             evaluate_agent = EvaluateAgent.create_agent()
             directive = self._language_directive()
+            option_analysis = f"{directive}\n{option_analysis}"            
             implementation_plan = f"{directive}\n{implementation_plan}"
             simulation_results = f"{directive}\n{simulation_results}"
-            evaluate_task = EvaluateAgent.create_task(implementation_plan, simulation_results)
+            evaluate_task = EvaluateAgent.create_task(implementation_plan, simulation_results, evaluate_agent)
+            # === Inject accumulated context before running Crew ===
+            accumulated_context = self._get_accumulated_context([
+                "collection",
+                "analysis",
+                "definition",
+                "exploration",
+                "creation",
+                "implementation",
+                "simulation"
+            ])
+            #running_ctx = build_running_context(include_phases=[
+            #    "collection","analysis","definition","exploration","creation","implementation","simulation"])
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+            )
+
+            evaluate_task.description = (
+                runtime_header
+                + "## ACCUMULATED CONTEXT\n"
+                + accumulated_context
+                + "\n\n"
+                + evaluate_task.description
+            )
 
             
             SessionManager.update_agent_progress("evaluate_agent", 0.5, "running", "Developing KPIs and success metrics")
@@ -578,7 +929,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[evaluate_agent],
                 tasks=[evaluate_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("evaluate_agent", 0.8, "running", "Finalizing evaluation framework")
@@ -608,17 +961,48 @@ class DecideWorkflow:
         try:
             SessionManager.update_agent_progress("report_agent", 0.1, "starting", "Initializing report generation")
             
-            # Collect all phase outputs
-            all_phase_outputs = self.collect_all_phase_outputs()
-            
+            # Build consolidated bundle from 'latest' markdown files only
+            consolidated_md = self._get_saved_markdown_bundle()
+
             SessionManager.update_agent_progress("report_agent", 0.3, "running", "Creating report agent")
             SessionManager.add_agent_communication("report_agent", "📊 Starting final report generation\n📋 Synthesizing all phase outputs into comprehensive report", "phase_start", "report")
-            
+
             # Create agent and task
             report_agent = ReportAgent.create_agent()
+
+            # Inject language directive and pass the consolidated bundle
             directive = self._language_directive()
-            all_phase_outputs = f"{directive}\n{all_phase_outputs}"
-            report_task = ReportAgent.create_task(all_phase_outputs)
+            payload = f"{directive}\n{consolidated_md}"
+            report_task = ReportAgent.create_task(payload, report_agent)
+
+            # === Inject accumulated context before running Crew ===
+            accumulated_context = self._get_accumulated_context([
+                "collection",
+                "analysis",
+                "definition",
+                "exploration",
+                "creation",
+                "implementation",
+                "simulation",
+                "evaluation"
+            ])
+            #running_ctx = build_running_context(include_phases=[
+            #    "collection","analysis","definition","exploration","creation","implementation","simulation","evaluation"])
+            runtime_header = (
+                "## RUNTIME CONTEXT\n"
+                f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
+                f"- Model: {config.validate_and_fix_selected_model()}\n"
+                f"- Language: {st.session_state.get('language_tag', 'en')}\n\n"
+            )
+
+            report_task.description = (
+                runtime_header
+                + "## ACCUMULATED CONTEXT\n"
+                + accumulated_context
+                + "\n\n"
+                + report_task.description
+            )
+
 
             
             SessionManager.update_agent_progress("report_agent", 0.5, "running", "Synthesizing comprehensive report")
@@ -628,7 +1012,9 @@ class DecideWorkflow:
             crew = Crew(
                 agents=[report_agent],
                 tasks=[report_task],
-                verbose=True
+                verbose=True,
+                memory=False,
+                cache=False
             )
             
             SessionManager.update_agent_progress("report_agent", 0.8, "running", "Finalizing report")
@@ -733,17 +1119,16 @@ class DecideWorkflow:
     def get_previous_phase_output(self, phase_name: str) -> str:
         """Get output from a previous phase"""
         phase_outputs = st.session_state.workflow_state.get('phase_outputs', {})
-        
         if phase_name in phase_outputs:
             output_info = phase_outputs[phase_name]
             output = output_info.get('output', {})
-            
             if isinstance(output, dict):
                 return json.dumps(output, indent=2)
             else:
                 return str(output)
-        
-        return f"No output available for phase: {phase_name}"
+
+        return ""
+
     
     def collect_all_phase_outputs(self) -> str:
         """Collect all phase outputs for final report"""
@@ -865,20 +1250,78 @@ class DecideWorkflow:
         if 'language_tag' not in ws:
             ws['language_tag'] = st.session_state.get('language_tag', 'en')
 
-
     def _store_phase_output(self, phase_key: str, output: Any):
-        """Guarda el output de una fase en session_state para el consolidado final."""
+        """Store phase output in session_state and persist a single latest Markdown file (no history)."""
         self._ensure_workflow_state()
-        # Normaliza a string (evita problemas con objetos no serializables)
+
+        # Normalize to string
         try:
             out_str = output if isinstance(output, str) else str(output)
         except Exception:
             out_str = repr(output)
 
+        # Save to session state (latest only) with memory guardrail
+        timestamp_iso = datetime.now().isoformat()
+
+        # Keep full output on disk, but trim what we keep in session to avoid heavy memory usage
+        # NOTE: 200k chars ~ 200 KB in memory; tune if needed.
+        MAX_SESSION_CHARS = 200_000  # safe default
+
+        # If too large, keep a truncated copy in session_state; full output still goes to disk below
+        session_out = (
+            out_str if len(out_str) <= MAX_SESSION_CHARS
+            else out_str[:MAX_SESSION_CHARS] + "\n...[truncated in session]"
+        )
+
         st.session_state.workflow_state['phase_outputs'][phase_key] = {
-            'timestamp': datetime.now().isoformat(),
-            'output': out_str
+            'timestamp': timestamp_iso,
+            'output': session_out
         }
+
+
+        # Persist a single 'latest' file per phase (overwrites each run)
+        base_dir = os.path.join("outputs", self.workflow_id)
+        latest_dir = os.path.join(base_dir, "latest")
+        os.makedirs(latest_dir, exist_ok=True)
+
+        # Stable filename per-phase
+        latest_path = os.path.join(latest_dir, f"{phase_key}.md")
+
+        # Compose Markdown header
+        lang_tag = st.session_state.workflow_state.get('language_tag', 'en')
+        timestamp_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
+        header = [
+            f"# Phase: {phase_key.capitalize()}",
+            f"**Timestamp:** {timestamp_tag}",
+            f"**Workflow ID:** {self.workflow_id}",
+            f"**Language Tag:** {lang_tag}",
+            ""
+        ]
+        md_full = "\n".join(header) + out_str
+
+        try:
+            # Overwrite 'latest' file
+            with open(latest_path, "w", encoding="utf-8") as f:
+                f.write(md_full)
+
+            # Track just the latest path (no archive array)
+            saved = st.session_state.workflow_state.setdefault("saved_markdown_files", {})
+            saved[phase_key] = {"latest": latest_path}
+
+            SessionManager.add_log("INFO", f"Saved (latest) {latest_path}")
+
+            # Optional cleanliness: remove any stray files in 'latest' that don't match our current phase filenames
+            # (Safe no-op if directory is clean)
+            for fname in os.listdir(latest_dir):
+                expected = f"{phase_key}.md"
+                full = os.path.join(latest_dir, fname)
+                if os.path.isfile(full) and fname.endswith(".md") and fname != expected and fname.count(".md") == 1:
+                    # Best-effort cleanup of stale files for other phases handled by their own saves later
+                    # We do nothing here to avoid deleting other phases' latest files.
+                    pass
+
+        except Exception as e:
+            SessionManager.add_log("WARNING", f"Failed to save Markdown file for {phase_key}: {str(e)}")
     
     def _language_directive(self) -> str:
         tag = st.session_state.workflow_state.get('language_tag', 'en')
@@ -892,4 +1335,120 @@ class DecideWorkflow:
             "- Do NOT include internal reasoning/chain-of-thought; provide only final answers.\n"
         )
 
+    def _phase_order(self) -> list:
+        """Return phases in canonical order for rendering."""
+        # Keep this list aligned with your workflow sequence
+        return [
+            "context",
+            "collection",
+            "analysis",
+            "definition",
+            "exploration",
+            "creation",
+            "implementation",
+            "simulation",
+            "evaluation",
+            "report",  # Note: report will be empty until generated
+        ]
 
+    def _get_saved_markdown_bundle(self) -> str:
+        """Build a consolidated Markdown bundle from the single 'latest' .md files plus project info and vector DB status."""
+        self._ensure_workflow_state()
+        ws = st.session_state.workflow_state
+        saved = ws.get("saved_markdown_files", {})
+        project = ws.get("project_info", {})
+        lang_tag = ws.get("language_tag", "en")
+
+        project_name = project.get("name", "Not specified")
+        project_desc = project.get("description", "Not specified")
+        analysis_focus = project.get("focus", "Not specified")
+
+        lines: List[str] = []
+        lines.append("# CONSOLIDATED PHASE OUTPUTS (latest only)")
+        lines.append(f"**Workflow ID:** {self.workflow_id}")
+        lines.append(f"**Language Tag:** {lang_tag}")
+        lines.append("")
+        lines.append("## Project Information")
+        lines.append(f"- **Project Name:** {project_name}")
+        lines.append(f"- **Description:** {project_desc}")
+        lines.append(f"- **Analysis Focus:** {analysis_focus}")
+        lines.append("")
+
+        # Context summary with vector DB (robust)
+        try:
+            docs = ws.get("documents", [])
+            lines.append("## Context Summary")
+            lines.append(f"- **Documents Processed:** {len(docs)}")
+            try:
+                vector_info = self.vector_store.get_collection_info()
+                if vector_info:
+                    lines.append(f"- **Vector DB Collection:** {vector_info.get('name', 'unknown')}")
+                    lines.append(f"- **Vectors Stored:** {vector_info.get('vector_count', 0)}")
+            except Exception:
+                lines.append("- **Vector DB:** Not available")
+            lines.append("")
+        except Exception:
+            pass
+
+        # Append each latest phase markdown if present
+        for phase in self._phase_order():
+            ref = saved.get(phase, {})
+            latest_path = ref.get("latest")
+            if latest_path and os.path.exists(latest_path):
+                try:
+                    with open(latest_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    lines.append(f"\n---\n\n## Phase: {phase.capitalize()} (from {latest_path})\n")
+                    lines.append(content)
+                except Exception as e:
+                    lines.append(f"\n---\n\n## Phase: {phase.capitalize()}\n*Error reading file:* {str(e)}")
+            else:
+                lines.append(f"\n---\n\n## Phase: {phase.capitalize()}\n*No latest Markdown found.*")
+
+        return "\n".join(lines)
+
+    def _format_base_context_as_markdown(self, base_context: dict) -> str:
+        """Format the initial user+docs+vector context as Markdown for audit and chaining."""
+        # --- Safely read fields with defaults ---
+        name = base_context.get("project_name") or "Not specified"
+        desc = base_context.get("project_description") or "Not specified"
+        focus = base_context.get("focus") or "Not specified"
+        lang = base_context.get("language_tag") or "en"
+        created = base_context.get("created_at") or datetime.now().isoformat()
+        docs_count = base_context.get("documents_count", 0)
+        doc_names = base_context.get("document_names") or []
+        vector_status = base_context.get("vector_status")
+
+        # --- Optional: pretty JSON dump for vector status if dict-like ---
+        def _pretty(obj: Any) -> str:
+            try:
+                if isinstance(obj, (dict, list)):
+                    return "```json\n" + json.dumps(obj, indent=2, ensure_ascii=False) + "\n```"
+                return str(obj)
+            except Exception:
+                return str(obj)
+
+        lines = []
+        lines.append("# Initial Context Bundle (User Inputs + Documents + Vector DB)")
+        lines.append("")
+        lines.append("## Project")
+        lines.append(f"- **Name:** {name}")
+        lines.append(f"- **Description:** {desc}")
+        lines.append(f"- **Analysis Focus:** {focus}")
+        lines.append(f"- **Language Tag:** {lang}")
+        lines.append(f"- **Created At:** {created}")
+        lines.append("")
+        lines.append("## Documents")
+        lines.append(f"- **Count:** {docs_count}")
+        if doc_names:
+            lines.append(f"- **Names:** {', '.join([str(d) for d in doc_names])}")
+        lines.append("")
+        lines.append("## Vector Store Status")
+        lines.append(_pretty(vector_status))
+        lines.append("")
+        return "\n".join(lines)
+
+    
+    def _get_accumulated_context(self, phases: List[str]) -> str:
+        """Thin wrapper so internal code can consistently call self._get_accumulated_context(...)."""
+        return _get_accumulated_context(phases)

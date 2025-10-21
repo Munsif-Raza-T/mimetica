@@ -2,6 +2,15 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, Any
 
+def _get_secret(key: str, default: str = "") -> str:
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets and st.secrets.get(key):
+            return st.secrets.get(key)
+    except Exception:
+        pass
+    return os.getenv(key, default)
+
 @dataclass
 class Config:
     """Configuration settings for MIMÉTICA MVP"""
@@ -51,17 +60,33 @@ class Config:
     # Rate Limiting Settings by Provider
     RATE_LIMITS: dict = field(default_factory=dict)
     
+    # --- Tools feature flags ---
+    USE_OPTIONAL_TOOLS: bool = True
+    TOOLS_ENABLED: dict = field(default_factory=lambda: {
+        "JSONSchemaValidatorTool": True,
+        "CriteriaLockerTool": True,
+        "RiskRegisterTool": True,
+        "MarketSizingTool": True,
+        "ElasticityEstimatorTool": True,
+        "TimeSeriesForecastTool": True,
+        "PositioningMapTool": True,
+        "UnitEconomicsTool": True,
+        "MarkdownFormatterTool": True,
+    })
+
+
     def __post_init__(self):
         """Initialize AVAILABLE_MODELS and secrets after dataclass initialization"""
         # Initialize secrets from streamlit if available
         try:
             import streamlit as st
             if hasattr(st, 'secrets'):
-                self.OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
-                self.ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
-                self.PINECONE_API_KEY = st.secrets.get("PINECONE_API_KEY", "")
-                self.PINECONE_ENVIRONMENT = st.secrets.get("PINECONE_ENVIRONMENT", "")
-                self.SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
+                self.OPENAI_API_KEY     = _get_secret("OPENAI_API_KEY", "")
+                self.ANTHROPIC_API_KEY  = _get_secret("ANTHROPIC_API_KEY", "")
+                self.PINECONE_API_KEY   = _get_secret("PINECONE_API_KEY", "")
+                self.PINECONE_ENVIRONMENT = _get_secret("PINECONE_ENVIRONMENT", "")
+                self.SERPER_API_KEY     = _get_secret("SERPER_API_KEY", "")
+
         except (ImportError, AttributeError, KeyError):
             # Fallback to environment variables if streamlit secrets not available
             self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -155,13 +180,29 @@ class Config:
     
     @classmethod
     def validate(cls) -> bool:
-        """Validate essential configuration"""
-        config = cls()
-        if not config.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY is required")
-        if not config.ANTHROPIC_API_KEY:
-            raise ValueError("ANTHROPIC_API_KEY is required")
+        """Validate essential configuration (solo pide la API key del proveedor seleccionado)"""
+        cfg = cls()
+        # Determina el modelo seleccionado (o default si no hay Streamlit)
+        try:
+            import streamlit as st
+            selected = st.session_state.get('selected_model', cfg.DEFAULT_MODEL)
+        except Exception:
+            selected = cfg.DEFAULT_MODEL
+
+        # Asegura que AVAILABLE_MODELS esté inicializado
+        if not cfg.AVAILABLE_MODELS:
+            cfg.__post_init__()
+
+        model_cfg = cfg.AVAILABLE_MODELS.get(selected, cfg.AVAILABLE_MODELS[cfg.DEFAULT_MODEL])
+        provider = model_cfg.get("provider", "openai")
+
+        if provider == "openai" and not cfg.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY is required for the selected OpenAI model.")
+        if provider == "anthropic" and not cfg.ANTHROPIC_API_KEY:
+            raise ValueError("ANTHROPIC_API_KEY is required for the selected Anthropic model.")
+
         return True
+
     
     def get_current_model_config(self) -> dict:
         """Get configuration for currently selected model"""
@@ -181,17 +222,20 @@ class Config:
     
     def get_model_provider(self, model_name: str = None) -> str:
         """Get the provider for a specific model"""
-        # Ensure AVAILABLE_MODELS is initialized
+        # Asegura AVAILABLE_MODELS inicializado
         if not self.AVAILABLE_MODELS:
             self.__post_init__()
-            
+
         if model_name is None:
-            import streamlit as st
-            model_name = st.session_state.get('selected_model', self.DEFAULT_MODEL)
-        
-        # Use self to access AVAILABLE_MODELS
+            try:
+                import streamlit as st
+                model_name = st.session_state.get('selected_model', self.DEFAULT_MODEL)
+            except Exception:
+                model_name = self.DEFAULT_MODEL
+
         model_config = self.AVAILABLE_MODELS.get(model_name, self.AVAILABLE_MODELS[self.DEFAULT_MODEL])
         return model_config.get('provider', 'openai')
+
     
     def get_rate_limit_settings(self, model_name: str = None) -> dict:
         """Get rate limiting settings for a specific model or current model"""

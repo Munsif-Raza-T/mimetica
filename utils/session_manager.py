@@ -1,15 +1,9 @@
-import streamlit as st
-from typing import Dict, Any, Optional
-from datetime import datetime
 import json
+from typing import Dict, Any, Optional, List
+from datetime import datetime
 
-class SessionManager:
-    """Manages session state and workflow progress"""
-    
 import streamlit as st
-from typing import Dict, Any, Optional
-from datetime import datetime
-import json
+
 
 class SessionManager:
     """Manages session state and workflow progress"""

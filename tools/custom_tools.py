@@ -6,8 +6,12 @@ from typing import Dict, List, Any, Optional, Type
 import streamlit as st
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import plotly.express as px
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+except Exception:
+    go = None
+    px = None
 try:
     import seaborn as sns 
 except Exception:
@@ -131,9 +135,7 @@ class CodeInterpreterTool(BaseTool):
             'numpy': np,
             'matplotlib': mpl,   
             'matplotlib.pyplot': plt,   
-            'plt': plt,              
-            'go': go,
-            'px': px,
+            'plt': plt,
             'datetime': datetime,
             'timedelta': timedelta,
             'json': json,
@@ -144,6 +146,11 @@ class CodeInterpreterTool(BaseTool):
         # Agrega seaborn solo si está disponible
         if sns is not None:
             allowed['seaborn'] = sns
+        if go is not None:
+            allowed['go'] = go
+        if px is not None:
+            allowed['px'] = px
+
         return allowed
 
     

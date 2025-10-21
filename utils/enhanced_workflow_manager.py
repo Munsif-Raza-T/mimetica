@@ -8,40 +8,29 @@ from utils.token_batch_manager import TokenBatchManager
 
 
 class EnhancedWorkflowManager:
-    """
-    Enhanced workflow manager that handles rate limiting for different LLM providers
-    Provides intelligent phase execution with proper delays and retry logic
-    """
-    
     def __init__(self, workflow_instance):
-        """
-        Initialize enhanced workflow manager
-        
-        Args:
-            workflow_instance: The DecideWorkflow instance to manage
-        """
         self.workflow = workflow_instance
-        
-        # Handle Streamlit session state availability
+
         try:
             self.current_model = config.validate_and_fix_selected_model()
-        except:
-            # Fallback when Streamlit is not available
-            self.current_model = config.DEFAULT_MODEL
-        
-        self.model_config = config.AVAILABLE_MODELS[self.current_model]
-        self.provider = self.model_config['provider']
-        
-        # Initialize provider-specific rate limiters
+        except Exception:
+            self.current_model = getattr(config, "DEFAULT_MODEL", None)
+
+        # ✅ Carga segura de la config del modelo
+        model_map = getattr(config, "AVAILABLE_MODELS", {}) or {}
+        self.model_config = model_map.get(self.current_model) or {}
+
+        # ✅ Provider con fallback
+        self.provider = self.model_config.get('provider', 'openai')
+
         self.anthropic_limiter = None
         self.openai_token_manager = None
-        
+
         if self.provider == 'anthropic':
             self.anthropic_limiter = get_anthropic_rate_limiter()
         else:
             self.openai_token_manager = TokenBatchManager()
-        
-        # Workflow execution stats
+
         self.execution_stats = {
             'start_time': None,
             'end_time': None,
@@ -52,36 +41,43 @@ class EnhancedWorkflowManager:
             'provider': self.provider,
             'model': self.current_model
         }
-        
-        # Phase execution settings based on provider
+
+        # ✅ AHORA _get_phase_settings devuelve un dict
         self.phase_settings = self._get_phase_settings()
-    
+
+        ws = st.session_state.setdefault("workflow_state", {})
+        if "language_tag" not in ws:
+            ws["language_tag"] = st.session_state.get("language_tag", "en")
+
     def _get_phase_settings(self) -> Dict[str, Dict[str, Any]]:
-        """Get phase execution settings based on provider"""
-        
+        """Get phase execution settings based on provider using central config"""
+        # lee del config con fallback seguro
+        try:
+            rl = config.get_rate_limit_settings(self.current_model) or {}
+        except Exception:
+            rl = {}
+
         if self.provider == 'anthropic':
-            # Conservative settings for Anthropic's strict rate limits
             return {
-                'inter_phase_delay': 5,  # 5 seconds between phases
-                'max_retries': 3,
-                'retry_delay': 30,  # 30 seconds initial retry delay
-                'timeout_per_phase': 120,  # 2 minutes per phase
+                'inter_phase_delay': rl.get('inter_phase_delay', 15),
+                'max_retries': rl.get('max_retries', 3),
+                'retry_delay': rl.get('retry_delay', 30),
+                'timeout_per_phase': 120,
                 'chunk_documents': True,
-                'max_document_tokens': 15000,  # Conservative for Anthropic
-                'safety_margin': 0.7  # More conservative
+                'max_document_tokens': 15000,
+                'safety_margin': rl.get('safety_margin', 0.7),
             }
-        else:
-            # More aggressive settings for OpenAI
+        else:  # openai / default
             return {
-                'inter_phase_delay': 5,  # 5 seconds between phases
-                'max_retries': 2,
-                'retry_delay': 15,  # 15 seconds initial retry delay
-                'timeout_per_phase': 180,  # 3 minutes per phase
+                'inter_phase_delay': rl.get('inter_phase_delay', 5),
+                'max_retries': rl.get('max_retries', 2),
+                'retry_delay': rl.get('retry_delay', 15),
+                'timeout_per_phase': 180,
                 'chunk_documents': False,
                 'max_document_tokens': 20000,
-                'safety_margin': 0.85
+                'safety_margin': rl.get('safety_margin', 0.85),
             }
-    
+
     def estimate_phase_tokens(self, phase_name: str, phase_function: Callable) -> int:
         """
         Estimate tokens required for a workflow phase
@@ -291,6 +287,13 @@ class EnhancedWorkflowManager:
                 try:
                     phase_result = self.execute_phase_with_rate_limiting(phase_name, phase_function)
                     
+                    if not isinstance(phase_result, dict):
+                        phase_result = {
+                            'success': True,           
+                            'phase': phase_name,
+                            'output': phase_result
+                        }
+
                     if phase_result.get('success'):
                         all_results[phase_name] = phase_result
                         self.execution_stats['phases_completed'].append(phase_name)
@@ -300,7 +303,7 @@ class EnhancedWorkflowManager:
                             try:
                                 from utils.session_manager import SessionManager
                                 SessionManager.update_phase(phase_name, 'completed')
-                                SessionManager.save_phase_output(phase_name, phase_result)
+                                
                             except ImportError:
                                 pass  # SessionManager not available
                     else:
@@ -398,7 +401,11 @@ class EnhancedWorkflowManager:
             stats['provider_stats'] = openai_stats
         
         return stats
-    
+    def _is_quality_block(self, output_str: str) -> bool:
+        out = (output_str or "").lower()
+        return ("validator report" in out) or (" block" in out) or ("blocked" in out)
+
+
     def reset_stats(self):
         """Reset execution statistics"""
         self.execution_stats = {
