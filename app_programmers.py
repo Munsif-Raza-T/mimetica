@@ -185,33 +185,32 @@ def create_sidebar():
             # Fallback if images are not found
             st.info("Images not found in assets folder")
                 # Preferences
-        st.subheader("Lenguage & Model Preferences")
+        st.subheader("Language & Model Preferences")
 
-        # Language selector (English default, Spanish alternative) & Model Selection Section
-        lang_options = {"English": "en", "Spanish": "es"}
+        # === Selector de idioma ===
+        lang_options = {"English": "en", "Spanish": "es", "French": "fr", "Portuguese": "pt"}
 
-        # Figure out current label from stored tag (so it persists across reruns)
+        # Determina la etiqueta actual (persistencia en session_state)
         current_label = next(
             (label for label, tag in lang_options.items() if tag == st.session_state.get("language_tag", "en")),
             "English"
         )
 
         selected_label = st.selectbox(
-            "Language",
+            "🌐 Language",
             list(lang_options.keys()),
             index=list(lang_options.keys()).index(current_label),
-            key="selected_language"  # keeps UI state in sync
+            key="selected_language"
         )
-        
-        language_selected = selected_label
 
+        # Convierte label a código de idioma
+        language = lang_options[selected_label]
 
-        # Persist the tag you’ll pass into agents
-        st.session_state["language_tag"] = lang_options[selected_label]
-        
-        if "workflow_state" not in st.session_state:
-            st.session_state["workflow_state"] = {}
-        st.session_state["workflow_state"]["language_tag"] = st.session_state["language_tag"]
+        # Guarda en session_state y actualiza en config
+        st.session_state["language_tag"] = language
+
+        from config import set_language  # 👈 IMPORTANTE: importa aquí, no arriba del archivo
+        set_language(language)
 
  
         
