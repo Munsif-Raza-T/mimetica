@@ -197,7 +197,7 @@ def create_sidebar():
         )
 
         selected_label = st.selectbox(
-            "🌐 Language",
+            "Language",
             list(lang_options.keys()),
             index=list(lang_options.keys()).index(current_label),
             key="selected_language"
