@@ -3,6 +3,10 @@ from crewai import Agent
 from config import config
 import streamlit as st
 from datetime import datetime
+from config import get_language
+language_selected = get_language()
+
+
 class DefineAgent:
     """Agent responsible for defining scope, objectives, and success criteria"""
     
@@ -77,6 +81,8 @@ class DefineAgent:
 "• Use structured Markdown tables with stable IDs (OBJ-#, KPI-#, CONSTR-#, DEP-#, RISK-#) for automation and auditability. "
 "• Keep normalization, formulas, and metrics reproducible for downstream agents.\n\n"
 
+f"You receive all the info in the selected language: **{language_selected}**."
+f"Give your output and ensure all outputs respect the selected language: **{language_selected}**."
 "Your deliverable is a complete, versionable Markdown problem definition and scope report that cites the Criteria Lock Hash, "
 "preserves locked criterion names, aligns objectives and milestones with the roadmap, and equips downstream agents to explore, simulate, or decide immediately."
 ),
@@ -105,6 +111,7 @@ If anything is unknown, mark it as TBD and create a corresponding entry in the D
 Do not invent facts.
 When internal information is insufficient or ambiguous, you may conduct targeted external searches (web, datasets, regulations, reports, benchmarks) to close critical gaps, always citing provenance (URL) and access date.
 
+MUST: Give your output and ensure all outputs respect the selected language: **{language_selected}**. 
 ________________________________________
 Time Context
 (use this information for headers, milestones, and horizon alignment)
@@ -207,16 +214,16 @@ Must match the Feasibility lock.
 9) Behavioral Economics
 • Explain how behavioral economics may affect the definition of the problem, what must be considered, what should be applied, and how to incorporate BE.
 
-9) Governance & Change Control
+10) Governance & Change Control
 • Decision authorities, limits, approvals, and SLAs.
 • Consistency review against the Criteria Lock; if deviations exist, generate a Change Request.
 • Define the change process: triggers, format, review, approval, and communication, explaining WHY it balances speed and safety.
 
-10) Traceability & Provenance
+11) Traceability & Provenance
 • Decision traceability table (each claim with its exact source and WHY).
 • Data dictionary with definition, unit, source system, and known limitations or biases.
 
-11) Data Gap & Collection Plan (TBD)
+12) Data Gap & Collection Plan (TBD)
 • For each missing datum: what is missing, WHY it matters, collection method (instrumentation/query/survey/experiment), owner, ETA, and acceptance criteria.
 
 ________________________________________

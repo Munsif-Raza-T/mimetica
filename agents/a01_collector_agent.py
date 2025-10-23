@@ -4,6 +4,9 @@ from config import config
 import streamlit as st
 import time
 from datetime import datetime
+from config import get_language
+language_selected = get_language()
+
 
 class CollectorAgent:
     """Agent responsible for data collection, cleaning, and vectorization"""
@@ -135,6 +138,9 @@ class CollectorAgent:
 
 "The result is a session-scoped **Context Pack v1** that downstream agents (Explore, Create, Implement, Simulate, Evaluate) can trust blindly: "
 "versioned, normalized, bilingual when needed, 100% indexed under a clear namespace, with quality scores, lineage, and a complete manifest."
+
+f"You receive all the info in the selected language: **{language_selected}**."
+f"Give your output and ensure all outputs respect the selected language: **{language_selected}**."
             ),
             tools=tools_list,
             verbose=True,
@@ -165,7 +171,7 @@ You must: (1) discover and enumerate ALL session-scoped artifacts; (2) clean & n
 (5) compute **dataset_id** and **processing_duration**; (6) split bilingual content into **ES/EN** subsections when applicable; (7) reconcile OCR vs parser table extraction and mark **manual_review** when mismatched;
 (8) index 100% of documents into a declared **namespace**; (9) extract decision-grade evidence with **units** and **timeframes**, KPIs (owner/system/cadence), early risks/assumptions,
 and initial **behavioral variables** (friction, defaults, framing, social proof, timing, commitment, anchoring); (10) emit a Markdown **Dataset Manifest** exactly as per template below PLUS machine-readable CSV/JSON summaries.
-
+(9) Give your output and ensure all outputs respect the selected language: **{language_selected}**.
 ────────────────────────────────────────────────────────────────────────────────────────
 INPUTS (verbatim)
 - Documents to process (session scope):

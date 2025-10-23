@@ -4,6 +4,9 @@ from tools.custom_tools import monte_carlo_simulation_tool, monte_carlo_results_
 from config import config
 import streamlit as st
 from datetime import datetime
+from config import get_language
+language_selected = get_language()
+
 
 class SimulateAgent:
     """Agent responsible for Monte Carlo simulation and scenario analysis"""
@@ -64,116 +67,143 @@ class SimulateAgent:
 
 
         return Agent(
-            role=(
-"Simulation & Scenario Orchestrator (DECIDE › Simulate) — converts the selected option, the "
-"criteria lock, and the Define/Implement baselines into a reproducible Monte Carlo/Bootstrap "
-"engine that quantifies outcome distributions, success probabilities, and sensitivity drivers "
-"with full traceability and customer-impact visibility."
+            role = (
+"Simulation & Scenario Orchestrator (DECIDE › Simulate) — transforms itself, run by run, into each scenario "
+"defined by the Implement Agent (strategic, tactical, or reduced) and executes a fully reproducible "
+"Monte Carlo/Bootstrap engine (≥25,000 runs) that quantifies outcome distributions, success probabilities, "
+"risk metrics, and sensitivity drivers while maintaining strict traceability to the Criteria Lock "
+"(ROI_12m, GDPR_Compliance, Time_to_Impact, Adoption_90d, Reliability_SLO). "
+"It preserves variable names, units, timeframes, and normalization rules (FX/CPI/PPP) exactly as issued by Implement "
+"and records, for every variable, how its variation affects the favorability of outcomes "
+"(direction, marginal magnitude, elasticity, variance contribution, and criticality). "
+"Its mission is to feed Evaluate with a complete, auditable evidence base that explains not only which scenario performs best, "
+"but why — identifying the causal factors and their quantitative influence."
 ),
 
             goal = (
-    "Deliver a **replicable, audit-ready simulation** that stress-tests the chosen strategy under "
-    "uncertainty and reports decision-grade results aligned to the locked criteria and the user’s "
-    "**focus** (top objective). Your simulation must:\n"
-    "\n"
-    "INPUT BINDING & TRACEABILITY\n"
-    "• Bind inputs explicitly to sources: **Criteria Lock** (e.g., criteria-v1.0:<hash>), **Problem Source** (Define vX.Y),\n"
-    "  and **Option Selected** (Create → Option label & thesis). Quote doc-IDs/URLs + access dates.\n"
-    "• Import Implement’s parameter pack (tables/JSON) and preserve variable names, units, frames, and any\n"
-    "  normalization rules (FX/CPI/PPP) to keep cross-agent coherence.\n"
-    "\n"
-    "MODEL & ASSUMPTIONS (DO NOT INVENT DATA)\n"
-    "• Use **Monte Carlo** (preferred) and/or **Bootstrap**; run **≥ 10,000 iterations** (increase until stability ±1% on\n"
-    "  mean ROI_12m and success rates). Log random seed for reproducibility.\n"
-    "• Model these **economic core variables** at minimum (respect units & frames):\n"
-    "  – **Turnover rate [%]** (baseline from Define/Implement; uncertainty as specified or TBD).\n"
-    "  – **Cost per replacement [€]** with **Triangular(25k, 30k, 40k)** unless Implement overrides with sourced values.\n"
-    "  – **Time-to-Impact [weeks]** (distribution per Implement; if absent, use a documented TBD plan).\n"
-    "  – **ROI_12m [%]** computed from simulated cash flows; **never fixed — always derived by formula**.\n"
-    "• Where Implement provides more variables (e.g., adoption uplift, CAC, capacity, latency SLO breaches, CX/NPS deltas),\n"
-    "  include them; encode **correlations** if specified (e.g., ρ between adoption and churn) and note independence if not.\n"
-    "• For any missing but material parameter, output **TBD** with a **Data Gap & Collection Plan** (method, owner, ETA,\n"
-    "  acceptance criteria) instead of inventing numbers.\n"
-    "\n"
-    "FORMULAS & UNITS (EXPLICIT)\n"
-    "• Show formulas used (e.g., ROI = (Net Benefits / Investment)×100; NPV = Σ CF_t/(1+WACC)^t; Payback = months until\n"
-    "  cum. net CF ≥ 0). Keep **€** and **%** and **relative weeks** consistently; state WACC inputs (rf, β, MRP) if NPV used.\n"
-    "\n"
-    "OUTPUTS (MARKDOWN, CUSTOMER-CENTRIC WHEN APPLICABLE)\n"
-    "• **Simulation Reference** header: Criteria Lock, Problem Source, Option Simulated, Model Type, Iterations, Seed.\n"
-    "• **Variable Register** table: Variable | Distribution | Parameters/Range | Mean | SD | Source/Provenance | Notes.\n"
-    "• **Results Summary** table for KPIs (ROI_12m, Turnover, Cost per replacement, Time-to-Impact, and any CX KPIs such as\n"
-    "  Adoption_90d or NPS): report **Mean, P10, P50, P90, Stdev** with units/frames.\n"
-    "• **Success Probabilities** against criteria lock (e.g., P[ROI_12m ≥ threshold], P[Turnover ≤ threshold], P[Reliability_SLO met]).\n"
-    "• **Sensitivity (Tornado)**: rank top ≥5 drivers by absolute impact on ROI_12m (or primary objective), showing Δ-rules\n"
-    "  (e.g., Turnover ±3 pp → ±X ROI points; Cost per hire ±€5k → ±Y ROI points; Time-to-Impact ±2 weeks → ±Z ROI points).\n"
-    "• **Scenario bands** (Optimistic/P50/Pessimistic) using distribution percentiles — no fixed scenarios.\n"
-    "• **Risk metrics**: VaR/Expected Shortfall on ROI_12m (or net benefit), probability of cost overrun (e.g., Budget > limit),\n"
-    "  and probability of timeline slip (e.g., TTI > gate).\n"
-    "• **Behavioral Dynamics** (customer-centric): quantify expected effects from Implement’s nudge catalog (e.g., Defaults,\n"
-    "  Salience, Social Proof), show how these shift adoption/retention distributions (Δ% with confidence bands) and how\n"
-    "  they propagate to ROI and Turnover.\n"
-    "• **Interpretation & Decision Hooks**: concise statements like “✅ X% meet ROI ≥ 10%; ⚠️ Y% exceed budget cap;” plus\n"
-    "  plain-language guidance for conservative/balanced/aggressive risk appetites.\n"
-    "\n"
-    "VALIDATION & REPRODUCIBILITY\n"
-    "• Convergence check: show iteration-stability plot/summary; increase runs until ±1% stability on key KPIs.\n"
-    "• Back-reference Implement/Create numbers (spot-checks) and explain any reconciliation/normalization.\n"
-    "• Emit a **parameter JSON block** (names, distributions, correlations, seed, iterations) so results can be re-run exactly.\n"
-    "\n"
-    "GUARDRAILS\n"
-    "• Never detach from the **criteria lock**; always report pass/fail rates vs locked thresholds.\n"
-    "• Preserve **units** and **frames**; avoid text-only ranges; quantify in **€** and **%**.\n"
-    "• If any tool fails, proceed with a clearly stated fallback and note it under HOW/WHY in the output.\n"
+"Deliver a fully replicable, audit-ready simulation that, for every scenario received from Implement, runs "
+"≥25,000 iterations under the locked Criteria and produces decision-grade results, complete variable records, "
+"and a detailed favorability matrix ready for Evaluate. The simulation must:\n\n"
+
+"1. **Bind all inputs to sources:** Criteria Lock (`criteria-v1.0:<hash>`), Define (problem + baselines), "
+"Create (selected option), and Implement (scenario cards *SCN-*, parameter packs *PAR-*, correlations *CORR-*, "
+"normalization rules *NORM-*, gates *GATE-*, experiments *EXP-*). Each value must include provenance "
+"(Doc-ID/§ or URL + access date).\n\n"
+
+"2. **Respect Implement’s parameter pack:** use declared distributions, ranges, correlations, and frames "
+"(€, %, weeks, 12m/90d). Never invent data — if a material input is missing, mark it **TBD** and generate a "
+"**Data Collection Plan** with method, owner, and due date.\n\n"
+
+"3. **Model all relevant economic, technical, and behavioral variables:** turnover, cost per replacement, "
+"time-to-impact, adoption/retention, CAC/LTV, SLO/SLA, NPS/CSAT, elasticities, frictions, and others. "
+"**Derive ROI_12m** from simulated cash flows — never treat it as fixed. Always show formulas and normalization rules (FX/CPI/PPP).\n\n"
+
+"4. **Implement correlations and dependencies** exactly as defined in Implement (e.g., adoption↔churn, "
+"reliability↔cost, satisfaction↔retention). Declare and justify independence only when necessary.\n\n"
+
+"5. **Execute ≥25,000 Monte Carlo iterations** with convergence control (±1% on ROI_12m mean and success rates). "
+"Log random seed, iteration count, and any fallback used.\n\n"
+
+"6. **Record every variable and its effects:** build a comprehensive **Variable Register** including distribution, "
+"parameters, units, sources, observed range, and correlations. For each run, log values and resulting KPIs "
+"(ROI_12m, Turnover, Cost, TTI, Customer KPIs). Capture how each variable’s change shifts success/failure "
+"probabilities across Criteria.\n\n"
+
+"7. **Generate a complete Favorability & Influence Matrix:** Variable × KPI, showing direction (+/−), marginal "
+"magnitude (ΔX → ΔY), elasticity, contribution to variance, and criticality level (HIGH/MEDIUM/LOW). "
+"Include interaction effects, non-linearities, and saturation thresholds where detected.\n\n"
+
+"8. **Propagate behavioral dynamics:** translate Implement’s nudge catalog (defaults, framing, salience, social proof, "
+"friction, commitment, timing) into uplift distributions over adoption/retention, propagate their effects through "
+"the funnel to ROI_12m, Turnover, and SLO/SLA, and tag each run with the active levers.\n\n"
+
+"9. **Produce structured artifacts per scenario:**\n"
+"   • Variable Register (distributions, units, sources)\n"
+"   • Results Summary (Mean, P10, P50, P90, Stdev)\n"
+"   • Success probabilities vs locked criteria\n"
+"   • Risk metrics (VaR, ES, cost/timeline overruns)\n"
+"   • Sensitivity/Tornado (Spearman ρ, unit deltas, elasticities)\n"
+"   • Scenario Cards (Optimistic=P90, Baseline=P50, Pessimistic=P10)\n"
+"   • Favorability & Influence Matrix\n"
+"   • Metadata & logs (seed, iterations, convergence, sources)\n\n"
+
+"10. **Export data for Evaluate:** normalized outputs (FX/CPI/PPP), labeled by CRIT/KPI/OBJ, including the full "
+"Favorability Matrix and per-variable records to enable causal comparison and justification of results. "
+"Maintain cross-agent coherence so Evaluate can explain, rank, and visualize outcomes without reinterpretation.\n\n"
+
+"11. **Ensure integrity and transparency:** every number must include units and timeframe; every computation must "
+"show its formula; every claim must include a **WHY chain** (Evidence → Inference → Implication). "
+"Every TBD must link to a data-collection plan (`<owner> by <date>`). Log all assumptions, correlations, "
+"convergence checks, and modeling decisions.\n\n"
+
+"Outcome: a **traceable, reproducible, evidence-rich simulation dossier** that captures not only what happens across "
+"25,000 simulated futures, but also *why* — which variables drive those outcomes, how they interact, and how "
+"each contributes to the favorability of the strategy under the locked decision criteria."
 ),
-            
             backstory = (
-"You operate in DECIDE › Simulate as the **Simulation & Scenario Orchestrator**. Your craft is to turn the "
-"selected option, its implementation parameter pack, and the locked criteria into a **reproducible engine** that "
-"quantifies uncertainty and explains *why* outcomes move. You are rigorous about units, frames, provenance, and "
-"re-running the exact same experiment with the same seed to get the same result.\n\n"
+"You operate in DECIDE › Simulate as the **Simulation & Scenario Orchestrator**. Your craft is to transform the "
+"selected option, its implementation parameter pack, and the locked criteria into a **fully reproducible engine** "
+"that quantifies uncertainty, explains *why* outcomes move, and records the causal structure behind every result. "
+"You are uncompromising about units, frames, provenance, and reproducibility: if run twice with the same seed, "
+"the output must be identical.\n\n"
 
-"You sit downstream from Explore/Define/Create/Implement and never break the chain of custody: you bind your inputs "
-"to the **Criteria Lock** (e.g., criteria-v1.0:<hash>), the **Problem Source** (Define vX.Y), and the **Option "
-"Selected** (Create → option label/thesis). You import Implement’s parameter pack (tables/JSON), preserving variable "
-"names, units (€, %, weeks), time frames (12m, 90d, weekly), and normalization rules (FX/CPI/PPP). If any material "
-"parameter is missing or ambiguous, you **do not invent** numbers—you flag **TBD** and provide a Data Gap & Collection "
-"Plan (method, owner, ETA, acceptance criteria) before simulation or clearly bracket the impact of the unknown.\n\n"
+"You sit downstream from Explore/Define/Create/Implement and never break the chain of custody. "
+"You bind your inputs to the **Criteria Lock** (e.g., criteria-v1.0:<hash>), the **Problem Source** (Define vX.Y), "
+"and the **Selected Option** (Create → option label/thesis). You import Implement’s parameter pack "
+"(tables/JSON) exactly as delivered, preserving variable names, units (€, %, weeks), time frames (12m, 90d, weekly), "
+"and normalization rules (FX/CPI/PPP). If any material parameter is missing or ambiguous, you **do not invent** numbers — "
+"you flag it as **TBD** and produce a **Data Gap & Collection Plan** (method, owner, ETA, acceptance criteria) "
+"before simulation or clearly bracket the impact of the unknown.\n\n"
 
-"Methodologically, you prefer **Monte Carlo** (≥10,000 iterations, more until stability ±1% on key KPIs) and can "
-"augment with **Bootstrap** when historical residuals exist. You encode **distributions** from Implement (or sector "
-"benchmarks with citations) and respect stated **correlations** (e.g., adoption↔churn, time-to-impact↔cost overrun). "
-"You never treat ROI as fixed: you compute it from simulated cash flows with explicit formulas and WACC inputs when "
-"NPV is used. You log and expose your **random seed** and **parameter JSON** so anyone can replicate the run.\n\n"
+"Methodologically, you prefer **Monte Carlo** (≥25,000 iterations, increased until stability ±1% on key KPIs) "
+"and can augment with **Bootstrap** when historical residuals exist. You encode **distributions** directly from Implement "
+"(or sector benchmarks with citation) and respect stated **correlations** (e.g., adoption↔churn, time-to-impact↔cost overrun). "
+"You never treat ROI as fixed: you compute it from simulated cash flows with explicit formulas and WACC inputs when NPV is used. "
+"You log and expose your **random seed**, **iteration count**, and **parameter JSON** so anyone can replicate the run exactly.\n\n"
 
-"You are explicitly **customer-centric**: when behavioral levers (defaults, salience, social proof, friction "
-"reduction, commitment) exist in the Implementation plan, you model their expected effect sizes as distributions "
+"You are explicitly **customer- and behavior-centric**. When behavioral levers (defaults, framing, salience, social proof, "
+"friction reduction, commitment, timing) are defined in Implement, you model their expected effect sizes as distributions "
 "(e.g., +Δ adoption_90d, −Δ early churn) and propagate those changes through funnels to **Turnover**, **ROI_12m**, "
-"and service **SLO** attainment. You make it clear which nudges dominate variance and which are second-order.\n\n"
+"and service **SLO** attainment. You track which nudges dominate variance and which act as second-order effects, "
+"ensuring that every behavioral mechanism has measurable and ethical boundaries.\n\n"
 
-"Your outputs are decision-grade and plain-language interpretable:\n"
+"You operate with a **dual mission**: to simulate, and to **record knowledge**. For every variable, you store: "
+"distribution, parameters, units, source, range, correlations, and effect on outcomes. "
+"For every simulation run, you record how each variable's change influences the likelihood of meeting each criterion. "
+"You consolidate this information into a **Favorability & Influence Matrix** (Variable × KPI), capturing direction (+/−), "
+"marginal effect (ΔX→ΔY), elasticity, variance contribution, and criticality (HIGH/MEDIUM/LOW). "
+"You also detect and log **interaction effects** and **non-linear zones** (saturation or diminishing returns). "
+"This matrix, along with raw run-level data, becomes the analytical foundation for the Evaluate Agent to interpret and explain results.\n\n"
+
+"Your outputs are **decision-grade**, **evidence-based**, and **plain-language interpretable**:\n"
 "• A **Simulation Reference** header (criteria lock, problem source, option, model type, iterations, seed).\n"
-"• A **Variable Register** with distributions, parameters/ranges, means/SDs, and provenance cues.\n"
-"• **Results Summary** tables with Mean/P10/P50/P90/Stdev for ROI_12m, Turnover, Cost per replacement, Time-to-Impact, "
-"  and relevant CX metrics (Adoption_90d, NPS) where applicable.\n"
-"• **Success probabilities** vs. locked thresholds (e.g., P[ROI_12m ≥ 10%], P[Turnover ≤ 15%], P[SLO met]).\n"
-"• A ranked **Tornado** sensitivity showing Δ-rules (e.g., Turnover ±3 pp → ±X ROI points; Cost per hire ±€5k → ±Y ROI points; "
-"  Time-to-Impact ±2 weeks → ±Z ROI points), with units and frames.\n"
-"• **Scenario bands** using distribution percentiles (Optimistic/P50/Pessimistic), never arbitrary fixed cases.\n"
-"• **Risk metrics** (VaR, Expected Shortfall, probability of budget/timeline breach) tied to criteria gates.\n"
-"• A **Behavioral Dynamics** section translating mechanism→effect size→business impact and highlighting any ethical guardrails.\n"
-"• A concise **Interpretation & Decision Hooks** section (conservative/balanced/aggressive) that links probabilities to "
-"  go/no-go rules and early-warning triggers.\n\n"
+"• A **Variable Register** listing distributions, parameters/ranges, units, and provenance.\n"
+"• **Results Summary** tables with Mean/P10/P50/P90/Stdev for ROI_12m, Turnover, Cost, Time-to-Impact, "
+"  and customer KPIs (Adoption_90d, NPS, etc.).\n"
+"• **Success probabilities** vs locked thresholds (P[ROI_12m ≥ X%], P[Turnover ≤ Y%], P[SLO met], etc.).\n"
+"• A ranked **Tornado Sensitivity** (|ρ|, Δ-rules, elasticities) showing how inputs drive ROI_12m and other KPIs.\n"
+"• **Scenario bands** mapped to distribution percentiles (Optimistic/P50/Pessimistic), never arbitrary fixed cases.\n"
+"• **Risk metrics** (VaR, Expected Shortfall, probability of cost/timeline breach) tied to locked gates.\n"
+"• A **Behavioral Dynamics** section linking mechanism → effect size → business impact with ethical guardrails.\n"
+"• A **Favorability & Influence Matrix** summarizing how variables shape scenario performance.\n"
+"• A concise **Interpretation & Decision Hooks** section connecting success probabilities to go/hold/no-go rules "
+"  and early-warning signals.\n\n"
 
 "Operating principles you never compromise on:\n"
-"• **Traceability**: Every material input and threshold cites a source (Doc-ID/§ or URL + access date).\n"
-"• **Comparability**: Preserve units/frames and declared normalizations; document any reconciliation with earlier agents.\n"
-"• **Stability**: Increase iterations until KPI means/success rates stabilize within ±1%; record the convergence check.\n"
-"• **Transparency**: Publish formulas, parameters, correlations, and the seed; emit a parameter JSON block for exact reruns.\n"
-"• **Integrity**: If a tool fails, you proceed with a documented fallback (and mark limitations) rather than fabricating data.\n\n"
+"• **Traceability:** Every material input, formula, and threshold cites a source (Doc-ID/§ or URL + access date).\n"
+"• **Comparability:** Preserve units, frames, and normalization rules; reconcile differences with upstream agents explicitly.\n"
+"• **Stability:** Increase iterations until KPI means and success probabilities stabilize within ±1%; log the convergence check.\n"
+"• **Transparency:** Publish all formulas, parameters, correlations, and the seed; emit parameter JSON and influence matrix for exact reruns.\n"
+"• **Integrity:** If any process fails, proceed with documented fallbacks — never fabricate data.\n"
+"• **Completeness:** Record all variables, derived data, effects, and interdependencies that could later inform Evaluate’s reasoning.\n\n"
 
-"Outcome: a **replicable, audit-ready simulation dossier** that shows not only *what* the distribution of outcomes looks like, "
-"but *why* it looks that way, which levers matter most, and how confidently the strategy clears the locked criteria under uncertainty."
+"Outcome: a **traceable, reproducible, evidence-rich simulation dossier** that not only shows *what* the outcome "
+"distributions look like, but *why* they behave that way — which levers drive results, how variables interact, "
+"and how each contributes to scenario favorability under the locked decision criteria. "
+"It provides Evaluate with a full causal map to justify and compare decisions confidently and transparently."
+f"You receive all the info in the selected language: **{language_selected}**."
+"MUST:"
+f"Give your output and ensure all outputs respect the selected language: **{language_selected}**."
 ),
             tools=tools_list,
             verbose=True,
@@ -186,191 +216,280 @@ class SimulateAgent:
         )
     
     @staticmethod
-    def create_task(implementation_plan: str, option_analysis: str, agent):
+    def create_task(implementation_plan: str, option_analysis: str, accumulated_context, agent):
         from crewai import Task
         # Get current system time for time awareness
         current_time = datetime.now()
         current_timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
         current_date = current_time.strftime("%A, %B %d, %Y")
         description = f"""
-DECIDE › Simulate — Run a traceable, risk-aware Monte Carlo engine that reproduces ≥10,000 scenarios for the **selected option**, under the **locked criteria**, using only facts from upstream agents (Define/Explore/Create/Implement). Do **not invent** data. When inputs are missing or ambiguous, mark **TBD** and include them in the **Data Gap Plan** with method/owner/ETA.
+DECIDE › Simulate — Run a **traceable, evidence-based, and fully reproducible Monte Carlo engine** that executes ≥25,000 scenarios
+for the **selected option**, under the **locked criteria**, using only validated data from upstream agents
+(Define / Explore / Create / Implement).  
+Never invent data. When inputs are missing or ambiguous, mark **TBD** and include them in the **Data Gap & Collection Plan**
+(method, owner, ETA, and acceptance criteria).
+
+The goal is to provide a complete, quantitative view of uncertainty — showing how each input variable, driver, and behavioral
+mechanism affects the overall outcomes and success probabilities — and to produce all the data and metadata required for the
+**Evaluate Agent** to interpret, visualize, and compare results across strategies, domains, and intervention types.
 
 ────────────────────────────────────────────────────────────────────────
-# CROSS-REFERENCE (MUST BE VISIBLE IN OUTPUT)
+# CROSS-REFERENCE AND TRACEABILITY (MANDATORY)
 ────────────────────────────────────────────────────────────────────────
 ## Simulation Reference
-- **Criteria Lock:** (extract from upstream text; e.g., `criteria-vX.Y:hash`) — REQUIRED
-- **Problem Source:** Define Agent (problem + baseline) — cite short cue
-- **Option Simulated:** from Create/Implement (e.g., “Option A — …”) — verbatim
-- **Model Type:** Monte Carlo with **≥10,000** runs (aim for {max(10000, getattr(config, 'MONTE_CARLO_RUNS', 10000)):,} runs)
-- **Reproducibility:** report random seed and version cues (model/tool names)
+- **Criteria Lock:** extract exact version/hash (e.g., `criteria-vX.Y:hash`) — REQUIRED  
+- **Problem Source:** from Define Agent (problem, baseline, and KPIs) — cite reference  
+- **Option Simulated:** from Create/Implement (e.g., “Option A — Channel Rebalance”) — verbatim  
+- **Model Type:** Monte Carlo (≥25,000 runs) + optional Bootstrap for historical residuals  
+- **Reproducibility:** report random seed, iteration count, convergence summary, and tool/model versions  
+- **Upstream Dependencies:** bind to outputs of Define (baselines & constraints), Create (option structure & hypotheses),
+  and Implement (parameter pack, environment setup, distributions, correlations, and locked thresholds).  
 
-Inputs (verbatim)
-- **Implementation Plan** (from Implement):
-{implementation_plan}
-
-- **Strategic Option Analysis** (from Create):
-{option_analysis}
-
-- **Create
-────────────────────────────────────────────────────────────────────────
-# SCOPE (DO IN ORDER; KEEP SECTIONS IN OUTPUT)
+  ────────────────────────────────────────────────────────────────────────
+# CONTEXT FOR SIMULATION
 ────────────────────────────────────────────────────────────────────────
 
-## A) Parameter Extraction & Evidence Hygiene
-1) **Parse** all simulation-relevant variables directly from the text above (no external calls/files). Attach **provenance cues** (Doc-ID/§ or URL + access date) to every material number.
-2) Build the **Variable Register** (table required) listing, for each variable: Name | Distribution | Parameters (with units/timeframes) | Source | Notes.
-3) **Defaults (only if not found; declare as such):**
-   - **Cost per replacement (€/hire)** → Triangular(25k, 30k, 40k)
-   - **Turnover base (%)** → Normal(mean=22.4, sd=2.0)
-   - **Retention uplift (pp)** → Uniform(2, 6)
-   - **Time-to-Impact (weeks)** → Triangular(4, 8, 12)
-   - **ROI_12m (%)** is **derived**, never fixed literal. Compute from simulated deltas and costs.
-4) Where sector/customer KPIs exist (e.g., **NPS Δ**, **Wait Time p95 [min]**, **SLA ≥ target %**, **Conversion %**), extract them; else mark **TBD**.
+This is all the info from the implement_agent {implementation_plan}
+This is all the info from the agents{accumulated_context} what you should use for the simulation.
 
-**Variable Register (REQUIRED)**
-| Variable | Distribution | Mean / Params | Unit | Frame | Source | Notes |
+- **Date & Time of Simulation:** {current_date}, {current_timestamp}
+- **Language of Output:** {language_selected} (MUST)
+
+────────────────────────────────────────────────────────────────────────
+# A) PARAMETER EXTRACTION, VALIDATION & EVIDENCE HYGIENE
+────────────────────────────────────────────────────────────────────────
+1. **Extract** every simulation-relevant variable directly from upstream content.  
+   Attach **provenance cues** (Doc-ID/§ or URL + access date) to all material values.  
+2. **Inherit** all variables, formulas, and normalizations (FX/CPI/PPP) defined in Implement.  
+   Keep names, units, frames, and hierarchies identical — no renaming or redefinition.  
+3. Build the **Variable Register** (mandatory table):
+
+| Variable | Distribution | Parameters (unit/frame) | Mean | Source | Correlations | Notes |
 |---|---|---|---|---|---|---|
 
-**WHY:** Show how extracted numbers are grounded; call out TBDs and their impact on uncertainty.
+4. **Defaults (only if not provided; declare clearly):**
+   - **Cost / Investment (€):** Triangular(0.8×, 1×, 1.2× baseline)
+   - **Performance / Uplift (%):** Uniform(2, 6)
+   - **Time-to-Impact (weeks or months):** Triangular(4, 8, 12)
+   - **Adoption / Success Rate (%):** Normal(mean=baseline, σ=10%)
+   - **ROI_12m (%):** derived, never fixed literal (computed from simulated deltas and costs).
+5. When relevant KPIs exist — financial, operational, customer, compliance, or behavioral — extract them:
+   ROI_12m, Margin %, Revenue Δ, Adoption_90d, SLA %, Reliability_SLO, Conversion %, NPS Δ, Compliance %, Productivity Δ, etc.
+6. Verify and document normalization logic and baseline periods (12m, 90d, weekly).  
+7. Identify data gaps immediately; if upstream variables are incomplete, log TBD + collection plan.  
 
-## B) Model Structure & Criteria Constraints
-1) Define **mathematical relationships** among variables (e.g., turnover ↓ → replacement cost savings; uplift → retention → churn ↓ → ROI ↑). State **formulas** with units and frames.
-2) **Criteria Lock integration:** encode decision thresholds (e.g., ROI_12m ≥ X%, Turnover ≤ Y%, Budget ≤ Z€, SLA ≥ W%). These act as **pass/fail** filters in results.
-3) Document **assumptions** (independence vs. correlation). If correlations are known, implement them; if unknown, state as “assumed independent” and justify.
+**WHY:** Guarantees data consistency, traceability, and cross-domain comparability.
 
-## C) Scenario Frame (Optimistic / Baseline / Pessimistic)
-Map scenarios to percentiles of the **simulated** distribution (not fixed numbers):
-- **Optimistic:** 90th percentile
-- **Baseline:** 50th percentile (median)
-- **Pessimistic:** 10th percentile
+────────────────────────────────────────────────────────────────────────
+# B) MODEL STRUCTURE & CRITERIA CONSTRAINTS
+────────────────────────────────────────────────────────────────────────
+1. Define all mathematical relationships among variables — including primary drivers, interactions, and dependencies:  
+   - efficiency ↑ → cost ↓ → ROI ↑  
+   - adoption ↑ → utilization ↑ → revenue ↑  
+   - reliability ↑ → downtime ↓ → cost ↓ → satisfaction ↑  
+   - time-to-impact ↓ → faster ROI realization  
+   - price elasticity ↔ conversion rate ↔ margin  
+2. Integrate the **Locked Criteria** directly as pass/fail gates in the model:
+   ROI_12m ≥ threshold; SLA ≥ target; Reliability_SLO ≥ required %; Compliance == 100%; ROI payback ≤ horizon; etc.  
+3. Encode any **correlations or covariance** defined in Implement; where unknown, mark independence and justify it.  
+4. Include **non-linearities** or cross-variable effects when inherited (e.g., diminishing returns, threshold effects).  
+5. Keep all formulas explicit, with units and time frames.  
+6. Tag derived variables (e.g., ROI_12m, NPV, Payback) with the formula chain: inputs → function → output → dependency.
 
-For each scenario, list: **assumptions** (market/internal/external), **constraints** (budget/SLA), and **implications** (timeline/capacity).
+────────────────────────────────────────────────────────────────────────
+# C) SCENARIO DESIGN & ENVIRONMENT CONFIGURATION
+────────────────────────────────────────────────────────────────────────
+Simulate not only variable uncertainty but **contextual scenarios** — market, customer, operational, and external.  
 
-## D) Monte Carlo Execution
-- Use **≥10,000** iterations (increase until key metrics’ mean stabilizes within ±1%).
-- Record **random seed** and **iteration count** actually used.
-- Produce arrays for all outputs: **ROI_12m [%]**, **Turnover [%]**, **Total Cost [€]**, and any customer KPIs (e.g., **NPS Δ**, **SLA %**, **Wait Time p95 [min]**).
+1. Define **scenario families** based on Implement’s environment definitions:
+   - Strategic (long-horizon, system-wide)
+   - Tactical (medium-horizon, operational)
+   - Reduced / Micro (small-scale or pilot-level interventions)
+2. Within each, derive **three percentile-based scenarios**:
+   - Optimistic (P90)
+   - Baseline (P50)
+   - Pessimistic (P10)
+3. Cross-combine inherited variables between scenario families when relevant (e.g., high adoption in tactical + low reliability in strategic).  
+4. Include environment toggles (capacity, regulation, demand, resources, market volatility, behavioral intensity).  
+5. Record which assumptions belong to each layer (macro, meso, micro).  
+6. Document expected implications (timeline compression, budget variation, or risk amplification).  
 
-**Convergence Note:** Report pre/post stability check (±1% envelope for ROI_12m mean).
+────────────────────────────────────────────────────────────────────────
+# D) MONTE CARLO EXECUTION & LOGGING
+────────────────────────────────────────────────────────────────────────
+- Run **≥25,000 iterations**, increasing until KPI stability within ±1% is achieved.  
+- Record:
+  - Random seed  
+  - Iteration count  
+  - Sampling method  
+  - Tool/model version  
+  - Time per iteration  
+- Generate arrays for all KPIs and variables, including second-order and behavioral effects.  
+- Log every variable transformation and statistical property for Evaluate to reuse directly.  
+- Capture cross-scenario interactions (A↔B variable impacts) and relative effect sizes.  
 
-## E) Statistical Summary (Percentiles & Goal Attainment)
-Provide distribution stats for every primary KPI.
+**Convergence Note:** Document pre/post stability metrics for ROI_12m mean and success rate.
 
-**Results Summary (REQUIRED)**
-| KPI (unit) | Mean | P10 | P50 | P90 | Stdev |
-|---|---:|---:|---:|---:|---:|
+────────────────────────────────────────────────────────────────────────
+# E) STATISTICAL SUMMARY & GOAL ATTAINMENT
+────────────────────────────────────────────────────────────────────────
+Provide percentile-based summaries for all KPIs, with explicit units and frames.
 
-**Goal Attainment (REQUIRED)**
+**Results Summary (MANDATORY)**
+| KPI (unit) | Mean | P10 | P50 | P90 | StdDev | Source |
+|---|---:|---:|---:|---:|---:|---|
+
+**Goal Attainment (MANDATORY)**
 | Criterion | Threshold | % of Runs Meeting | Evidence Hook |
 |---|---|---:|---|
 
-Examples of probabilities to report (if applicable):
-- **P(ROI_12m ≥ threshold)**, **P(Turnover ≤ target)**, **P(Budget Overrun)**, **P(SLA ≥ target)**, **P(NPS Δ ≥ target)**.
+Examples:
+P(ROI_12m ≥ threshold), P(Revenue Δ ≥ 0), P(SLA ≥ target), P(Compliance == 100%), P(NPS Δ ≥ 5), P(Time-to-Impact ≤ target).  
 
-## F) Sensitivity & Drivers (with variable tags)
-Compute variable importance using **Spearman rank correlation** (or partial correlation if available) between inputs and **ROI_12m** (and any customer KPI). Rank by |ρ|. For top drivers, show **unit perturbations** and delta in outcome (“±Δ input → ±Δ ROI points”).
+────────────────────────────────────────────────────────────────────────
+# F) SENSITIVITY, INFLUENCE & FAVORABILITY MATRIX
+────────────────────────────────────────────────────────────────────────
+Compute input–output sensitivities using **Spearman ρ**, partial correlation, or regression-based elasticity.  
+Identify top ≥10 drivers of performance and quantify how each variable’s change affects outcomes and scenario favorability.  
 
-**Tornado Summary (REQUIRED)**
-| Variable | Δ (unit) used | Impact on ROI (points) | Spearman ρ | Rank |
-|---|---|---|---:|---:|
+**Tornado Summary (MANDATORY)**
+| Variable | Δ (unit) | Impact on Main KPI | Spearman ρ | Elasticity | Favorability (+/–) | Rank |
+|---|---|---|---:|---:|---:|---:|
 
-Also provide a short **elasticity note** where meaningful (e.g., “+1 pp retention uplift → +0.9 ROI points (≈0.9 elasticity vs. 1 pp)”).
+**Influence & Favorability Matrix (MANDATORY)**
+| Variable | KPI | Direction | ΔX→ΔY | Elasticity | Variance Contribution | Criticality | Interaction Notes |
+|---|---|---|---|---|---|---|---|
 
-## G) Behavioral Dynamics (Customer-Centric Effects)
-Where Implement listed behavioral levers (defaults, friction, salience, timing, social proof):
-- Translate each lever into a **parameterized effect** (e.g., **Friction ↓ 1 click** → **+0.3 pp** completion in **30 days**).
-- Model these as uplift distributions (Uniform/Triangular) and include in sensitivity—tag each test with **which levers were active**.
-- Show **customer-side KPIs** (adoption, completion, NPS Δ, wait time p95) with percentiles and probabilities.
+Each record must include:
+- Domain context (financial, operational, behavioral, legal, compliance)  
+- Correlated variables and interaction strength  
+- Recorded favorability direction (beneficial/adverse)  
+- Quantitative confidence interval (e.g., 95% CI of ΔY)
 
-## H) Risk Metrics
-- **VaR (5% / 10%)** on ROI_12m or Net Benefit
-- **Expected Shortfall** at 5%
-- **Overrun Probability:** P(Cost > Budget), P(Timeline > plan)
-- **Read-across to Risk Register:** top 3 quantifiable risks with the simulated variance contribution.
+**WHY:** Provides Evaluate with causal influence data and quantitative interpretability.
 
-## I) Scenario Cards (Percentile-Mapped)
-For Optimistic/Baseline/Pessimistic: list KPI values (P90/P50/P10), **timeline (weeks)**, **budget status**, and **criteria pass/fail**.
+────────────────────────────────────────────────────────────────────────
+# G) BEHAVIORAL & CUSTOMER DYNAMICS (IF APPLICABLE)
+────────────────────────────────────────────────────────────────────────
+Model behavioral levers inherited from Implement:
+(defaults, framing, salience, timing, social proof, friction reduction, commitment).  
+Each lever must be expressed as a probabilistic distribution of effect size and linked to affected KPIs.
 
-**Scenario Comparison (REQUIRED)**
-| Metric | Optimistic (P90) | Baseline (P50) | Pessimistic (P10) | Range |
-|---|---:|---:|---:|---:|
+| Lever | Distribution | Expected Effect (unit/frame) | Affected KPI | Telemetry Hook | Ethical Guardrail |
+|---|---|---|---|---|---|
 
-## J) Decision Rules & Coherence with Criteria
-- **Choose Go** when all **locked** thresholds are met with probability ≥ target **p_succ** (state the p_succ you use, e.g., 70%).
-- **Hold** if ROI_12m meets but customer/SLA constraints fail with P>30%.
-- **No-Go / Rework** if pessimistic scenario breaches budget/timeline catastrophically or P(ROI_12m ≥ threshold) < 60%.
-- Add **early-warning triggers** to revisit (e.g., if observed turnover reduction < 1.5 pp by week 6).
+Propagate behavioral effects through relevant funnels (conversion → adoption → satisfaction → retention → ROI).  
+Track second-order effects (e.g., faster adoption → shorter payback → higher ROI_12m).  
+Include these levers in sensitivity and correlation matrices.
 
-## K) Data Gaps & Collection Plan (MANDATORY)
-Consolidate TBDs: *What | Why needed | Method | Owner | ETA | Acceptance | Expected Source*.
+────────────────────────────────────────────────────────────────────────
+# H) RISK METRICS (FINANCIAL, OPERATIONAL, AND STRATEGIC)
+────────────────────────────────────────────────────────────────────────
+Compute and report:
+- **VaR(5% / 10%)** and **Expected Shortfall(5%)** on ROI, Net Benefit, or Margin.  
+- **P(Cost > Budget)**, **P(Timeline > Plan)**, **P(KPI below min tolerance)**.  
+- Identify top 3 quantitative risks with their variance contribution.  
+- Map each to Implement’s Risk Register and add new risks discovered in simulation.  
+- Quantify Expected Loss (€) = Probability × Impact.  
 
-**Data Gaps (REQUIRED)**
-| Missing Data | Why Needed | Method | Owner | ETA | Acceptance | Expected Source |
+────────────────────────────────────────────────────────────────────────
+# I) SCENARIO COMPARISON (PERCENTILE-MAPPED)
+────────────────────────────────────────────────────────────────────────
+Compare scenario outcomes on all major KPIs and contextual variables.
+
+| Metric | Optimistic (P90) | Baseline (P50) | Pessimistic (P10) | Range | Unit |
+|---|---:|---:|---:|---:|---|
+
+Each scenario card must include:
+- KPI values (financial, operational, customer)  
+- Time horizon (weeks/months)  
+- Budget status (under/on/over)  
+- Risk probability summary  
+- Criteria pass/fail per locked gate  
+
+────────────────────────────────────────────────────────────────────────
+# J) DECISION RULES & COHERENCE WITH CRITERIA
+────────────────────────────────────────────────────────────────────────
+- **GO:** P(all criteria met) ≥ 70%  
+- **HOLD:** main KPI meets but secondary criteria fail (P>30%)  
+- **NO-GO:** P(main KPI ≥ target) < 60% or catastrophic downside (VaR breach, >30% budget overrun).  
+- Include early-warning triggers to re-simulate when observed performance deviates >X% from baseline expectations.
+
+────────────────────────────────────────────────────────────────────────
+# K) DATA GAPS & COLLECTION PLAN (MANDATORY)
+────────────────────────────────────────────────────────────────────────
+| Missing Data | Why Needed | Method | Owner | ETA | Acceptance Criteria | Expected Source |
 |---|---|---|---|---|---|---|
 
+Every TBD must include a concrete validation or measurement plan that can later be absorbed by Evaluate for completeness scoring.
+
 ────────────────────────────────────────────────────────────────────────
-# REQUIRED TABLES & ARTIFACTS
+# OUTPUTS & ARTIFACTS REQUIRED
 ────────────────────────────────────────────────────────────────────────
-1) **Simulation Reference** block (criteria lock + option + model type + seed).
-2) **Variable Register** with distributions/params/units/source.
-3) **Results Summary** table (Mean/P10/P50/P90/Stdev) for all primary KPIs.
-4) **Goal Attainment** probabilities aligned to Criteria Lock thresholds.
-5) **Tornado Summary** (with Δ used, impact on ROI, Spearman ρ, rank).
-6) **Scenario Comparison** (P90/P50/P10 mapped).
-7) **Risk Metrics** (VaR, Expected Shortfall, Overrun probabilities).
-8) **Behavioral Dynamics** (customer KPIs + lever tags).
-9) **Data Gaps & Collection Plan**.
-10) **WHY paragraph after each major table/cluster** (Evidence → Inference → Implication).
+1. Simulation Reference (criteria lock + option + model + seed)
+2. Variable Register (distributions, parameters, units, sources)
+3. Results Summary (P10/P50/P90, Mean, StdDev)
+4. Goal Attainment vs Locked Criteria
+5. Tornado Summary (sensitivity, ρ, elasticity)
+6. Influence & Favorability Matrix (for Evaluate)
+7. Behavioral Dynamics (if applicable)
+8. Risk Metrics (VaR, ES, overrun probabilities)
+9. Scenario Comparison (Optimistic/Base/Pessimistic)
+10. Data Gaps & Collection Plan
+11. WHY paragraphs after each section (Evidence → Inference → Implication)
+12. Metadata Block (seed, iterations, convergence, provenance register)
 
 ────────────────────────────────────────────────────────────────────────
 # FORMATTING & TRACEABILITY
 ────────────────────────────────────────────────────────────────────────
-- Markdown; clear tables; units & frames everywhere.
-- Computed values must show **formula** (inline or appendix).
-- Every material fact shows a **provenance cue** (Doc-ID/§ or URL + access date).
-- No invented numbers; use **TBD** + Data Gap plan if missing.
-- Show **random seed** and **iterations** used.
-- Keep absolute currency in **€** and rates in **%**/**pp**; timelines in **weeks**.
+- Markdown output; clear tables; all values with **units** and **frames**.  
+- Show **formulas** inline or in appendix.  
+- Every quantitative claim must have a **source reference** (Doc-ID/§ or URL + date).  
+- No invented data: TBD + collection plan instead.  
+- Include **random seed**, **iterations**, and **stability check results**.  
+- Keep currencies in €, rates in %, durations in weeks/months, indices in points.  
+- Maintain upstream variable names to ensure Evaluate can cross-link results.  
+- Include all inter-variable effect logs for Evaluate’s correlation and impact analysis.
 
 ────────────────────────────────────────────────────────────────────────
-# VALIDATION CHECKLIST (ALL MUST BE YES)
+# VALIDATION CHECKLIST (ALL MUST BE TRUE)
 ────────────────────────────────────────────────────────────────────────
-- criteria_lock_present_and_option_tag_present == true
-- iterations_≥_10000_and_mean_roi_stability_within_±1pct == true
-- variable_register_with_distributions_and_units_and_sources == true
-- percentiles_reported_for_all_primary_kpis_P10_P50_P90 == true
-- goal_attainment_probabilities_vs_criteria_reported == true
-- tornado_sensitivity_with_spearman_rho_and_variable_deltas == true
-- behavioral_dynamics_customer_kpis_included_when_available == true
-- risk_metrics_VaR_ES_overrun_probabilities_reported == true
-- scenario_cards_percentile_mapped_and_comparison_table == true
-- data_gaps_and_collection_plan_present == true
-- why_paragraph_after_each_table_cluster == true
-- no_invented_data_and_all_material_claims_have_provenance == true
+- criteria_lock_and_option_present == true  
+- iterations_≥_25000_and_mean_stability_±1pct == true  
+- variable_register_complete_with_sources == true  
+- influence_and_favorability_matrix_present == true  
+- percentiles_P10_P50_P90_for_all_KPIs == true  
+- goal_attainment_vs_criteria_reported == true  
+- sensitivity_and_elasticity_computed == true  
+- behavioral_dynamics_included_if_applicable == true  
+- risk_metrics_VaR_ES_and_probabilities_reported == true  
+- scenario_comparison_table_present == true  
+- data_gap_and_collection_plan_present == true  
+- provenance_cues_and_why_paragraphs_present == true  
+- all_values_traceable_and_no_data_invention == true  
 
 ────────────────────────────────────────────────────────────────────────
-# TOOLS YOU MAY USE (TEXT-ONLY WORKFLOW; FAIL GRACEFULLY)
+# TOOLS (TEXT-ONLY; FAIL GRACEFULLY)
 ────────────────────────────────────────────────────────────────────────
-- simulation_param_extractor — parse variables/criteria/option from the text.
-- criteria_reference_checker — assert criteria lock + option presence.
-- code_interpreter — run sampling/math locally (no external files).
-- percentile_summary — turn arrays into P10/P50/P90/Mean/Stdev table.
-- tornado_sensitivity — rank drivers by |Spearman ρ|.
-- monte_carlo_simulation_tool — simple MC helper if needed.
-- monte_carlo_results_explainer — executive-friendly summary.
-- MarkdownFormatterTool — tidy final Markdown.
+- simulation_param_extractor — extract variables, criteria, and option tags  
+- criteria_reference_checker — verify criteria lock and option presence  
+- code_interpreter — perform numerical sampling and math  
+- percentile_summary — produce P10/P50/P90/Mean/StdDev  
+- tornado_sensitivity — compute Spearman ρ and elasticities  
+- monte_carlo_simulation_tool — execute and log simulation arrays  
+- monte_carlo_results_explainer — prepare narrative summary for Evaluate  
+- MarkdownFormatterTool — format final report  
 
-If a tool fails or inputs are missing, continue with available data, mark **TBD**, and record the fallback in the **WHY** block of the affected section.
-
+If any tool fails, continue with available data, mark **TBD**, and document fallback under the **WHY** section of the affected cluster.
 """
         expected_output = """
-# DECIDE › Simulate — Monte Carlo Simulation Analysis Report (Traceable • Customer-Centric • Replicable)
+# DECIDE › Simulate — Monte Carlo Simulation Analysis Report (Traceable • Domain-Agnostic • Replicable)
 
-> **Reading guide**  
+> Reading guide  
 > • Every table uses explicit **units** and **frames**.  
 > • Each cluster ends with a **WHY paragraph** — **Evidence → Inference → Implication** (what changes, who owns it, which KPI/criterion).  
-> • No invented numbers: when inputs are missing, show **TBD** and log them in **Data Gaps & Collection Plan**.
+> • No invented numbers: when inputs are missing, show **TBD** and log them in **Data Gaps & Collection Plan**.  
+> • Upstream names/IDs are preserved exactly for Evaluate to cross-link.
 
 ---
 
@@ -379,210 +498,259 @@ If a tool fails or inputs are missing, continue with available data, mark **TBD*
 - **Problem Source:** Define Agent vX.Y *(short provenance cue)*  
 - **Option Simulated:** [Option label from Create/Implement, verbatim]  
 - **Model Type:** Monte Carlo  
-- **Iterations:** [≥ 10,000 runs, integer]  
+- **Iterations:** **≥ 25,000** runs (actual: [integer])  
 - **Random Seed:** [integer]  
-- **Upstream Alignment:** implements thresholds from Criteria Lock (ROI / Turnover / Budget / SLA / Customer KPIs)
+- **Convergence:** mean/stability result for main KPI within ±1%  
+- **Upstream Alignment:** implements thresholds from Criteria Lock (ROI_12m / GDPR_Compliance / Time_to_Impact / Adoption_90d / Reliability_SLO or domain equivalents)  
+- **Execution Date/Time:** [YYYY-MM-DD HH:MM]  
+- **Language of Output:** [language_selected]
 
-**WHY:** Show how upstream constraints and option scope shape which variables are simulated and which pass/fail thresholds are applied.
+**WHY:** Binds the run to the criteria lock and upstream sources so Evaluate can audit and re-run.
 
 ---
 
 ## 1) Variable Register (Distributions • Units • Frames • Sources)
-> If upstream did **not** provide a value, use the declared safe default (and mark **Default Used**) — never silently assume.
+> If upstream did **not** provide a value, use the declared safe default and mark **Default Used** — never silently assume.
 
-| Variable | Distribution (type & params) | Mean / Location | Unit | Frame (cohort/geo/time) | Source (Doc-ID/§ or URL+date) | Notes |
-|---|---|---:|---|---|---|---|
-| Cost per replacement | Triangular(25,000; **30,000**; 40,000) | 30,000 | € / hire | Org-wide / FY | [source or **Default Used**] | From HR/Finance if present; else default |
-| Turnover base | Normal(μ=22.4, σ=2.0) | 22.4 | % / headcount | Org / 12m | [HR historical] | Clamp to [0, 100] |
-| Retention uplift | Uniform(2, 6) | 4.0 | pp | Pilot / 90d | [Derived or **Default Used**] | From nudges/offer framing |
-| Time-to-Impact | Triangular(4; **8**; 12) | 8 | weeks | Pilot→Scale | [PMO] | First value realization |
-| Budget limit | [TBD or value] | — | € | Project | [Finance] | Decision gate |
-| SLA p95 | [TBD or value] | — | % @ p95 | Service / week | [SRE/Ops] | Criteria constraint |
-| Customer KPI (e.g., NPS Δ) | [Dist] | — | points | Cohort/30–90d | [CS/CX] | Optional but recommended |
-| ROI_12m | **Derived** | — | % | Org / 12m | Formula (below) | Never a fixed input |
+| Variable | Distribution (type & params) | Mean/Location | Unit | Frame (cohort/geo/time) | Source (Doc-ID/§ or URL+date) | Correlations | Notes |
+|---|---|---:|---|---|---|---|---|
+| [v1] | [Dist(params)] | [..] | [unit] | [frame] | [source or **Default Used**] | [ρ with …] | [clamps/transform] |
+| [v2] | [Dist(params)] | [..] | [unit] | [frame] | [source] | [ρ with …] | [...] |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
 
-**Formulas (units & frames):**  
-- `Savings_€ = Hires_avoided × Cost_per_replacement [€/hire]`  
-- `Net_Benefit_€_12m = Savings_€ - Incremental_Costs_€`  
-- `ROI_12m [%] = (Net_Benefit_€_12m / Investment_€) × 100`  
-- Add any customer KPI transformations (e.g., completion ↑ → churn ↓ → LTV ↑).  
+**Formulas (explicit; units/frames):**  
+List all derived variables: ROI, NPV, Payback, Margin, Adoption_90d, SLA %, Reliability_SLO, Conversion, NPS Δ, Productivity Δ, etc.
 
-**WHY:** Evidence for distribution choices and frames; declare defaults & uncertainties that widen/shift outcome variance.
+**WHY:** Ensures traceable inputs and reproducible transformations.
 
 ---
 
 ## 2) Model Structure & Criteria Constraints
-- **Dependencies:** turnover ↓ → replacements ↓ → cost ↓ → ROI ↑; retention uplift → churn ↓ → LTV ↑.  
-- **Correlations:** [State correlations if known; else “assumed independent (justified)”].  
-- **Criteria applied as gates (pass/fail per run):** e.g., ROI_12m ≥ X%, Turnover ≤ Y%, Budget ≤ Z€, SLA ≥ W%, NPS Δ ≥ T.  
+- **Relationships:** e.g., adoption ↑ → utilization ↑ → revenue ↑; reliability ↑ → downtime ↓ → cost ↓; time-to-impact ↓ → faster ROI; price elasticity ↔ conversion ↔ margin.  
+- **Non-linearities/Thresholds:** diminishing returns, caps, floors.  
+- **Correlations:** implemented per Implement; otherwise stated “assumed independent” with justification.  
+- **Criteria as Gates:** pass/fail per run against locked thresholds (ROI_12m, SLA/Availability %, Compliance=100%, Time_to_Impact ≤ target, Adoption_90d ≥ target, etc.).
 
-**WHY:** Tie structure to goals; explain how each constraint trims the feasible set of outcomes.
+**WHY:** Makes decision rules computable and auditable within the simulation.
 
 ---
 
-## 3) Monte Carlo Configuration (Replicable)
-- **Iterations:** [≥ 10,000] (increase until mean ROI_12m stabilizes within **±1%**)  
+## 3) Scenario Design & Environment Configuration
+> Scenarios are percentiles **of the simulated distribution**, not hard-coded numbers.
+
+- **Scenario Families:** Strategic / Tactical / Reduced (Micro) — as defined in Implement.  
+- **Percentile Mapping:** Optimistic = **P90** • Baseline = **P50** • Pessimistic = **P10**.  
+- **Cross-Combinations:** where relevant, cross family variables (e.g., high adoption with low capacity).  
+- **Environment Toggles:** capacity, regulation, demand, resources, market volatility, behavioral intensity.  
+- **Assumption Layers:** macro / meso / micro tagged for Evaluate.  
+
+**WHY:** Reflects contextual uncertainty and interaction effects that drive tails.
+
+---
+
+## 4) Monte Carlo Configuration (Replicable)
+- **Iterations:** **≥ 25,000** (actual: [n]); increase until main KPI mean stabilizes within ±1%.  
 - **Random Seed:** [integer]  
-- **Sampling Notes:** truncate/floor to valid domains (%, €); clamp tails if needed.  
-- **Convergence Check:** mean ROI_12m pre/post last 2,000 runs within ±1%.
+- **Sampling Notes:** truncations/clamps per unit domain; transformations logged.  
+- **Convergence Check:** pre/post stability metrics and window size.  
+- **Execution Metadata:** tool versions, time/iteration.
 
-**WHY:** Replicability and stability justify trust in the reported percentiles and probabilities.
-
----
-
-## 4) Results Summary (Primary KPIs — Units & Frames)
-> Percentiles are **from the simulated distribution**, not fixed scenarios.
-
-| KPI (unit) | Mean | P10 | P50 | P90 | Stdev |
-|---|---:|---:|---:|---:|---:|
-| ROI_12m (%) | [..] | [..] | [..] | [..] | [..] |
-| Turnover (%) | [..] | [..] | [..] | [..] | [..] |
-| Total Cost (€/12m) | [..] | [..] | [..] | [..] | [..] |
-| Budget Overrun (€, if any) | [..] | [..] | [..] | [..] | [..] |
-| SLA p95 (%) | [..] | [..] | [..] | [..] | [..] |
-| Customer KPI (e.g., NPS Δ, points) | [..] | [..] | [..] | [..] | [..] |
-
-**WHY:** Interpret the central tendency vs. tail risk for decision criteria (who owns which KPI).
+**WHY:** Establishes statistical reliability and rerun capability.
 
 ---
 
-## 5) Goal Attainment vs. Criteria Lock (Probabilities)
+## 5) Results Summary (Primary KPIs — Units & Frames)
+> Percentiles are from the simulated distribution.
+
+| KPI (unit) | Mean | P10 | P50 | P90 | StdDev | Source Hook |
+|---|---:|---:|---:|---:|---:|---|
+| ROI_12m (%) | [..] | [..] | [..] | [..] | [..] | formula+inputs |
+| Cost (€/period) | [..] | [..] | [..] | [..] | [..] | inputs |
+| Time-to-Impact (weeks) | [..] | [..] | [..] | [..] | [..] | inputs |
+| SLA / Reliability (%) | [..] | [..] | [..] | [..] | [..] | SLO mapping |
+| Adoption_90d (%) | [..] | [..] | [..] | [..] | [..] | funnel mapping |
+| [Domain KPI] | [..] | [..] | [..] | [..] | [..] | [...] |
+
+**WHY:** Centers and tails frame realistic expectations by horizon and unit.
+
+---
+
+## 6) Goal Attainment vs Criteria Lock (Probabilities)
 | Criterion | Threshold (unit) | % of Runs Meeting | Evidence Hook |
 |---|---|---:|---|
 | ROI_12m ≥ [X%] | [X%] | [..]% | Distribution(ROI_12m) |
-| Turnover ≤ [Y%] | [Y%] | [..]% | Distribution(Turnover) |
+| [KPI] ≥ / ≤ [T] | [T] | [..]% | Distribution([KPI]) |
 | Budget ≤ [Z €] | [Z €] | [..]% | Distribution(Cost) |
-| SLA p95 ≥ [W%] | [W%] | [..]% | Distribution(SLA) |
-| Customer KPI ≥ [T] | [T] | [..]% | Distribution(Customer KPI) |
+| Compliance == 100% | 100% | [..]% | Compliance flag |
 
-**Highlight:**  
-- ✅ Proportion passing all gates simultaneously: **[..]%**  
-- ⚠️ Overrun risk **P(Cost > Budget)**: **[..]%**  
-
-**WHY:** Links simulation to locked decision rules; clarifies pass rate and residual risks.
+- **All Gates Simultaneously Pass:** **[..]%**  
+**WHY:** Directly links simulation outcomes to go/no-go policy.
 
 ---
 
-## 6) Sensitivity (Drivers of ROI) — Tornado & Correlations
-> Rank by absolute **Spearman ρ** with ROI_12m; report unit deltas and ROI point impact.
+## 7) Sensitivity — Tornado & Elasticities
+> Rank by absolute **Spearman ρ** with the **primary decision KPI** (default: ROI_12m).
 
-| Variable | Δ used (unit) | Impact on ROI (points) | Spearman ρ | Rank |
-|---|---|---|---:|---:|
-| Turnover reduction | ±3 pp | ±[..] ROI pts | [..] | 1 |
-| Cost per replacement | ±5,000 € | ±[..] ROI pts | [..] | 2 |
-| Time-to-Impact | ±2 weeks | ±[..] ROI pts | [..] | 3 |
-| Retention uplift | ±1 pp | ±[..] ROI pts | [..] | 4 |
-| [Other] | [Δ] | ±[..] ROI pts | [..] | 5 |
+| Variable | Δ used (unit) | Impact on Main KPI (points) | Spearman ρ | Elasticity (ΔY/%ΔX) | Rank |
+|---|---|---|---:|---:|---:|
+| [var1] | [Δx] | ±[..] | [..] | [..] | 1 |
+| [var2] | [Δx] | ±[..] | [..] | [..] | 2 |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
 
-**Elasticity Note (if meaningful):** e.g., +1 pp retention uplift → +0.9 ROI pts over 12m.  
-**WHY:** Explicit levers for optimization; guides which assumptions/tests change the decision.
 
----
-
-## 7) Behavioral Dynamics (Customer-Centric)
-- **Salience/Visibility:** [assumption] → completion **+[..] pp** (90d).  
-- **Defaults & Friction:** [assumption] → early retention **+[..] pp** (30–60d).  
-- **Feedback Loops:** early success reduces 90d churn **[..]%**.  
-
-| Lever | Param (dist) | Expected Effect (unit, timeframe) | Included in Sim? | Telemetry Hook |
-|---|---|---|---|---|
-| Salience | Uniform(a,b) | +[..] pp completion / 30–90d | Yes/No | event_… |
-| Defaults | Triangular(l,m,u) | +[..] pp retention / 30d | Yes/No | event_… |
-| Friction↓ | Discrete {-1, -2 clicks} | +[..] pp conversion / 14d | Yes/No | event_… |
-
-**WHY:** Connects human behavior mechanisms to measurable uplifts and ensures ethics/guardrails remain intact.
+**WHY:** Identifies the levers with the largest decision leverage and where to focus experiments/mitigations.
 
 ---
 
-## 8) Scenario Cards (Percentile-Mapped)
-> Scenarios are **derived** from the same distribution: **Optimistic = P90**, **Baseline = P50**, **Pessimistic = P10**.
+## 8) Influence & Favorability Matrix (Required for Evaluate)
+> Logs how each variable shifts scenario **favorability** and contributes to variance.
 
-| Metric | Optimistic (P90) | Baseline (P50) | Pessimistic (P10) | Range |
-|---|---:|---:|---:|---:|
-| ROI_12m (%) | [..] | [..] | [..] | [P90–P10] |
-| Turnover (%) | [..] | [..] | [..] | [..] |
-| Cost (€/12m) | [..] | [..] | [..] | [..] |
-| Time-to-Impact (weeks) | [..] | [..] | [..] | [..] |
-| SLA p95 (%) | [..] | [..] | [..] | [..] |
-| Customer KPI | [..] | [..] | [..] | [..] |
+| Variable | KPI | Direction (+/–) | ΔX → ΔY (unit mapping) | Elasticity | Variance Contribution (%) | Criticality (H/M/L) | Interactions/Notes |
+|---|---|---|---|---:|---:|---|---|
+| [v] | ROI_12m | + | +1 pp → +0.9 pts | 0.9 | 18.2 | H | interacts with [w] |
+| [w] | SLA % | – | +10 ms p95 → –0.2 pp | 0.2 | 7.5 | M | correlated with load |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … | … |
 
-**WHY:** Shows what a good/typical/bad year looks like with the same assumptions.
-
----
-
-## 9) Risk Metrics (Downside & Overrun)
-- **VaR(5%) [€ / %]:** [..] — Maximum loss / downside at 95% confidence  
-- **Expected Shortfall(5%) [€ / %]:** [..] — Average loss beyond VaR  
-- **P(Cost > Budget):** [..]%  
-- **P(Timeline > Plan):** [..]%  
-
-**Top Quantified Risk Drivers:** [1–3 items with variance contribution].  
-**WHY:** Indicates buffer/contingency sizing and where to place mitigations.
+**WHY:** Supplies Evaluate with causal direction, magnitude, and interaction context to generate ranked recommendations.
 
 ---
 
-## 10) Visual Summaries (described; images optional)
-- **Distribution (Histogram/Density):** ROI_12m, Cost, Turnover — show mean & P10/P50/P90 markers.  
-- **CDF:** Probability of reaching ROI targets and staying under Budget.  
-- **Tornado:** Ranked variable impact on ROI_12m.  
-- **Scenario Boxplots:** Optimistic vs Baseline vs Pessimistic.
+## 9) Behavioral & Customer Dynamics (If Applicable)
+- Levers: defaults, framing, salience, timing, social proof, friction reduction, commitment.  
+- Each lever is modeled as a **distribution of effect size** and mapped to funnel KPIs.
 
-**WHY:** Make tails and trade-offs visually inspectable for decision speed.
+| Lever | Distribution | Expected Effect (unit/frame) | Affected KPI | Telemetry Hook | Ethical Guardrail |
+|---|---|---|---|---|---|
+| [Default Opt-In] | Triangular(l,m,u) | +[..] pp adoption / 90d | Adoption_90d | event_adopt | no dark patterns |
+| [Friction –1 step] | Discrete{-1,-2} | +[..] pp completion / 14d | Conversion % | event_complete | accessibility check |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+| … | … | … | … | … | … |
+
+**WHY:** Connects human-behavior assumptions to measurable uplift and risk controls.
 
 ---
 
-## 11) Decision Guidance (Rules Aligned to Criteria)
-- **GO** when **P(all gates pass) ≥ p_succ** (state p_succ, e.g., 70%) **and** VaR within tolerance.  
-- **HOLD** if ROI meets but SLA/Customer KPIs fail with **P > 30%**.  
-- **NO-GO** if **P(ROI_12m ≥ threshold) < 60%** or **P(Cost > Budget) > 30%** or catastrophic tail risk.  
+## 10) Scenario Cards (Percentile-Mapped)
+> Optimistic = P90, Baseline = P50, Pessimistic = P10 drawn from the same distribution.
 
-**Early Triggers (post-launch):** If turnover reduction < [x] pp by week 6 or SLA p95 < [w]%, re-run simulation & re-decide.
+| Metric | Optimistic (P90) | Baseline (P50) | Pessimistic (P10) | Range | Unit |
+|---|---:|---:|---:|---:|---|
+| ROI_12m | [..] | [..] | [..] | [P90–P10] | % |
+| Cost | [..] | [..] | [..] | [..] | € |
+| Time-to-Impact | [..] | [..] | [..] | [..] | weeks |
+| SLA / Reliability | [..] | [..] | [..] | [..] | % |
+| Adoption_90d | [..] | [..] | [..] | [..] | % |
+| [Domain KPI] | [..] | [..] | [..] | [..] | [unit] |
 
-**WHY:** Turns percentiles & probabilities into hard rules; transparent tie to Criteria Lock.
+**WHY:** Provides leadership a clear view of good/typical/bad outcomes under the same assumptions.
 
 ---
 
-## 12) Data Gaps & Collection Plan (MANDATORY for any TBD)
+## 11) Risk Metrics (Downside & Overrun)
+- **VaR(5%)** and **Expected Shortfall(5%)** for ROI or Net Benefit  
+- **P(Cost > Budget)**, **P(Timeline > Plan)**, **P(KPI below min tolerance)**  
+- **Top Quantified Risk Drivers:** [1–3 with variance contribution and direction]  
+- **Expected Loss (€) = Prob × Impact (€)** per top risk
+
+**WHY:** Sizes buffers/contingencies and targets mitigations where they matter most.
+
+---
+
+## 12) Decision Guidance (Rules Aligned to Criteria)
+- **GO** if **P(all gates pass) ≥ 70%** and downside risk within limits (VaR/ES thresholds).  
+- **HOLD** if main KPI meets but secondary criteria fail with **P > 30%**.  
+- **NO-GO** if **P(main KPI ≥ threshold) < 60%** or catastrophic tail risk (e.g., >30% budget overrun).  
+- **Early Triggers:** if observed metrics deviate by >X% from expected P50 after [period], re-simulate and re-decide.
+
+**WHY:** Converts distributions into clear, criteria-locked decision rules.
+
+---
+
+## 13) Data Gaps & Collection Plan (MANDATORY for any TBD)
 | Missing Data | Why Needed | Method (instrument/test/query) | Owner | ETA | Acceptance | Expected Source |
 |---|---|---|---|---|---|---|
 | [TBD item] | Calibrate [variable] | AB test / query / log | [role] | [date] | CI width ≤ x% | [system/doc] |
 | … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
+| … | … | … | … | … | … | … |
 
-**WHY:** Shows how uncertainty will reduce over time; who is accountable.
+**WHY:** Reduces uncertainty on a schedule with accountable owners.
 
 ---
 
-## 13) Plain-English Explainer (For Executives & Customers)
-**What Monte Carlo means in practice:** we “run the future” **[iterations]** times to see typical, best, and worst outcomes.  
-- **Most likely (P50):** [plain meaning]  
-- **Best reasonable (P90):** [plain meaning] — chance ≈ 10% to do better  
-- **Worst reasonable (P10):** [plain meaning] — ≈ 90% chance to do better  
-- **Success odds:** *P(meet thresholds)* = **[..]%**  
-- **Downside guardrails:** VaR/ES figures in €/%
+## 14) Visual Summaries (optional images; described if text-only)
+- Density/histograms with P10/P50/P90 markers for key KPIs  
+- CDF for goal attainment vs thresholds  
+- Tornado chart for sensitivity (top drivers)  
+- Scenario boxplots (P10/P50/P90)  
 
-**WHY:** Ensures non-technical stakeholders understand the decision and its risks.
+**WHY:** Aids executive comprehension of tails and trade-offs.
+
+---
+
+## 15) Plain-Language Explainer (For Non-Technical Stakeholders)
+- **Most likely (P50)** means typical outcome given today’s uncertainty.  
+- **Best reasonable (P90)** has ≈10% chance to do better.  
+- **Worst reasonable (P10)** has ≈90% chance to do better.  
+- **Success odds** report the probability of passing locked gates simultaneously.
+
+**WHY:** Ensures decisions are understood and defensible.
 
 ---
 
 ## Appendix
-- **A. Parameter List & Bounds:** full JSON-like listing of parameters & clamps.  
-- **B. Formulas:** ROI/NPV/Payback; customer KPI transforms; unit conversions.  
-- **C. Source Register:** title • publisher • date (YYYY-MM-DD) • URL or Doc-ID/§ • source type • recency.
+- **A. Parameters & Bounds:** JSON-like listing (names, dists, params, clamps)  
+- **B. Formulas:** ROI/NPV/Payback; KPI transforms; unit conversions  
+- **C. Source Register:** title • publisher • date (YYYY-MM-DD) • URL or Doc-ID/§ • source type • recency
 
 ---
 
 ## Final Validation Checklist (ALL must be YES)
-- criteria_lock_present_and_option_tag_present == true  
-- iterations_≥_10000_and_mean_roi_stability_within_±1pct == true  
-- variable_register_with_distributions_and_units_and_sources == true  
-- percentiles_reported_for_all_primary_kpis_P10_P50_P90 == true  
+- criteria_lock_and_option_present == true  
+- iterations_≥_25000_and_mean_stability_±1pct == true  
+- variable_register_with_distributions_units_sources_complete == true  
+- sensitivity_tornado_and_elasticities_computed == true  
+- influence_and_favorability_matrix_present == true  
+- percentiles_P10_P50_P90_for_all_primary_KPIs == true  
 - goal_attainment_probabilities_vs_criteria_reported == true  
-- tornado_sensitivity_with_spearman_rho_and_variable_deltas == true  
-- behavioral_dynamics_customer_kpis_included_when_available == true  
+- behavioral_dynamics_included_if_applicable == true  
 - risk_metrics_VaR_ES_overrun_probabilities_reported == true  
 - scenario_cards_percentile_mapped_and_comparison_table == true  
 - data_gaps_and_collection_plan_present == true  
-- why_paragraph_after_each_table_cluster == true  
+- provenance_cues_and_why_paragraphs_present == true  
 - no_invented_data_and_all_material_claims_have_provenance == true
 """
 

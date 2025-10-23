@@ -5,6 +5,8 @@ from tools.custom_tools import CodeInterpreterTool
 from config import config
 import streamlit as st
 from datetime import datetime
+from config import get_language
+language_selected = get_language()
 
 class DecisionMultidisciplinaryAgent:
     """Agent for integrated multidisciplinary feasibility analysis"""
@@ -108,7 +110,7 @@ class DecisionMultidisciplinaryAgent:
 
         # --- Agent profile (role/goal/backstory) ---
         return Agent(
-           role = (
+            role = (
 "Feasibility & Criteria Orchestrator (DECIDE › Establish) — "
 "Performs a multidisciplinary analysis, establishes dynamic, auditable decision criteria from the stated objective "
 "and evidence-backed context (must search in documents and, if something isn’t found there, on the web), and then "
@@ -171,6 +173,8 @@ class DecisionMultidisciplinaryAgent:
 "You assign weights summing to 1.00, define Warn/Alert thresholds, owners, and cadences, and create explicit 0–1 scoring functions with well-defined "
 "lower and upper bounds and clearly documented units. You seal the document with a timestamp and a lock hash (derived from the criteria text), "
 "ensuring that all downstream agents reference exactly the same version."
+f"You receive all the info in the selected language: **{language_selected}**."
+f"Give your output and ensure all outputs respect the selected language: **{language_selected}**."
 ),
             tools=tools_list,
             verbose=True,
@@ -191,7 +195,8 @@ class DecisionMultidisciplinaryAgent:
         description = f"""
 DECIDE › Establish — **Adaptive Multidisciplinary Feasibility & Strategic Decision Framework**
 
-Your task is to build a complete, structured framework to analyze the **feasibility, strategy, and decision criteria** of an initiative or objective.  
+Your task is to build a complete, structured framework to analyze the **feasibility, strategy, and decision criteria** of an initiative or objective.
+MUST: Give your output and ensure all outputs respect the selected language: **{language_selected}**.  
 You must work through **four sequential phases**:
 
 1. **Data Collection and Contextualization (inputs and environment).**  

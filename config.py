@@ -11,6 +11,21 @@ def _get_secret(key: str, default: str = "") -> str:
         pass
     return os.getenv(key, default)
 
+
+# ==========================================
+# Language Configuration
+# ==========================================
+
+LANGUAGE_SELECTED = "en"
+
+def set_language(lang: str):
+    global LANGUAGE_SELECTED
+    LANGUAGE_SELECTED = lang
+
+def get_language() -> str:
+    return LANGUAGE_SELECTED
+
+
 @dataclass
 class Config:
     """Configuration settings for MIMÉTICA MVP"""

@@ -1,3 +1,7 @@
+# Phase: Collection
+**Timestamp:** 20251023_163427
+**Workflow ID:** workflow_20251023_162800
+**Language Tag:** en
 ```
 # Dataset Manifest
 

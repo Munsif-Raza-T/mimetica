@@ -682,10 +682,11 @@ class DecideWorkflow:
             # Create agent and task
             implement_agent = ImplementAgent.create_agent()
             option_analysis = f"{directive}\n{option_analysis}"
-            implement_task = ImplementAgent.create_task(selected_option, option_analysis, agent=implement_agent)
             accumulated_context = self._get_accumulated_context(
                 ["collection", "analysis", "definition", "exploration", "creation"]
-            )
+            )           
+            implement_task = ImplementAgent.create_task(accumulated_context, selected_option, option_analysis, agent=implement_agent)
+
             runtime_header = (
                 "## RUNTIME CONTEXT\n"
                 f"- Vector namespace: {st.session_state.get('vector_namespace', 'mimetica/mixed')}\n"
@@ -757,8 +758,6 @@ class DecideWorkflow:
             directive = self._language_directive()
             implementation_plan = f"{directive}\n{implementation_plan}"
             option_analysis = f"{directive}\n{option_analysis}"
-            simulate_task = SimulateAgent.create_task(implementation_plan, option_analysis, agent=simulate_agent)
-            # === Inject accumulated context before running Crew ===
             accumulated_context = self._get_accumulated_context([
                 "collection",
                 "analysis",
@@ -767,6 +766,9 @@ class DecideWorkflow:
                 "creation",
                 "implementation"
             ])
+            simulate_task = SimulateAgent.create_task(implementation_plan, option_analysis, accumulated_context, agent=simulate_agent)
+            # === Inject accumulated context before running Crew ===
+
 
 
 
