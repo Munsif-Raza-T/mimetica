@@ -1,3 +1,7 @@
+# Phase: Simulation
+**Timestamp:** 20251023_165317
+**Workflow ID:** workflow_20251023_162800
+**Language Tag:** en
 ```
 # DECIDE › Simulate — Monte Carlo Simulation Analysis Report (Traceable • Domain-Agnostic • Replicable)
 

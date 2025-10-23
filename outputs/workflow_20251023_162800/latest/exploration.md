@@ -1,3 +1,7 @@
+# Phase: Exploration
+**Timestamp:** 20251023_164720
+**Workflow ID:** workflow_20251023_162800
+**Language Tag:** en
 ```
 # Strategic Context Exploration & Risk Mapping — **Evidence-First, Fully-Explained Dossier**
 **Execution Timestamp (local):** 2025-10-23 16:46:01 • **Calendar:** 2025-10-23

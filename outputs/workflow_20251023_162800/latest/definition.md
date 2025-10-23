@@ -1,3 +1,7 @@
+# Phase: Definition
+**Timestamp:** 20251023_164556
+**Workflow ID:** workflow_20251023_162800
+**Language Tag:** en
 # Strategic Problem Definition & Scope — Full Evidence-Based Report
 
 > **Non-negotiables**
